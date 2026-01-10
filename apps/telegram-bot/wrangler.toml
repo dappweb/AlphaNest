@@ -10,7 +10,7 @@ ENVIRONMENT = "production"
 # KV for storing user subscriptions
 [[kv_namespaces]]
 binding = "SUBSCRIPTIONS"
-id = "your_kv_id_here"
+id = "653be5fe9c01498baa76780f7503e4b3"
 
 # Secrets (set via wrangler secret put)
 # TELEGRAM_BOT_TOKEN

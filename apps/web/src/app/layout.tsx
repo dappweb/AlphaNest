@@ -17,6 +17,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://alphanest-web.pages.dev'),
   title: {
     default: 'AlphaNest - Cross-Chain Meme Asset Platform',
     template: '%s | AlphaNest',
