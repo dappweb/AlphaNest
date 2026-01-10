@@ -1,0 +1,17 @@
+name = "alphanest-telegram-bot"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+BOT_NAME = "AlphaNestBot"
+ENVIRONMENT = "production"
+
+# KV for storing user subscriptions
+[[kv_namespaces]]
+binding = "SUBSCRIPTIONS"
+id = "your_kv_id_here"
+
+# Secrets (set via wrangler secret put)
+# TELEGRAM_BOT_TOKEN
+# WEBHOOK_SECRET

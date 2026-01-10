@@ -1,0 +1,42 @@
+{
+  "name": "@alphanest/api",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "build": "esbuild src/index.ts --bundle --outdir=dist --format=esm --platform=browser --target=es2022 --external:node:*",
+    "deploy": "wrangler deploy",
+    "deploy:dev": "wrangler deploy --env dev",
+    "deploy:preview": "wrangler deploy --env preview",
+    "db:migrate": "wrangler d1 migrations apply alphanest-production",
+    "db:migrate:dev": "wrangler d1 migrations apply alphanest-dev --local",
+    "db:seed": "wrangler d1 execute alphanest-production --file=../../infrastructure/database/seed.sql",
+    "db:studio": "wrangler d1 studio alphanest-production",
+    "tail": "wrangler tail",
+    "test": "vitest",
+    "test:coverage": "vitest --coverage",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src --ext .ts"
+  },
+  "dependencies": {
+    "@hono/zod-validator": "^0.7.6",
+    "@solana/web3.js": "^1.90.0",
+    "hono": "^4.0.0",
+    "jose": "^5.2.0",
+    "nanoid": "^5.0.0",
+    "viem": "^2.0.0",
+    "zod": "^3.22.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260109.0",
+    "@types/node": "^20.11.0",
+    "@typescript-eslint/eslint-plugin": "^6.19.0",
+    "@typescript-eslint/parser": "^6.19.0",
+    "esbuild": "^0.20.0",
+    "eslint": "^8.56.0",
+    "typescript": "^5.3.0",
+    "vitest": "^1.2.0",
+    "wrangler": "^3.25.0"
+  }
+}

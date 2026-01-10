@@ -1,0 +1,176 @@
+# AlphaNest API - Cloudflare Workers 配置
+# 文档: https://developers.cloudflare.com/workers/wrangler/configuration/
+
+name = "alphanest-api"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+# ============================================
+# 账户配置 (部署前替换)
+# ============================================
+# account_id = "your_cloudflare_account_id"
+
+# ============================================
+# 路由配置 (待域名配置后启用)
+# ============================================
+# routes = [
+#   { pattern = "api.alphanest.dev/*", zone_name = "alphanest.dev" }
+# ]
+
+# ============================================
+# 构建配置 (使用 wrangler 默认打包)
+# ============================================
+# [build]
+# command = "pnpm build"
+
+# ============================================
+# D1 数据库绑定
+# ============================================
+[[d1_databases]]
+binding = "DB"
+database_name = "alphanest-db"
+database_id = "6b0be3c5-138b-4f9a-89c5-09f6927b007e"
+
+# ============================================
+# KV 命名空间绑定
+# ============================================
+# 缓存 (价格、Dev评分等)
+[[kv_namespaces]]
+binding = "CACHE"
+id = "ad4a9d257fbc4c18871fa5b5afe78bd9"
+
+# 会话存储
+[[kv_namespaces]]
+binding = "SESSIONS"
+id = "d4423f5c67b0419a8e2a1c6342400faf"
+
+# Rate Limiting 计数器
+[[kv_namespaces]]
+binding = "RATE_LIMIT"
+id = "91cd952407aa4aadb9c6a8c807bbc224"
+
+# ============================================
+# R2 存储桶绑定 (待创建后启用)
+# ============================================
+# [[r2_buckets]]
+# binding = "ASSETS"
+# bucket_name = "alphanest-assets"
+
+# ============================================
+# Queue 绑定 (待创建后启用)
+# ============================================
+# [[queues.producers]]
+# binding = "TASK_QUEUE"
+# queue = "alphanest-tasks"
+#
+# [[queues.producers]]
+# binding = "NOTIFICATION_QUEUE"
+# queue = "alphanest-notifications"
+#
+# [[queues.consumers]]
+# queue = "alphanest-tasks"
+# max_batch_size = 10
+# max_batch_timeout = 30
+# max_retries = 3
+# dead_letter_queue = "alphanest-dlq"
+#
+# [[queues.consumers]]
+# queue = "alphanest-notifications"
+# max_batch_size = 50
+# max_batch_timeout = 10
+
+# ============================================
+# Durable Objects (WebSocket 管理)
+# ============================================
+[[durable_objects.bindings]]
+name = "WEBSOCKET_SERVER"
+class_name = "WebSocketServer"
+
+[[migrations]]
+tag = "v1"
+new_classes = ["WebSocketServer"]
+
+# ============================================
+# 环境变量 (非敏感)
+# ============================================
+[vars]
+ENVIRONMENT = "production"
+LOG_LEVEL = "info"
+API_VERSION = "v1"
+CORS_ORIGIN = "https://alphanest.dev"
+
+# 链 ID
+BASE_CHAIN_ID = "8453"
+SOLANA_CLUSTER = "mainnet-beta"
+ETH_CHAIN_ID = "1"
+BNB_CHAIN_ID = "56"
+
+# 功能开关
+ENABLE_INSURANCE = "true"
+ENABLE_TRADING = "true"
+ENABLE_WEBSOCKET = "true"
+
+# Rate Limiting
+RATE_LIMIT_REQUESTS = "100"
+RATE_LIMIT_WINDOW = "60"
+
+# ============================================
+# 开发环境配置
+# ============================================
+[env.dev]
+name = "alphanest-api-dev"
+routes = [
+  { pattern = "api-dev.alphanest.dev/*", zone_name = "alphanest.dev" }
+]
+
+[[env.dev.d1_databases]]
+binding = "DB"
+database_name = "alphanest-dev"
+database_id = "your_dev_d1_database_id"
+
+[[env.dev.kv_namespaces]]
+binding = "CACHE"
+id = "your_dev_cache_kv_id"
+
+[[env.dev.kv_namespaces]]
+binding = "SESSIONS"
+id = "your_dev_sessions_kv_id"
+
+[env.dev.vars]
+ENVIRONMENT = "development"
+LOG_LEVEL = "debug"
+CORS_ORIGIN = "http://localhost:3000"
+
+# ============================================
+# 预览环境配置
+# ============================================
+[env.preview]
+name = "alphanest-api-preview"
+
+[[env.preview.d1_databases]]
+binding = "DB"
+database_name = "alphanest-preview"
+database_id = "your_preview_d1_database_id"
+
+[env.preview.vars]
+ENVIRONMENT = "preview"
+LOG_LEVEL = "debug"
+
+# ============================================
+# Cron Triggers (定时任务)
+# ============================================
+[triggers]
+crons = [
+  "* * * * *",      # 每分钟 - 更新价格和热门列表
+  "*/5 * * * *",    # 每5分钟 - 更新Dev评分
+  "0 * * * *",      # 每小时 - 检测Rug Pull
+  "0 0 * * *"       # 每天 - 数据清理
+]
+
+# ============================================
+# 本地开发配置
+# ============================================
+[dev]
+port = 8787
+local_protocol = "http"
