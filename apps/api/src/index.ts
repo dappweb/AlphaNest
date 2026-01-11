@@ -11,6 +11,7 @@ import { logger } from 'hono/logger';
 import { secureHeaders } from 'hono/secure-headers';
 import { prettyJSON } from 'hono/pretty-json';
 import { HTTPException } from 'hono/http-exception';
+import * as Sentry from '@sentry/cloudflare';
 
 // 路由模块
 import { userRoutes } from './routes/user';
@@ -68,6 +69,9 @@ export interface Env {
   CONTRACT_ALPHANEST_CORE: string;
   CONTRACT_REPUTATION_REGISTRY: string;
   CONTRACT_ALPHAGUARD: string;
+  
+  // Sentry
+  SENTRY_DSN: string;
 }
 
 // 创建 Hono 应用
@@ -198,11 +202,41 @@ app.get('/ws', async (c) => {
 });
 
 // ============================================
+// Sentry 初始化中间件
+// ============================================
+
+app.use('*', async (c, next) => {
+  // 初始化 Sentry (如果配置了 DSN)
+  if (c.env.SENTRY_DSN) {
+    Sentry.init({
+      dsn: c.env.SENTRY_DSN,
+      environment: c.env.ENVIRONMENT,
+      tracesSampleRate: c.env.ENVIRONMENT === 'production' ? 0.1 : 1.0,
+    });
+  }
+  await next();
+});
+
+// ============================================
 // 错误处理
 // ============================================
 
 app.onError((err, c) => {
   console.error('API Error:', err);
+
+  // 发送错误到 Sentry
+  if (c.env.SENTRY_DSN) {
+    Sentry.captureException(err, {
+      tags: {
+        path: c.req.path,
+        method: c.req.method,
+      },
+      extra: {
+        url: c.req.url,
+        headers: Object.fromEntries(c.req.raw.headers.entries()),
+      },
+    });
+  }
 
   if (err instanceof HTTPException) {
     return c.json({

@@ -58,6 +58,8 @@
 | **TokenFactory 代币工厂** | `TokenFactory.sol` | ✅ **NEW** |
 | **AlphaToken $ALPHA 代币** | `AlphaToken.sol` | ✅ **NEW** |
 | **Sepolia 部署脚本** | `script/Deploy.s.sol` | ✅ **NEW** |
+| **Base 主网部署脚本** | `script/Deploy.s.sol` | ✅ **NEW** |
+| **环境配置模板** | `.env.example` | ✅ **NEW** |
 | Foundry 测试脚本 | `test/*.t.sol` | ✅ |
 
 #### Telegram Bot
@@ -84,8 +86,22 @@
 
 | 模块 | 任务 | 优先级 |
 |-----|------|--------|
-| **智能合约** | Sepolia 测试网部署验证 | P0 |
-| **智能合约** | 部署到 Base 主网 | P1 |
+| **智能合约** | 实际执行 Base 主网部署 | P1 |
+
+### Sepolia 部署完成 ✅ (2026-01-10)
+
+| 合约 | 地址 |
+|-----|------|
+| MockUSDC | `0xDfB896d01E354F39dbd9125E6790AE65D28a25Cd` |
+| AlphaToken | `0x3eAA60E349d9Bd1E366D19369cF753CBaC1f4488` |
+| AlphaNestCore | `0x687111E43D417c99F993FB6D26F4b06E465c7A94` |
+| ReputationRegistry | `0xC3a8D57aCa3D3d244057b69129621d87c3a37574` |
+| CrossChainVerifier | `0x32229e84F7b63E201d0E4B64931F8ff1571e0a60` |
+| TokenFactory | `0x5461D1F4a6854f509D7FdD1b5722C4ceF1E479d5` |
+| AlphaGuardOracle | `0x3a8D8Fe1bE80B0DD36Ee16758F4108EEFfeEbb57` |
+| AlphaGuard | `0xB72A72EFC2F42092099Af61EFf2B2B8ad8f197a9` |
+
+**部署者**: `0x4C10831CBcF9884ba72051b5287b6c87E4F74A48`
 
 ### 待开发 📋
 
@@ -278,7 +294,7 @@
 
 ---
 
-**最后更新**: 2026-01-10 14:45
+**最后更新**: 2026-01-10 19:55
 
 ---
 
@@ -290,18 +306,105 @@
 - [x] 更新 `foundry.toml` solc 版本 (0.8.24) 和 via_ir
 - [x] 所有合约编译成功 ✅
 
-### 跟单系统 UI 组件
-- [x] `copy-trade-panel.tsx` - 主面板 (标签页/搜索/统计)
-- [x] `copy-trade-card.tsx` - 交易员卡片组件
-- [x] `copy-trade-list.tsx` - 交易员列表
-- [x] `copy-trade-modal.tsx` - 跟单设置弹窗
-- [x] `trader-leaderboard.tsx` - 排行榜表格
+### 跟单系统 UI 组件 ✅ (已实现)
+- [x] `copy-trade-panel.tsx` - 主面板 (标签页/搜索/统计/筛选)
+- [x] `copy-trade-card.tsx` - 交易员卡片组件 (PnL/胜率/跟随)
+- [x] `copy-trade-list.tsx` - 交易员列表 (加载状态/空状态)
+- [x] `copy-trade-modal.tsx` - 跟单设置弹窗 (投资金额/风控参数)
+- [x] `trader-leaderboard.tsx` - 排行榜表格 (可排序列)
+- [x] `index.ts` - 统一导出
+- [x] 更新 `/copy-trade` 页面使用新组件
 
 ### API 依赖
 - [x] 安装 `@cloudflare/workers-types` 
 
-### 待完成
-- [ ] **Sepolia 部署** - 需要配置:
-  1. 在 `contracts/.env` 中填写 `PRIVATE_KEY`
-  2. 配置可用的 Sepolia RPC URL
-  3. 执行: `forge script script/Deploy.s.sol:DeployAllSepolia --rpc-url sepolia --broadcast`
+---
+
+## Sepolia 部署指南
+
+### 前置要求
+1. 安装 Foundry: `curl -L https://foundry.paradigm.xyz | bash && foundryup`
+2. 获取测试网 ETH: https://sepoliafaucet.com
+
+### 环境配置
+在 `contracts/` 目录下创建 `.env` 文件:
+
+```bash
+# 你的钱包私钥 (不带 0x 前缀)
+PRIVATE_KEY=your_private_key_here
+
+# Sepolia RPC URL (从 Alchemy/Infura 获取)
+SEPOLIA_RPC_URL=https://eth-sepolia.g.alchemy.com/v2/YOUR_API_KEY
+
+# (可选) Etherscan API Key 用于合约验证
+ETHERSCAN_API_KEY=your_etherscan_api_key
+```
+
+### 部署命令
+```bash
+cd contracts
+
+# 加载环境变量
+source .env
+
+# 部署到 Sepolia
+forge script script/Deploy.s.sol:DeployAllSepolia \
+  --rpc-url $SEPOLIA_RPC_URL \
+  --broadcast \
+  --verify
+
+# 部署完成后保存合约地址!
+```
+
+### 部署后检查清单
+- [ ] 验证所有合约在 Etherscan 上显示源码
+- [ ] 测试 MockUSDC mint 功能
+- [ ] 测试 AlphaGuard 保险购买流程
+- [ ] 测试 ReputationRegistry 评分更新
+- [ ] 更新前端配置中的合约地址
+
+---
+
+## Base 主网部署指南
+
+### 前置要求
+1. 安装 Foundry: `curl -L https://foundry.paradigm.xyz | bash && foundryup`
+2. 准备足够 ETH 用于 gas 费用
+3. 配置多签钱包地址 (推荐用于生产环境)
+
+### 环境配置
+在 `contracts/` 目录下创建 `.env` 文件 (参考 `.env.example`):
+
+```bash
+# 你的钱包私钥 (不带 0x 前缀)
+PRIVATE_KEY=your_private_key_here
+
+# Base 主网 RPC URL
+BASE_RPC_URL=https://mainnet.base.org
+
+# Basescan API Key 用于合约验证
+BASESCAN_API_KEY=your_basescan_api_key
+```
+
+### 部署命令
+```bash
+cd contracts
+
+# 加载环境变量
+source .env
+
+# 部署到 Base 主网
+forge script script/Deploy.s.sol:DeployAllBase \
+  --rpc-url $BASE_RPC_URL \
+  --broadcast \
+  --verify
+
+# 部署完成后保存合约地址!
+```
+
+### Base 主网部署后检查清单
+- [ ] 验证所有合约在 Basescan 上显示源码
+- [ ] 配置多签钱包作为管理员
+- [ ] 测试 AlphaGuard 保险流程 (使用真实 USDC)
+- [ ] 更新前端配置中的合约地址
+- [ ] 设置监控告警

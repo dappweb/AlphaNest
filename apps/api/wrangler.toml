@@ -115,6 +115,9 @@ ENABLE_WEBSOCKET = "true"
 RATE_LIMIT_REQUESTS = "100"
 RATE_LIMIT_WINDOW = "60"
 
+# Sentry (从 secrets 读取)
+# SENTRY_DSN = "设置为 Cloudflare secret"
+
 # ============================================
 # 开发环境配置
 # ============================================

@@ -196,6 +196,111 @@ contract DeployTestnet is Script {
     }
 }
 
+/**
+ * @title DeployAllBase
+ * @notice 部署所有 AlphaNest 合约到 Base 主网
+ */
+contract DeployAllBase is Script {
+    // Base Mainnet USDC address
+    address constant BASE_USDC = 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913;
+    
+    function run() external {
+        uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
+        address deployer = vm.addr(deployerPrivateKey);
+        
+        console.log("=== AlphaNest Full Deployment to Base Mainnet ===");
+        console.log("Deployer:", deployer);
+        console.log("Chain ID:", block.chainid);
+        require(block.chainid == 8453, "Must deploy to Base Mainnet (chainId: 8453)");
+        
+        vm.startBroadcast(deployerPrivateKey);
+
+        // 1. Deploy $ALPHA Token
+        AlphaToken alphaToken = new AlphaToken(
+            deployer,  // communityPool (update to multisig later)
+            deployer,  // ecosystemPool
+            deployer,  // teamPool
+            deployer,  // investorPool
+            deployer   // liquidityPool
+        );
+        console.log("\n1. AlphaToken deployed:", address(alphaToken));
+
+        // 2. Deploy AlphaNestCore
+        AlphaNestCore core = new AlphaNestCore(
+            address(alphaToken),
+            deployer,  // treasury (update to multisig later)
+            deployer   // buyback address
+        );
+        console.log("2. AlphaNestCore deployed:", address(core));
+
+        // 3. Deploy ReputationRegistry
+        ReputationRegistry reputation = new ReputationRegistry();
+        console.log("3. ReputationRegistry deployed:", address(reputation));
+
+        // 4. Deploy CrossChainVerifier
+        CrossChainVerifier verifier = new CrossChainVerifier();
+        console.log("4. CrossChainVerifier deployed:", address(verifier));
+
+        // 5. Deploy TokenFactory
+        TokenFactory factory = new TokenFactory(deployer);
+        console.log("5. TokenFactory deployed:", address(factory));
+
+        // 6. Deploy AlphaGuardOracle
+        AlphaGuardOracle oracle = new AlphaGuardOracle(deployer);
+        console.log("6. AlphaGuardOracle deployed:", address(oracle));
+
+        // 7. Deploy AlphaGuard with real USDC
+        AlphaGuard alphaGuard = new AlphaGuard(
+            BASE_USDC,
+            address(oracle),
+            200  // 2% fee
+        );
+        console.log("7. AlphaGuard deployed:", address(alphaGuard));
+
+        // ============================================
+        // Configure contracts
+        // ============================================
+        
+        // Configure Oracle
+        oracle.setAlphaGuard(address(alphaGuard));
+        
+        // Configure CrossChainVerifier - add supported chains
+        verifier.configureChain(1, "Ethereum", true, 12);
+        verifier.configureChain(8453, "Base", true, 2);
+        verifier.configureChain(56, "BNB Chain", true, 15);
+        verifier.configureChain(137, "Polygon", true, 128);
+        verifier.configureChain(42161, "Arbitrum", true, 1);
+        
+        // Grant roles (update to multisig addresses for production)
+        core.grantRole(core.POINTS_MANAGER_ROLE(), deployer);
+        reputation.grantRole(reputation.VERIFIER_ROLE(), deployer);
+        verifier.grantRole(verifier.RELAYER_ROLE(), deployer);
+
+        vm.stopBroadcast();
+
+        // ============================================
+        // Output Summary
+        // ============================================
+        console.log("\n========================================");
+        console.log("=== BASE MAINNET DEPLOYMENT COMPLETE ===");
+        console.log("========================================");
+        console.log("\nCore Contracts:");
+        console.log("  AlphaToken:        ", address(alphaToken));
+        console.log("  AlphaNestCore:     ", address(core));
+        console.log("  ReputationRegistry:", address(reputation));
+        console.log("  CrossChainVerifier:", address(verifier));
+        console.log("  TokenFactory:      ", address(factory));
+        console.log("\nInsurance Contracts:");
+        console.log("  AlphaGuard:        ", address(alphaGuard));
+        console.log("  AlphaGuardOracle:  ", address(oracle));
+        console.log("\nExternal Tokens:");
+        console.log("  USDC (Base):       ", BASE_USDC);
+        console.log("\n========================================");
+        console.log("IMPORTANT: Update pool addresses to multisig!");
+        console.log("========================================");
+    }
+}
+
 // Mock USDC for testnet
 contract MockUSDC {
     string public name = "USD Coin";
