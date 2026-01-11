@@ -31,15 +31,21 @@ export function useWebSocket({
   onConnect,
   onDisconnect,
   onError,
-  reconnectInterval = 3000,
-  maxReconnectAttempts = 5,
+  reconnectInterval = 5000,
+  maxReconnectAttempts = 2, // 减少重试次数
 }: UseWebSocketOptions): UseWebSocketReturn {
   const wsRef = useRef<WebSocket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const reconnectAttemptsRef = useRef(0);
   const subscribedChannelsRef = useRef<Set<string>>(new Set());
+  const [isEnabled, setIsEnabled] = useState(true); // 用于禁用 WebSocket
 
   const connect = useCallback(() => {
+    // 如果已禁用或已达最大重试次数，不再尝试连接
+    if (!isEnabled || reconnectAttemptsRef.current >= maxReconnectAttempts) {
+      return;
+    }
+
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
 
     try {
@@ -60,15 +66,24 @@ export function useWebSocket({
         setIsConnected(false);
         onDisconnect?.();
 
-        // Attempt reconnect
+        // Attempt reconnect with backoff
         if (reconnectAttemptsRef.current < maxReconnectAttempts) {
           reconnectAttemptsRef.current++;
-          setTimeout(connect, reconnectInterval);
+          const backoff = reconnectInterval * reconnectAttemptsRef.current;
+          setTimeout(connect, backoff);
+        } else {
+          // 静默禁用 WebSocket，不再尝试
+          setIsEnabled(false);
         }
       };
 
-      wsRef.current.onerror = (error) => {
-        onError?.(error);
+      wsRef.current.onerror = () => {
+        // 静默处理错误，不打印到控制台
+        // 增加重试计数
+        reconnectAttemptsRef.current++;
+        if (reconnectAttemptsRef.current >= maxReconnectAttempts) {
+          setIsEnabled(false);
+        }
       };
 
       wsRef.current.onmessage = (event) => {
@@ -76,13 +91,14 @@ export function useWebSocket({
           const message = JSON.parse(event.data) as WebSocketMessage;
           onMessage?.(message);
         } catch {
-          console.error('Failed to parse WebSocket message:', event.data);
+          // 静默忽略解析错误
         }
       };
-    } catch (error) {
-      console.error('WebSocket connection error:', error);
+    } catch {
+      // 静默处理连接错误
+      setIsEnabled(false);
     }
-  }, [url, onMessage, onConnect, onDisconnect, onError, reconnectInterval, maxReconnectAttempts]);
+  }, [url, onMessage, onConnect, onDisconnect, onError, reconnectInterval, maxReconnectAttempts, isEnabled]);
 
   const subscribe = useCallback((channel: string) => {
     subscribedChannelsRef.current.add(channel);
