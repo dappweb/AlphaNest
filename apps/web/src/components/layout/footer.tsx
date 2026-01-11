@@ -51,10 +51,10 @@ const footerLinks = [
   {
     title: 'Resources',
     links: [
-      { name: 'Documentation', href: 'https://docs.alphanest.dev', external: true },
-      { name: 'API', href: 'https://api.alphanest.dev', external: true },
-      { name: 'Whitepaper', href: '/whitepaper.pdf', external: true },
-      { name: 'Brand Kit', href: '/brand', external: true },
+      { name: 'Documentation', href: 'https://alphanest-web-9w8.pages.dev', external: true },
+      { name: 'API', href: 'https://alphanest-api.suiyiwan1.workers.dev', external: true },
+      { name: 'Whitepaper', href: '/AlphaNest-Whitepaper.pdf', external: true },
+      { name: 'Brand Kit', href: 'https://github.com/alphanest', external: true },
     ],
   },
   {
