@@ -30,7 +30,7 @@ compatibility_flags = ["nodejs_compat"]
 [[d1_databases]]
 binding = "DB"
 database_name = "alphanest-db"
-database_id = "6b0be3c5-138b-4f9a-89c5-09f6927b007e"
+database_id = "6408074b-1989-40a9-a748-4124ffd297de"
 
 # ============================================
 # KV 命名空间绑定
@@ -38,17 +38,17 @@ database_id = "6b0be3c5-138b-4f9a-89c5-09f6927b007e"
 # 缓存 (价格、Dev评分等)
 [[kv_namespaces]]
 binding = "CACHE"
-id = "ad4a9d257fbc4c18871fa5b5afe78bd9"
+id = "3ae92e8c9c74467695857507745d4f64"
 
 # 会话存储
 [[kv_namespaces]]
 binding = "SESSIONS"
-id = "d4423f5c67b0419a8e2a1c6342400faf"
+id = "55bd89b63daf4bacaf4dd6bf22720ca4"
 
 # Rate Limiting 计数器
 [[kv_namespaces]]
 binding = "RATE_LIMIT"
-id = "91cd952407aa4aadb9c6a8c807bbc224"
+id = "59b47b256b47499995ea884c40395058"
 
 # ============================================
 # R2 存储桶绑定 (待创建后启用)
