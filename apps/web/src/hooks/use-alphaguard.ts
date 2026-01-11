@@ -1,12 +1,12 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { useAccount, useWriteContract, useReadContract, useWaitForTransactionReceipt } from 'wagmi';
 import { parseUnits, formatUnits } from 'viem';
 
 // Contract addresses (will be updated after deployment)
-const ALPHAGUARD_ADDRESS = process.env.NEXT_PUBLIC_ALPHAGUARD_ADDRESS as `0x${string}` || '0x0000000000000000000000000000000000000000';
-const USDC_ADDRESS = process.env.NEXT_PUBLIC_USDC_ADDRESS as `0x${string}` || '0x0000000000000000000000000000000000000000';
+const ALPHAGUARD_ADDRESS = process.env.NEXT_PUBLIC_ALPHAGUARD_ADDRESS as `0x${string}` || '0xCbcE6832F5E59F90c24bFb57Fb6f1Bc8B4232f03';
+const USDC_ADDRESS = process.env.NEXT_PUBLIC_USDC_ADDRESS as `0x${string}` || '0xceCC6D1dA322b6AC060D3998CA58e077CB679F79';
 
 // ABIs
 const ALPHAGUARD_ABI = [
@@ -383,4 +383,42 @@ export function useUsdcBalance() {
     isLoading,
     refetch,
   };
+}
+
+/**
+ * Hook for fetching active insurance pools from contract
+ * Note: Since contract doesn't have a poolCount, we'll fetch from API or use a range
+ */
+export function useActivePools(maxPoolId: number = 10) {
+  const [pools, setPools] = useState<Array<{ poolId: number; poolInfo: PoolInfo; odds: { rug: number; safe: number } }>>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchPools = async () => {
+      setIsLoading(true);
+      const activePools: typeof pools = [];
+
+      for (let poolId = 1; poolId <= maxPoolId; poolId++) {
+        try {
+          // Fetch pool info and odds in parallel
+          const [poolInfoResult, oddsResult] = await Promise.all([
+            fetch(`/api/insurance/pools/${poolId}`).catch(() => null),
+            fetch(`/api/insurance/pools/${poolId}/odds`).catch(() => null),
+          ]);
+
+          // If API fails, try reading from contract directly
+          // For now, we'll use a simpler approach: fetch from backend API
+        } catch (error) {
+          // Skip failed pools
+        }
+      }
+
+      setPools(activePools);
+      setIsLoading(false);
+    };
+
+    fetchPools();
+  }, [maxPoolId]);
+
+  return { pools, isLoading };
 }

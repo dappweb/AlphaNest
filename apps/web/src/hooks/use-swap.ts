@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi';
+import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadContract, useSendTransaction } from 'wagmi';
 import { parseUnits, formatUnits } from 'viem';
 import { getBestQuote, get0xPrice, type SwapParams, type SwapQuote } from '@/lib/dex-aggregator';
 
@@ -80,7 +80,7 @@ export function useSwap(chainId: number) {
   });
 
   const { writeContract: approve, data: approveHash } = useWriteContract();
-  const { writeContract: swap, data: swapHash } = useWriteContract();
+  const { sendTransaction, data: swapHash } = useSendTransaction();
 
   const { isLoading: isApproving, isSuccess: isApproveSuccess } = useWaitForTransactionReceipt({
     hash: approveHash,
@@ -232,25 +232,24 @@ export function useSwap(chainId: number) {
     });
   }, [state.sellToken, state.sellAmount, state.quote, approve]);
 
-  // Execute swap - placeholder for actual implementation
-  // Note: Raw transaction execution requires useSendTransaction from wagmi
+  // Execute swap using the quote data
   const executeSwap = useCallback(async () => {
     if (!state.quote || !address) return;
     
-    // For production, use useSendTransaction hook:
-    // const { sendTransaction } = useSendTransaction()
-    // sendTransaction({ to: state.quote.to, data: state.quote.data, value: state.quote.value })
-    
-    console.log('Swap execution:', {
-      to: state.quote.to,
-      data: state.quote.data,
-      value: state.quote.value,
-    });
-    
-    // Trigger a placeholder transaction for demo
-    // In production, integrate with useSendTransaction
-    alert('Swap ready! Connect to mainnet to execute.');
-  }, [state.quote, address]);
+    try {
+      sendTransaction({
+        to: state.quote.to as `0x${string}`,
+        data: state.quote.data as `0x${string}`,
+        value: BigInt(state.quote.value || '0'),
+      });
+    } catch (error) {
+      console.error('Swap execution failed:', error);
+      setState((prev) => ({
+        ...prev,
+        error: 'Failed to execute swap',
+      }));
+    }
+  }, [state.quote, address, sendTransaction]);
 
   // Refetch allowance after approval
   useEffect(() => {

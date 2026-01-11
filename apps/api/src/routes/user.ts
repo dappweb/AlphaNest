@@ -7,6 +7,7 @@ import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { nanoid } from 'nanoid';
 import { generateToken } from '../middleware/auth';
+import { verifySignature } from '../utils/signature';
 
 const app = new Hono();
 
@@ -38,11 +39,14 @@ const verifyHoldingSchema = z.object({
 app.post('/connect', zValidator('json', connectSchema), async (c) => {
   const { wallet_address, chain, signature, message } = c.req.valid('json');
 
-  // TODO: 验证签名
-  // const isValid = await verifySignature(wallet_address, signature, message, chain);
-  // if (!isValid) {
-  //   return c.json({ success: false, error: { code: 'INVALID_SIGNATURE', message: 'Invalid signature' } }, 401);
-  // }
+  // 验证签名
+  const isValid = await verifySignature(wallet_address, signature, message, chain);
+  if (!isValid) {
+    return c.json({ 
+      success: false, 
+      error: { code: 'INVALID_SIGNATURE', message: 'Invalid signature' } 
+    }, 401);
+  }
 
   // 查找或创建用户
   let user = await c.env.DB.prepare(
@@ -224,6 +228,192 @@ app.get('/points/history', async (c) => {
       total: (total as any)?.count || 0,
     },
   });
+});
+
+/**
+ * GET /account/holdings
+ * 获取用户持仓
+ */
+app.get('/account/holdings', async (c) => {
+  const address = c.req.query('address');
+  const chainId = parseInt(c.req.query('chainId') || '1');
+
+  if (!address) {
+    return c.json({
+      success: false,
+      error: { code: 'INVALID_PARAMS', message: 'Missing address parameter' },
+    }, 400);
+  }
+
+  // This endpoint can be used to get cached holdings
+  // Real-time balances should use /blockchain/balance
+  return c.json({
+    success: true,
+    data: [],
+    message: 'Use /blockchain/balance for real-time balances',
+  });
+});
+
+/**
+ * GET /account/transactions
+ * 获取用户交易历史
+ */
+app.get('/account/transactions', async (c) => {
+  const address = c.req.query('address');
+  const chainId = parseInt(c.req.query('chainId') || '1');
+  const limit = Math.min(parseInt(c.req.query('limit') || '20'), 100);
+  const page = parseInt(c.req.query('page') || '1');
+
+  if (!address) {
+    return c.json({
+      success: false,
+      error: { code: 'INVALID_PARAMS', message: 'Missing address parameter' },
+    }, 400);
+  }
+
+  try {
+    // Check cache first
+    const cacheKey = `tx_history:${chainId}:${address}:${page}`;
+    const cached = await c.env.CACHE.get(cacheKey, { type: 'json' });
+    
+    if (cached) {
+      return c.json({ success: true, data: cached });
+    }
+
+    // Fetch from database (if we have stored transactions)
+    const storedTxs = await c.env.DB.prepare(`
+      SELECT * FROM transactions 
+      WHERE (from_address = ? OR to_address = ?) AND chain_id = ?
+      ORDER BY block_number DESC, created_at DESC
+      LIMIT ? OFFSET ?
+    `).bind(address, address, chainId, limit, (page - 1) * limit).all();
+
+    // If we have stored transactions, return them
+    if (storedTxs.results && storedTxs.results.length > 0) {
+      const txs = storedTxs.results.map((tx: any) => ({
+        hash: tx.tx_hash,
+        type: tx.type || 'send',
+        status: tx.status || 'confirmed',
+        timestamp: tx.created_at * 1000,
+        from: tx.from_address,
+        to: tx.to_address,
+        value: tx.value,
+        gasUsed: tx.gas_used,
+        blockNumber: tx.block_number,
+        tokenIn: tx.token_in ? JSON.parse(tx.token_in) : undefined,
+        tokenOut: tx.token_out ? JSON.parse(tx.token_out) : undefined,
+      }));
+
+      // Cache for 1 minute
+      await c.env.CACHE.put(cacheKey, JSON.stringify(txs), { expirationTtl: 60 });
+
+      return c.json({ success: true, data: txs });
+    }
+
+    // Fallback: Try to fetch from RPC (limited, as most RPCs don't provide full history)
+    // In production, use a service like Alchemy, Moralis, or The Graph
+    const transactions: any[] = [];
+
+    // Cache empty result for 5 minutes
+    await c.env.CACHE.put(cacheKey, JSON.stringify(transactions), { expirationTtl: 300 });
+
+    return c.json({
+      success: true,
+      data: transactions,
+      message: 'No transactions found. Consider using a blockchain indexer for full history.',
+    });
+  } catch (error) {
+    console.error('Transaction history error:', error);
+    return c.json({
+      success: false,
+      error: { code: 'TX_HISTORY_ERROR', message: 'Failed to fetch transaction history' },
+    }, 500);
+  }
+});
+
+/**
+ * GET /:address/stats
+ * 获取用户统计数据
+ */
+app.get('/:address/stats', async (c) => {
+  const address = c.req.param('address');
+
+  try {
+    // Find user by address
+    const user = await c.env.DB.prepare(
+      'SELECT id, created_at FROM users WHERE wallet_address = ?'
+    ).bind(address).first();
+
+    if (!user) {
+      return c.json({
+        success: true,
+        data: {
+          totalTrades: 0,
+          winRate: 0,
+          totalVolume: 0,
+          pointsBalance: 0,
+          insurancePolicies: 0,
+          memberSince: '',
+        },
+      });
+    }
+
+    // Get total trades
+    const tradesResult = await c.env.DB.prepare(`
+      SELECT COUNT(*) as count FROM trade_logs WHERE user_id = ?
+    `).bind((user as any).id).first();
+    const totalTrades = parseInt((tradesResult as any)?.count || '0');
+
+    // Get total volume
+    const volumeResult = await c.env.DB.prepare(`
+      SELECT SUM(CAST(amount AS REAL)) as total FROM trade_logs WHERE user_id = ?
+    `).bind((user as any).id).first();
+    const totalVolume = parseFloat((volumeResult as any)?.total || '0');
+
+    // Get points balance
+    const pointsResult = await c.env.DB.prepare(
+      'SELECT total_points FROM users WHERE id = ?'
+    ).bind((user as any).id).first();
+    const pointsBalance = parseInt((pointsResult as any)?.total_points || '0');
+
+    // Get active insurance policies
+    const policiesResult = await c.env.DB.prepare(`
+      SELECT COUNT(*) as count FROM insurance_policies 
+      WHERE user_id = ? AND status = 'active'
+    `).bind((user as any).id).first();
+    const insurancePolicies = parseInt((policiesResult as any)?.count || '0');
+
+    // Calculate win rate from trade history
+    const profitableTradesResult = await c.env.DB.prepare(`
+      SELECT COUNT(*) as count FROM trade_logs 
+      WHERE user_id = ? AND pnl > 0
+    `).bind((user as any).id).first();
+    const profitableTrades = parseInt((profitableTradesResult as any)?.count || '0');
+    const winRate = totalTrades > 0 ? (profitableTrades / totalTrades) * 100 : 0;
+
+    // Format member since date
+    const memberSince = (user as any).created_at
+      ? new Date((user as any).created_at).toISOString().split('T')[0]
+      : '';
+
+    return c.json({
+      success: true,
+      data: {
+        totalTrades,
+        winRate,
+        totalVolume,
+        pointsBalance,
+        insurancePolicies,
+        memberSince,
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching user stats:', error);
+    return c.json({
+      success: false,
+      error: { code: 'DB_ERROR', message: 'Failed to fetch user stats' },
+    }, 500);
+  }
 });
 
 export { app as userRoutes };

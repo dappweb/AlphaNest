@@ -98,7 +98,7 @@ const ALPHANEST_CORE_ABI = [
 ] as const;
 
 // Contract address from environment
-const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_ALPHANEST_CORE_ADDRESS as `0x${string}`;
+const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_ALPHANEST_CORE_ADDRESS as `0x${string}` || '0x0DE761C3A2e72BFa04B660395856ADc0A1252879';
 
 // ============================================
 // Types

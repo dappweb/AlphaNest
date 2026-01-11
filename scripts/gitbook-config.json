@@ -1,0 +1,55 @@
+{
+  "space": {
+    "title": "AlphaNest Documentation",
+    "description": "AlphaNest - 去中心化 Meme 代币交易和保险平台完整文档",
+    "visibility": "public"
+  },
+  "structure": {
+    "introduction": {
+      "title": "介绍",
+      "files": ["README.md"]
+    },
+    "setup": {
+      "title": "设置指南",
+      "files": ["SETUP_GUIDE.md"]
+    },
+    "deployment": {
+      "title": "部署",
+      "sections": {
+        "quick-start": {
+          "title": "快速启动",
+          "files": ["PRODUCTION_QUICK_START.md"]
+        },
+        "guide": {
+          "title": "部署指南",
+          "files": ["DEPLOYMENT_GUIDE.md"]
+        },
+        "production-checklist": {
+          "title": "生产检查清单",
+          "files": ["PRODUCTION_CHECKLIST.md"]
+        },
+        "feasibility-report": {
+          "title": "可行性报告",
+          "files": ["PRODUCTION_FEASIBILITY_REPORT.md"]
+        }
+      }
+    },
+    "development": {
+      "title": "开发",
+      "sections": {
+        "functional-availability": {
+          "title": "功能可用性",
+          "files": ["FUNCTIONAL_AVAILABILITY_REPORT.md"]
+        }
+      }
+    },
+    "api": {
+      "title": "API 文档",
+      "description": "API 端点文档"
+    },
+    "contracts": {
+      "title": "智能合约",
+      "description": "智能合约文档"
+    }
+  }
+}

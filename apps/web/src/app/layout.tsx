@@ -4,6 +4,7 @@ import './globals.css';
 import { Providers } from '@/components/providers';
 import { Header } from '@/components/layout/header';
 import { Sidebar } from '@/components/layout/sidebar';
+import { Footer } from '@/components/layout/footer';
 import { InstallPrompt, OfflineIndicator } from '@/components/pwa/install-prompt';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-geist-sans' });
@@ -111,6 +112,7 @@ export default function RootLayout({
             <div className="flex flex-1 flex-col">
               <Header />
               <main className="flex-1 overflow-auto p-6">{children}</main>
+              <Footer />
             </div>
           </div>
           <InstallPrompt />

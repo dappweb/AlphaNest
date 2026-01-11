@@ -1,58 +1,412 @@
 'use client';
-import { useState } from 'react';
+
+import { useState, useEffect } from 'react';
+import { useAccount } from 'wagmi';
+import { 
+  Save, 
+  Bell, 
+  Shield, 
+  Palette, 
+  Globe, 
+  Sliders,
+  CheckCircle,
+  AlertCircle
+} from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+
+interface Settings {
+  // Trading
+  slippage: string;
+  deadline: string;
+  expertMode: boolean;
+  autoApprove: boolean;
+  // Notifications
+  priceAlerts: boolean;
+  whaleAlerts: boolean;
+  newLaunches: boolean;
+  insuranceReminders: boolean;
+  emailNotifications: boolean;
+  telegramNotifications: boolean;
+  // Display
+  theme: 'dark' | 'light' | 'system';
+  language: 'en' | 'zh';
+  currency: 'USD' | 'EUR' | 'CNY';
+  // Privacy
+  hideBalance: boolean;
+  hideActivity: boolean;
+}
+
+const defaultSettings: Settings = {
+  slippage: '0.5',
+  deadline: '20',
+  expertMode: false,
+  autoApprove: false,
+  priceAlerts: true,
+  whaleAlerts: true,
+  newLaunches: true,
+  insuranceReminders: true,
+  emailNotifications: false,
+  telegramNotifications: false,
+  theme: 'dark',
+  language: 'en',
+  currency: 'USD',
+  hideBalance: false,
+  hideActivity: false,
+};
 
 export default function SettingsPage() {
-  const [slippage, setSlippage] = useState('0.5');
-  const [deadline, setDeadline] = useState('20');
-  
+  const { isConnected } = useAccount();
+  const [settings, setSettings] = useState<Settings>(defaultSettings);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
+
+  // Load settings from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem('alphanest-settings');
+    if (saved) {
+      try {
+        setSettings({ ...defaultSettings, ...JSON.parse(saved) });
+      } catch (e) {
+        console.error('Failed to parse settings:', e);
+      }
+    }
+  }, []);
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    setSaveStatus('idle');
+    
+    try {
+      // Save to localStorage
+      localStorage.setItem('alphanest-settings', JSON.stringify(settings));
+      
+      // In production, also sync to API
+      // await saveSettingsToAPI(settings);
+      
+      setSaveStatus('success');
+      setTimeout(() => setSaveStatus('idle'), 3000);
+    } catch (e) {
+      setSaveStatus('error');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const updateSetting = <K extends keyof Settings>(key: K, value: Settings[K]) => {
+    setSettings(prev => ({ ...prev, [key]: value }));
+  };
+
+  const Toggle = ({ 
+    checked, 
+    onChange, 
+    label, 
+    description 
+  }: { 
+    checked: boolean; 
+    onChange: (v: boolean) => void; 
+    label: string;
+    description?: string;
+  }) => (
+    <label className="flex items-center justify-between py-2">
+      <div>
+        <span className="text-sm font-medium">{label}</span>
+        {description && (
+          <p className="text-xs text-muted-foreground">{description}</p>
+        )}
+      </div>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        onClick={() => onChange(!checked)}
+        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+          checked ? 'bg-primary' : 'bg-muted'
+        }`}
+      >
+        <span
+          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+            checked ? 'translate-x-6' : 'translate-x-1'
+          }`}
+        />
+      </button>
+    </label>
+  );
+
   return (
-    <div className='space-y-6'>
-      <h1 className='text-3xl font-bold'>Settings</h1>
-      
-      <Card className='p-6'>
-        <h2 className='text-xl font-semibold mb-4'>Trading Settings</h2>
-        <div className='space-y-4'>
-          <div>
-            <label className='block text-sm mb-2'>Slippage Tolerance (%)</label>
-            <input 
-              type='number' 
-              value={slippage} 
-              onChange={(e) => setSlippage(e.target.value)} 
-              className='w-full p-2 border rounded bg-background'
+    <div className="space-y-6 max-w-3xl">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Settings</h1>
+          <p className="text-muted-foreground">
+            Manage your preferences and account settings
+          </p>
+        </div>
+        <Button onClick={handleSave} disabled={isSaving}>
+          {isSaving ? (
+            'Saving...'
+          ) : saveStatus === 'success' ? (
+            <>
+              <CheckCircle className="h-4 w-4 mr-2 text-success" />
+              Saved
+            </>
+          ) : saveStatus === 'error' ? (
+            <>
+              <AlertCircle className="h-4 w-4 mr-2 text-destructive" />
+              Error
+            </>
+          ) : (
+            <>
+              <Save className="h-4 w-4 mr-2" />
+              Save Changes
+            </>
+          )}
+        </Button>
+      </div>
+
+      {/* Trading Settings */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Sliders className="h-5 w-5 text-primary" />
+            Trading Settings
+          </CardTitle>
+          <CardDescription>
+            Configure default trading parameters
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="slippage">Slippage Tolerance (%)</Label>
+              <Input
+                id="slippage"
+                type="number"
+                value={settings.slippage}
+                onChange={(e) => updateSetting('slippage', e.target.value)}
+                step="0.1"
+                min="0.01"
+                max="50"
+              />
+              <p className="text-xs text-muted-foreground">
+                Recommended: 0.5% for stable pairs, 1-3% for volatile tokens
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="deadline">Transaction Deadline (minutes)</Label>
+              <Input
+                id="deadline"
+                type="number"
+                value={settings.deadline}
+                onChange={(e) => updateSetting('deadline', e.target.value)}
+                min="1"
+                max="60"
+              />
+            </div>
+          </div>
+
+          <div className="border-t pt-4 space-y-2">
+            <Toggle
+              checked={settings.expertMode}
+              onChange={(v) => updateSetting('expertMode', v)}
+              label="Expert Mode"
+              description="Disable warnings for high price impact trades"
+            />
+            <Toggle
+              checked={settings.autoApprove}
+              onChange={(v) => updateSetting('autoApprove', v)}
+              label="Auto Approve Tokens"
+              description="Automatically approve tokens for trading (use with caution)"
             />
           </div>
-          <div>
-            <label className='block text-sm mb-2'>Transaction Deadline (minutes)</label>
-            <input 
-              type='number' 
-              value={deadline} 
-              onChange={(e) => setDeadline(e.target.value)} 
-              className='w-full p-2 border rounded bg-background'
+        </CardContent>
+      </Card>
+
+      {/* Notification Settings */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Bell className="h-5 w-5 text-primary" />
+            Notifications
+          </CardTitle>
+          <CardDescription>
+            Choose what notifications you want to receive
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-muted-foreground">Alert Types</p>
+            <Toggle
+              checked={settings.priceAlerts}
+              onChange={(v) => updateSetting('priceAlerts', v)}
+              label="Price Alerts"
+              description="Get notified when tokens hit your target price"
+            />
+            <Toggle
+              checked={settings.whaleAlerts}
+              onChange={(v) => updateSetting('whaleAlerts', v)}
+              label="Whale Alerts"
+              description="Large transactions from tracked wallets"
+            />
+            <Toggle
+              checked={settings.newLaunches}
+              onChange={(v) => updateSetting('newLaunches', v)}
+              label="New Token Launches"
+              description="Notify when verified devs launch new tokens"
+            />
+            <Toggle
+              checked={settings.insuranceReminders}
+              onChange={(v) => updateSetting('insuranceReminders', v)}
+              label="Insurance Reminders"
+              description="Policy expiration and claim reminders"
             />
           </div>
-          <Button>Save Settings</Button>
-        </div>
+
+          <div className="border-t pt-4 space-y-2">
+            <p className="text-sm font-medium text-muted-foreground">Channels</p>
+            <Toggle
+              checked={settings.emailNotifications}
+              onChange={(v) => updateSetting('emailNotifications', v)}
+              label="Email Notifications"
+            />
+            <Toggle
+              checked={settings.telegramNotifications}
+              onChange={(v) => updateSetting('telegramNotifications', v)}
+              label="Telegram Notifications"
+            />
+          </div>
+        </CardContent>
       </Card>
-      
-      <Card className='p-6'>
-        <h2 className='text-xl font-semibold mb-4'>Notifications</h2>
-        <div className='space-y-3'>
-          <label className='flex items-center gap-2'>
-            <input type='checkbox' defaultChecked />
-            <span>Price Alerts</span>
-          </label>
-          <label className='flex items-center gap-2'>
-            <input type='checkbox' defaultChecked />
-            <span>New Token Launches</span>
-          </label>
-          <label className='flex items-center gap-2'>
-            <input type='checkbox' />
-            <span>Whale Activity</span>
-          </label>
-        </div>
+
+      {/* Display Settings */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Palette className="h-5 w-5 text-primary" />
+            Display
+          </CardTitle>
+          <CardDescription>
+            Customize how information is displayed
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label>Theme</Label>
+              <div className="flex gap-2">
+                {(['dark', 'light', 'system'] as const).map((theme) => (
+                  <Button
+                    key={theme}
+                    variant={settings.theme === theme ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => updateSetting('theme', theme)}
+                    className="flex-1"
+                  >
+                    {theme.charAt(0).toUpperCase() + theme.slice(1)}
+                  </Button>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Language</Label>
+              <div className="flex gap-2">
+                {([
+                  { value: 'en', label: 'English' },
+                  { value: 'zh', label: '中文' },
+                ] as const).map((lang) => (
+                  <Button
+                    key={lang.value}
+                    variant={settings.language === lang.value ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => updateSetting('language', lang.value)}
+                    className="flex-1"
+                  >
+                    {lang.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Currency</Label>
+              <div className="flex gap-2">
+                {(['USD', 'EUR', 'CNY'] as const).map((currency) => (
+                  <Button
+                    key={currency}
+                    variant={settings.currency === currency ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => updateSetting('currency', currency)}
+                    className="flex-1"
+                  >
+                    {currency}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </CardContent>
       </Card>
+
+      {/* Privacy Settings */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Shield className="h-5 w-5 text-primary" />
+            Privacy
+          </CardTitle>
+          <CardDescription>
+            Control your privacy settings
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <Toggle
+            checked={settings.hideBalance}
+            onChange={(v) => updateSetting('hideBalance', v)}
+            label="Hide Portfolio Balance"
+            description="Show asterisks instead of actual balance values"
+          />
+          <Toggle
+            checked={settings.hideActivity}
+            onChange={(v) => updateSetting('hideActivity', v)}
+            label="Hide Activity from Leaderboards"
+            description="Your trades won't appear on public leaderboards"
+          />
+        </CardContent>
+      </Card>
+
+      {/* Danger Zone */}
+      {isConnected && (
+        <Card className="border-destructive/50">
+          <CardHeader>
+            <CardTitle className="text-destructive">Danger Zone</CardTitle>
+            <CardDescription>
+              Irreversible actions - proceed with caution
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between p-4 rounded-lg bg-destructive/10">
+              <div>
+                <p className="font-medium">Reset All Settings</p>
+                <p className="text-sm text-muted-foreground">
+                  Reset all settings to their default values
+                </p>
+              </div>
+              <Button 
+                variant="destructive" 
+                size="sm"
+                onClick={() => {
+                  setSettings(defaultSettings);
+                  localStorage.removeItem('alphanest-settings');
+                }}
+              >
+                Reset
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

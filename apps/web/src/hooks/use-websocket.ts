@@ -123,7 +123,7 @@ export function useTokenPrice(tokenAddress: string) {
   const [price, setPrice] = useState<number | null>(null);
   const [priceChange24h, setPriceChange24h] = useState<number | null>(null);
 
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787';
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://alphanest-api.suiyiwan1.workers.dev';
   const wsUrl = apiUrl.replace('http', 'ws') + '/ws';
 
   const { isConnected, subscribe, unsubscribe } = useWebSocket({
@@ -151,7 +151,7 @@ export function useTokenPrice(tokenAddress: string) {
 export function useWhaleAlerts(tokenAddress: string) {
   const [alerts, setAlerts] = useState<WhaleAlert[]>([]);
 
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787';
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://alphanest-api.suiyiwan1.workers.dev';
   const wsUrl = apiUrl.replace('http', 'ws') + '/ws';
 
   const { isConnected, subscribe, unsubscribe } = useWebSocket({
@@ -187,7 +187,7 @@ interface WhaleAlert {
 export function useDevActivity(devAddress: string) {
   const [activities, setActivities] = useState<DevActivity[]>([]);
 
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787';
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://alphanest-api.suiyiwan1.workers.dev';
   const wsUrl = apiUrl.replace('http', 'ws') + '/ws';
 
   const { isConnected, subscribe, unsubscribe } = useWebSocket({

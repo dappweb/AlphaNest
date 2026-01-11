@@ -20,6 +20,13 @@ import { tradeRoutes } from './routes/trade';
 import { insuranceRoutes } from './routes/insurance';
 import { tokenRoutes } from './routes/tokens';
 import { webhookRoutes } from './routes/webhooks';
+import { blockchainRoutes } from './routes/blockchain';
+import { traderRoutes } from './routes/traders';
+import { analyticsRoutes } from './routes/analytics';
+import { referralRoutes } from './routes/referral';
+import { notificationRoutes } from './routes/notifications';
+import { botRoutes } from './routes/bots';
+import { memeRoutes } from './routes/meme';
 
 // 中间件
 import { authMiddleware } from './middleware/auth';
@@ -61,6 +68,7 @@ export interface Env {
   BITQUERY_API_KEY: string;
   COVALENT_API_KEY: string;
   DEXSCREENER_API_KEY: string;
+  BIRDEYE_API_KEY: string;
   
   // 安全
   JWT_SECRET: string;
@@ -169,13 +177,24 @@ const api = new Hono<{ Bindings: Env }>();
 api.route('/user', userRoutes);
 api.route('/dev', devRoutes);
 api.route('/tokens', tokenRoutes);
+api.route('/blockchain', blockchainRoutes);
+api.route('/traders', traderRoutes);
+api.route('/analytics', analyticsRoutes);
+api.route('/meme', memeRoutes);
 
 // 需要认证的路由
 api.use('/trade/*', authMiddleware());
 api.use('/insurance/*', authMiddleware());
+api.use('/copy-trades/*', authMiddleware());
+api.use('/referral/*', authMiddleware());
+api.use('/notifications/*', authMiddleware());
+api.use('/bots/*', authMiddleware());
 
 api.route('/trade', tradeRoutes);
 api.route('/insurance', insuranceRoutes);
+api.route('/referral', referralRoutes);
+api.route('/notifications', notificationRoutes);
+api.route('/bots', botRoutes);
 
 // Webhook 路由 (需要签名验证)
 api.route('/webhooks', webhookRoutes);

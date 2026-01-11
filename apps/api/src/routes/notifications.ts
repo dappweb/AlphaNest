@@ -1,254 +1,192 @@
 /**
- * 通知 API 路由
+ * Notifications 通知系统路由
  */
 
 import { Hono } from 'hono';
-import { z } from 'zod';
-import { zValidator } from '@hono/zod-validator';
 import { nanoid } from 'nanoid';
 
-interface Env {
-  DB: D1Database;
-  SESSIONS: KVNamespace;
-  TELEGRAM_BOT_TOKEN?: string;
-}
+const app = new Hono();
 
-const notifications = new Hono<{ Bindings: Env }>();
-
-// 获取用户通知列表
-notifications.get('/', async (c) => {
-  const authHeader = c.req.header('Authorization');
-  if (!authHeader?.startsWith('Bearer ')) {
-    return c.json({ success: false, error: 'Unauthorized' }, 401);
+/**
+ * GET /
+ * 获取用户通知列表
+ */
+app.get('/', async (c) => {
+  const user = c.get('user');
+  if (!user) {
+    return c.json({
+      success: false,
+      error: { code: 'UNAUTHORIZED', message: 'Authentication required' },
+    }, 401);
   }
 
-  const token = authHeader.slice(7);
-  const session = await c.env.SESSIONS.get(`session:${token}`);
-  if (!session) {
-    return c.json({ success: false, error: 'Invalid token' }, 401);
-  }
-
-  const { userId } = JSON.parse(session);
+  const page = parseInt(c.req.query('page') || '1');
+  const limit = Math.min(parseInt(c.req.query('limit') || '20'), 100);
+  const offset = (page - 1) * limit;
+  const unreadOnly = c.req.query('unread') === 'true';
 
   try {
-    const result = await c.env.DB.prepare(`
-      SELECT id, type, title, message, read, data, created_at
-      FROM notifications
+    let query = `
+      SELECT * FROM notifications
       WHERE user_id = ?
-      ORDER BY created_at DESC
-      LIMIT 50
-    `).bind(userId).all();
+    `;
+
+    if (unreadOnly) {
+      query += ` AND read = false`;
+    }
+
+    query += ` ORDER BY created_at DESC LIMIT ? OFFSET ?`;
+
+    const notifications = await c.env.DB.prepare(query)
+      .bind(user.id, limit, offset).all();
 
     return c.json({
       success: true,
-      data: result.results?.map((n: any) => ({
+      data: (notifications.results || []).map((n: any) => ({
         id: n.id,
         type: n.type,
+        priority: n.priority,
         title: n.title,
         message: n.message,
-        read: n.read === 1,
-        data: n.data ? JSON.parse(n.data) : null,
-        createdAt: n.created_at,
+        timestamp: new Date(n.created_at).toLocaleString(),
+        read: Boolean(n.read),
+        actionUrl: n.action_url,
+        actionLabel: n.action_label,
       })),
+      meta: {
+        page,
+        limit,
+      },
     });
   } catch (error) {
-    console.error('Failed to fetch notifications:', error);
-    return c.json({ success: false, error: 'Failed to fetch notifications' }, 500);
+    console.error('Error fetching notifications:', error);
+    return c.json({
+      success: false,
+      error: { code: 'DB_ERROR', message: 'Failed to fetch notifications' },
+    }, 500);
   }
 });
 
-// 标记通知为已读
-notifications.post('/:id/read', async (c) => {
-  const authHeader = c.req.header('Authorization');
-  if (!authHeader?.startsWith('Bearer ')) {
-    return c.json({ success: false, error: 'Unauthorized' }, 401);
+/**
+ * PUT /:id/read
+ * 标记通知为已读
+ */
+app.put('/:id/read', async (c) => {
+  const user = c.get('user');
+  if (!user) {
+    return c.json({
+      success: false,
+      error: { code: 'UNAUTHORIZED', message: 'Authentication required' },
+    }, 401);
   }
 
-  const token = authHeader.slice(7);
-  const session = await c.env.SESSIONS.get(`session:${token}`);
-  if (!session) {
-    return c.json({ success: false, error: 'Invalid token' }, 401);
-  }
-
-  const { userId } = JSON.parse(session);
   const notificationId = c.req.param('id');
 
   try {
     await c.env.DB.prepare(`
-      UPDATE notifications SET read = 1 WHERE id = ? AND user_id = ?
-    `).bind(notificationId, userId).run();
+      UPDATE notifications 
+      SET read = true, updated_at = ?
+      WHERE id = ? AND user_id = ?
+    `).bind(Date.now(), notificationId, user.id).run();
 
     return c.json({ success: true });
   } catch (error) {
-    console.error('Failed to mark notification as read:', error);
-    return c.json({ success: false, error: 'Failed to update notification' }, 500);
+    console.error('Error marking notification as read:', error);
+    return c.json({
+      success: false,
+      error: { code: 'DB_ERROR', message: 'Failed to update notification' },
+    }, 500);
   }
 });
 
-// 标记所有通知为已读
-notifications.post('/read-all', async (c) => {
-  const authHeader = c.req.header('Authorization');
-  if (!authHeader?.startsWith('Bearer ')) {
-    return c.json({ success: false, error: 'Unauthorized' }, 401);
+/**
+ * PUT /read-all
+ * 标记所有通知为已读
+ */
+app.put('/read-all', async (c) => {
+  const user = c.get('user');
+  if (!user) {
+    return c.json({
+      success: false,
+      error: { code: 'UNAUTHORIZED', message: 'Authentication required' },
+    }, 401);
   }
-
-  const token = authHeader.slice(7);
-  const session = await c.env.SESSIONS.get(`session:${token}`);
-  if (!session) {
-    return c.json({ success: false, error: 'Invalid token' }, 401);
-  }
-
-  const { userId } = JSON.parse(session);
 
   try {
     await c.env.DB.prepare(`
-      UPDATE notifications SET read = 1 WHERE user_id = ? AND read = 0
-    `).bind(userId).run();
+      UPDATE notifications 
+      SET read = true, updated_at = ?
+      WHERE user_id = ? AND read = false
+    `).bind(Date.now(), user.id).run();
 
     return c.json({ success: true });
   } catch (error) {
-    console.error('Failed to mark all notifications as read:', error);
-    return c.json({ success: false, error: 'Failed to update notifications' }, 500);
-  }
-});
-
-// 获取未读通知数量
-notifications.get('/unread-count', async (c) => {
-  const authHeader = c.req.header('Authorization');
-  if (!authHeader?.startsWith('Bearer ')) {
-    return c.json({ success: false, error: 'Unauthorized' }, 401);
-  }
-
-  const token = authHeader.slice(7);
-  const session = await c.env.SESSIONS.get(`session:${token}`);
-  if (!session) {
-    return c.json({ success: false, error: 'Invalid token' }, 401);
-  }
-
-  const { userId } = JSON.parse(session);
-
-  try {
-    const result = await c.env.DB.prepare(`
-      SELECT COUNT(*) as count FROM notifications WHERE user_id = ? AND read = 0
-    `).bind(userId).first();
-
+    console.error('Error marking all as read:', error);
     return c.json({
-      success: true,
-      data: { count: (result as any)?.count || 0 },
-    });
-  } catch (error) {
-    console.error('Failed to get unread count:', error);
-    return c.json({ success: false, error: 'Failed to get count' }, 500);
+      success: false,
+      error: { code: 'DB_ERROR', message: 'Failed to update notifications' },
+    }, 500);
   }
 });
 
-// 更新通知偏好设置
-const preferencesSchema = z.object({
-  whaleAlerts: z.boolean().optional(),
-  devLaunches: z.boolean().optional(),
-  priceAlerts: z.boolean().optional(),
-  insuranceUpdates: z.boolean().optional(),
-  telegramEnabled: z.boolean().optional(),
-  telegramChatId: z.string().optional(),
-  emailEnabled: z.boolean().optional(),
-  email: z.string().email().optional(),
-});
-
-notifications.put('/preferences', zValidator('json', preferencesSchema), async (c) => {
-  const authHeader = c.req.header('Authorization');
-  if (!authHeader?.startsWith('Bearer ')) {
-    return c.json({ success: false, error: 'Unauthorized' }, 401);
+/**
+ * DELETE /:id
+ * 删除通知
+ */
+app.delete('/:id', async (c) => {
+  const user = c.get('user');
+  if (!user) {
+    return c.json({
+      success: false,
+      error: { code: 'UNAUTHORIZED', message: 'Authentication required' },
+    }, 401);
   }
 
-  const token = authHeader.slice(7);
-  const session = await c.env.SESSIONS.get(`session:${token}`);
-  if (!session) {
-    return c.json({ success: false, error: 'Invalid token' }, 401);
-  }
-
-  const { userId } = JSON.parse(session);
-  const preferences = c.req.valid('json');
+  const notificationId = c.req.param('id');
 
   try {
-    // Store preferences in KV for quick access
-    await c.env.SESSIONS.put(
-      `prefs:${userId}`,
-      JSON.stringify(preferences),
-      { expirationTtl: 60 * 60 * 24 * 365 } // 1 year
-    );
+    await c.env.DB.prepare(`
+      DELETE FROM notifications 
+      WHERE id = ? AND user_id = ?
+    `).bind(notificationId, user.id).run();
 
     return c.json({ success: true });
   } catch (error) {
-    console.error('Failed to update preferences:', error);
-    return c.json({ success: false, error: 'Failed to update preferences' }, 500);
+    console.error('Error deleting notification:', error);
+    return c.json({
+      success: false,
+      error: { code: 'DB_ERROR', message: 'Failed to delete notification' },
+    }, 500);
   }
 });
 
-// 获取通知偏好设置
-notifications.get('/preferences', async (c) => {
-  const authHeader = c.req.header('Authorization');
-  if (!authHeader?.startsWith('Bearer ')) {
-    return c.json({ success: false, error: 'Unauthorized' }, 401);
+/**
+ * DELETE /
+ * 清空所有通知
+ */
+app.delete('/', async (c) => {
+  const user = c.get('user');
+  if (!user) {
+    return c.json({
+      success: false,
+      error: { code: 'UNAUTHORIZED', message: 'Authentication required' },
+    }, 401);
   }
-
-  const token = authHeader.slice(7);
-  const session = await c.env.SESSIONS.get(`session:${token}`);
-  if (!session) {
-    return c.json({ success: false, error: 'Invalid token' }, 401);
-  }
-
-  const { userId } = JSON.parse(session);
 
   try {
-    const prefs = await c.env.SESSIONS.get(`prefs:${userId}`);
-    
-    const defaultPrefs = {
-      whaleAlerts: true,
-      devLaunches: true,
-      priceAlerts: true,
-      insuranceUpdates: true,
-      telegramEnabled: false,
-      telegramChatId: null,
-      emailEnabled: false,
-      email: null,
-    };
+    await c.env.DB.prepare(`
+      DELETE FROM notifications 
+      WHERE user_id = ?
+    `).bind(user.id).run();
 
-    return c.json({
-      success: true,
-      data: prefs ? { ...defaultPrefs, ...JSON.parse(prefs) } : defaultPrefs,
-    });
+    return c.json({ success: true });
   } catch (error) {
-    console.error('Failed to get preferences:', error);
-    return c.json({ success: false, error: 'Failed to get preferences' }, 500);
+    console.error('Error clearing notifications:', error);
+    return c.json({
+      success: false,
+      error: { code: 'DB_ERROR', message: 'Failed to clear notifications' },
+    }, 500);
   }
 });
 
-// 内部方法: 创建通知
-export async function createNotification(
-  db: D1Database,
-  data: {
-    userId: string;
-    type: string;
-    title: string;
-    message: string;
-    data?: Record<string, unknown>;
-  }
-): Promise<void> {
-  const id = nanoid();
-  const now = Math.floor(Date.now() / 1000);
-
-  await db.prepare(`
-    INSERT INTO notifications (id, user_id, type, title, message, data, read, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, 0, ?)
-  `).bind(
-    id,
-    data.userId,
-    data.type,
-    data.title,
-    data.message,
-    data.data ? JSON.stringify(data.data) : null,
-    now
-  ).run();
-}
-
-export default notifications;
+export { app as notificationRoutes };

@@ -254,7 +254,7 @@ export const COMMON_TOKENS: Record<number, Record<string, string>> = {
   11155111: {
     ETH: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE',
     WETH: '0x7b79995e5f793A07Bc00c21412e50Ecae098E7f9',
-    USDC: '0xdaA1EEEEE49b6c9Fb6ec2D990D07f1CD6281bebe', // Mock USDC
+    USDC: '0xceCC6D1dA322b6AC060D3998CA58e077CB679F79', // Deployed MockUSDC
   },
 };
 

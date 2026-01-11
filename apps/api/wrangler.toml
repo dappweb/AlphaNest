@@ -89,7 +89,7 @@ class_name = "WebSocketServer"
 
 [[migrations]]
 tag = "v1"
-new_classes = ["WebSocketServer"]
+new_sqlite_classes = ["WebSocketServer"]
 
 # ============================================
 # 环境变量 (非敏感)
@@ -98,7 +98,7 @@ new_classes = ["WebSocketServer"]
 ENVIRONMENT = "production"
 LOG_LEVEL = "info"
 API_VERSION = "v1"
-CORS_ORIGIN = "https://alphanest.dev"
+CORS_ORIGIN = "*"
 
 # 链 ID
 BASE_CHAIN_ID = "8453"

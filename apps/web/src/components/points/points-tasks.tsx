@@ -1,9 +1,14 @@
 'use client';
 
-import { Check, Clock, ArrowRight, Wallet, RefreshCw, Shield, Users, Share2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Check, Clock, ArrowRight, Wallet, RefreshCw, Shield, Users, Share2, Loader2 } from 'lucide-react';
+import { useAccount } from 'wagmi';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { usePointsInfo } from '@/hooks/use-alphanest-core';
+import { useUserPolicies } from '@/hooks/use-alphaguard';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://alphanest-api.suiyiwan1.workers.dev';
 
 interface Task {
   id: string;
@@ -85,9 +90,94 @@ const TASKS: Task[] = [
 ];
 
 export function PointsTasks() {
-  const dailyTasks = TASKS.filter((t) => t.type === 'daily');
-  const weeklyTasks = TASKS.filter((t) => t.type === 'weekly');
-  const oneTimeTasks = TASKS.filter((t) => t.type === 'one-time');
+  const { isConnected, address } = useAccount();
+  const { pointsInfo } = usePointsInfo();
+  const { policyIds } = useUserPolicies();
+  const [tasks, setTasks] = useState<Task[]>(TASKS);
+  const [completingTask, setCompletingTask] = useState<string | null>(null);
+
+  // Update task statuses based on user state
+  useEffect(() => {
+    setTasks((prevTasks) =>
+      prevTasks.map((task) => {
+        if (task.id === 'connect-wallet') {
+          return { ...task, status: isConnected ? 'completed' : 'available' };
+        }
+        if (task.id === 'buy-insurance' && policyIds && policyIds.length > 0) {
+          return { ...task, status: 'completed' };
+        }
+        // Add more task status checks here
+        return task;
+      })
+    );
+  }, [isConnected, policyIds]);
+
+  const handleCompleteTask = async (task: Task) => {
+    if (task.status === 'completed' || task.status === 'locked') return;
+    if (!isConnected) {
+      alert('Please connect your wallet first');
+      return;
+    }
+
+    setCompletingTask(task.id);
+
+    try {
+      // Call backend API to record task completion
+      const response = await fetch(`${API_URL}/api/v1/points/complete-task`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          taskId: task.id,
+          address: address,
+        }),
+      });
+
+      if (response.ok) {
+        // Update task status locally
+        setTasks((prevTasks) =>
+          prevTasks.map((t) => (t.id === task.id ? { ...t, status: 'completed' as const } : t))
+        );
+      } else {
+        // For tasks that don't require backend (like daily check-in)
+        if (task.id === 'daily-check-in') {
+          // Store in localStorage
+          const lastCheckIn = localStorage.getItem('lastCheckIn');
+          const today = new Date().toDateString();
+          if (lastCheckIn !== today) {
+            localStorage.setItem('lastCheckIn', today);
+            setTasks((prevTasks) =>
+              prevTasks.map((t) => (t.id === task.id ? { ...t, status: 'completed' as const } : t))
+            );
+          }
+        } else {
+          alert('Failed to complete task. Please try again.');
+        }
+      }
+    } catch (error) {
+      console.error('Error completing task:', error);
+      // For daily check-in, still allow local completion
+      if (task.id === 'daily-check-in') {
+        const lastCheckIn = localStorage.getItem('lastCheckIn');
+        const today = new Date().toDateString();
+        if (lastCheckIn !== today) {
+          localStorage.setItem('lastCheckIn', today);
+          setTasks((prevTasks) =>
+            prevTasks.map((t) => (t.id === task.id ? { ...t, status: 'completed' as const } : t))
+          );
+        }
+      } else {
+        alert('Failed to complete task. Please try again.');
+      }
+    } finally {
+      setCompletingTask(null);
+    }
+  };
+
+  const dailyTasks = tasks.filter((t) => t.type === 'daily');
+  const weeklyTasks = tasks.filter((t) => t.type === 'weekly');
+  const oneTimeTasks = tasks.filter((t) => t.type === 'one-time');
 
   return (
     <Card>
@@ -105,7 +195,12 @@ export function PointsTasks() {
           <h3 className="mb-3 text-sm font-medium text-muted-foreground">Daily Tasks</h3>
           <div className="space-y-2">
             {dailyTasks.map((task) => (
-              <TaskItem key={task.id} task={task} />
+              <TaskItem
+                key={task.id}
+                task={task}
+                onComplete={() => handleCompleteTask(task)}
+                isCompleting={completingTask === task.id}
+              />
             ))}
           </div>
         </div>
@@ -115,7 +210,12 @@ export function PointsTasks() {
           <h3 className="mb-3 text-sm font-medium text-muted-foreground">Weekly Tasks</h3>
           <div className="space-y-2">
             {weeklyTasks.map((task) => (
-              <TaskItem key={task.id} task={task} />
+              <TaskItem
+                key={task.id}
+                task={task}
+                onComplete={() => handleCompleteTask(task)}
+                isCompleting={completingTask === task.id}
+              />
             ))}
           </div>
         </div>
@@ -125,7 +225,12 @@ export function PointsTasks() {
           <h3 className="mb-3 text-sm font-medium text-muted-foreground">One-time Tasks</h3>
           <div className="space-y-2">
             {oneTimeTasks.map((task) => (
-              <TaskItem key={task.id} task={task} />
+              <TaskItem
+                key={task.id}
+                task={task}
+                onComplete={() => handleCompleteTask(task)}
+                isCompleting={completingTask === task.id}
+              />
             ))}
           </div>
         </div>
@@ -134,7 +239,15 @@ export function PointsTasks() {
   );
 }
 
-function TaskItem({ task }: { task: Task }) {
+function TaskItem({
+  task,
+  onComplete,
+  isCompleting,
+}: {
+  task: Task;
+  onComplete: () => void;
+  isCompleting: boolean;
+}) {
   const isCompleted = task.status === 'completed';
   const isLocked = task.status === 'locked';
 
@@ -179,8 +292,17 @@ function TaskItem({ task }: { task: Task }) {
           +{task.points}
         </Badge>
         {!isCompleted && !isLocked && (
-          <Button size="sm" variant="ghost">
-            <ArrowRight className="h-4 w-4" />
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={onComplete}
+            disabled={isCompleting}
+          >
+            {isCompleting ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <ArrowRight className="h-4 w-4" />
+            )}
           </Button>
         )}
       </div>

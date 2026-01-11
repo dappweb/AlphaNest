@@ -22,7 +22,7 @@ const COMMON_TOKENS: Record<number, TokenInfo[]> = {
   ],
   11155111: [
     { address: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE', symbol: 'ETH', name: 'Ethereum', decimals: 18 },
-    { address: '0xdaA1EEEEE49b6c9Fb6ec2D990D07f1CD6281bebe', symbol: 'USDC', name: 'Mock USDC', decimals: 6 },
+    { address: '0xceCC6D1dA322b6AC060D3998CA58e077CB679F79', symbol: 'USDC', name: 'Mock USDC', decimals: 6 },
   ],
 };
 

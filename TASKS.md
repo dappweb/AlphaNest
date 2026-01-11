@@ -1,410 +1,480 @@
 # AlphaNest 开发任务跟踪
 
 **创建日期**: 2026-01-10  
-**最后更新**: 2026-01-10 12:51  
+**最后更新**: 2026-01-11 20:15  
 **当前阶段**: Phase 2 - 核心功能开发
 
 ---
 
-## 项目进度概览
+## ✅ 最新部署状态
 
-### 已完成 ✅
+| 服务 | URL | 状态 |
+|------|-----|------|
+| **Web** | https://alphanest-web-9w8.pages.dev | ✅ 已部署 |
+| **API** | https://alphanest-api.suiyiwan1.workers.dev | ✅ 已部署 |
+| **D1 数据库** | alphanest-db | ✅ 已创建 |
+| **KV 缓存** | CACHE/SESSIONS/RATE_LIMIT | ✅ 已创建 |
 
-#### Web 前端
-| 任务 | 文件/说明 | 状态 |
-|------|----------|------|
-| Next.js 15 工程初始化 | `apps/web/` | ✅ |
-| TailwindCSS + shadcn/ui 配置 | - | ✅ |
-| RainbowKit 钱包连接集成 | - | ✅ |
-| Solana 钱包集成 | `solana-provider.tsx` | ✅ |
-| Dashboard 页面框架 | `app/page.tsx` | ✅ |
-| Trade 交易页面 | `app/trade/` | ✅ |
-| Dev 详情页 | `app/devs/[address]/` | ✅ |
-| 保险市场页 | `app/insurance/` | ✅ |
-| 积分系统页面 | `app/points/` | ✅ |
-| K线图表 (Lightweight Charts) | `components/trade/` | ✅ |
-| DEX Aggregator (0x/1inch) | `use-swap.ts` | ✅ |
-| Jupiter Swap 集成 | `use-jupiter-swap.ts` | ✅ |
-| 保险合约 Hooks | `use-alphaguard.ts` | ✅ |
-| **质押系统 Hooks** | `use-alphanest-core.ts` | ✅ **NEW** |
-| **Dev 信誉 Hooks** | `use-reputation.ts` | ✅ **NEW** |
-| **验证挖矿 Hooks** | `use-verify-to-earn.ts` | ✅ **NEW** |
-| WebSocket 客户端 Hook | `use-websocket.ts` | ✅ |
-| 多语言支持 (i18n) | `i18n/` | ✅ |
-| PWA 移动端优化 | - | ✅ |
-| 部署到 Cloudflare Pages | - | ✅ |
+---
 
-#### API 后端
-| 任务 | 文件/说明 | 状态 |
-|------|----------|------|
-| Hono 框架搭建 | `apps/api/src/index.ts` | ✅ |
-| 路由模块结构 | `routes/*.ts` | ✅ |
-| 中间件 (CORS, Auth, Rate Limit, GeoBlock) | `middleware/*.ts` | ✅ |
-| WebSocket Durable Object | `index.ts` | ✅ |
-| Cron 定时任务 | `scheduled/` | ✅ |
-| **blockchain 服务** | `services/blockchain.ts` | ✅ **NEW** |
-| **notifications 服务** | `services/notifications.ts` | ✅ **NEW** |
-| 签名验证工具 | `utils/signature.ts` | ✅ |
-| 外部API集成工具 | `utils/external-api.ts` | ✅ |
+## ⚠️ 重要说明
 
-#### 智能合约
-| 任务 | 文件/说明 | 状态 |
-|------|----------|------|
-| AlphaGuard 保险合约 | `AlphaGuard.sol` | ✅ |
-| AlphaGuardOracle 预言机 | `AlphaGuardOracle.sol` | ✅ |
-| **AlphaNestCore 核心合约** | `AlphaNestCore.sol` | ✅ **NEW** |
-| **ReputationRegistry 信誉合约** | `ReputationRegistry.sol` | ✅ **NEW** |
-| **CrossChainVerifier 跨链验证** | `CrossChainVerifier.sol` | ✅ **NEW** |
-| **TokenFactory 代币工厂** | `TokenFactory.sol` | ✅ **NEW** |
-| **AlphaToken $ALPHA 代币** | `AlphaToken.sol` | ✅ **NEW** |
-| **Sepolia 部署脚本** | `script/Deploy.s.sol` | ✅ **NEW** |
-| **Base 主网部署脚本** | `script/Deploy.s.sol` | ✅ **NEW** |
-| **环境配置模板** | `.env.example` | ✅ **NEW** |
-| Foundry 测试脚本 | `test/*.t.sol` | ✅ |
+本文档区分三种状态：
+- ✅ **代码完成** - 源代码已编写
+- 🔧 **待集成** - 代码存在但未部署/未配置/使用模拟数据
+- 📋 **未开始** - 尚未开发
 
-#### Telegram Bot
-| 任务 | 文件/说明 | 状态 |
-|------|----------|------|
-| 基础命令 (/start, /help) | `telegram-bot/src/index.ts` | ✅ |
-| 订阅系统 (/subscribe) | - | ✅ |
-| **安全评分 (/score)** | 代币安全分析 | ✅ **NEW** |
-| **鲸鱼预警 (/whale)** | 大户交易监控 | ✅ **NEW** |
-| **Dev 查询 (/dev)** | API 集成 | ✅ **NEW** |
-| **价格查询 (/price)** | API 集成 | ✅ **NEW** |
+**当前状态**: Web 和 API 已部署，智能合约待部署 (需要 Foundry + 私钥)。
 
-#### 其他
-| 任务 | 状态 |
+---
+
+## 项目真实状态
+
+### 前端 UI (代码完成，使用模拟数据)
+
+| 页面 | 文件 | 代码 | 真实数据 | 说明 |
+|------|------|------|----------|------|
+| Dashboard | `app/page.tsx` | ✅ | 🔧 | 统计数据为模拟 |
+| Trade | `app/trade/` | ✅ | 🔧 | K线图表模拟，Swap未连接真实DEX |
+| Copy Trading | `app/copy-trade/` | ✅ | 🔧 | 交易员列表为模拟数据 |
+| Dev Rankings | `app/devs/` | ✅ | 🔧 | 排行榜为模拟数据 |
+| Insurance | `app/insurance/` | ✅ | 🔧 | 合约未部署，无法真实购买 |
+| Points | `app/points/` | ✅ | 🔧 | 积分系统为模拟数据 |
+| Analytics | `app/analytics/` | ✅ | 🔧 | 图表数据为随机生成 |
+| Bots | `app/bots/` | ✅ | 🔧 | 机器人为模拟，无实际交易 |
+| Account | `app/account/` | ✅ | 🔧 | 持仓/交易历史为模拟 |
+| **Referral** | `app/referral/` | ✅ | 🔧 | 推荐系统 (新增) |
+| Settings | `app/settings/` | ✅ | ✅ | localStorage 持久化 |
+
+### 社区功能 (新增 2026-01-11) ✅
+
+| 组件 | 文件 | 状态 | 说明 |
+|------|------|------|------|
+| 推荐系统 | `components/referral/` | ✅ | 推荐链接/统计/历史/排行榜 |
+| 社交分享 | `components/share/` | ✅ | 分享按钮/PnL卡片/交易卡片 |
+| 页脚 | `components/layout/footer.tsx` | ✅ | 社交链接/导航/法律链接 |
+| 下拉菜单 | `components/ui/dropdown-menu.tsx` | ✅ | UI 基础组件 |
+
+### 智能合约 (Sepolia 已部署 ✅)
+
+| 合约 | Sepolia 地址 | 状态 |
+|------|-------------|------|
+| MockUSDC | `0xceCC6D1dA322b6AC060D3998CA58e077CB679F79` | ✅ |
+| AlphaToken | `0x425845f5E29017380993119D976cBBa41990E53A` | ✅ |
+| AlphaNestCore | `0x0DE761C3A2e72BFa04B660395856ADc0A1252879` | ✅ |
+| ReputationRegistry | `0xC6B671e921D4888421E200360eeD5c11BeC2ad12` | ✅ |
+| CrossChainVerifier | `0x326c44a65d6A75217FA4064776864bc8983c1e9c` | ✅ |
+| TokenFactory | `0x350ca479821D4eDA3e4bF41021f6736598378f0c` | ✅ |
+| AlphaGuardOracle | `0x493b00F67e560c1eAb11e340f9648eE19B2Eb693` | ✅ |
+| AlphaGuard | `0xCbcE6832F5E59F90c24bFb57Fb6f1Bc8B4232f03` | ✅ |
+
+**部署信息**:
+- 网络: Sepolia (Chain ID: 11155111)
+- 部署区块: 10016505
+- Gas 费用: ~0.000019 ETH
+
+### API 后端 (已部署 ✅)
+
+| 模块 | 文件 | 代码 | 部署 | 说明 |
+|------|------|------|------|------|
+| Hono 框架 | `apps/api/src/index.ts` | ✅ | ✅ | Worker 主入口 |
+| 路由模块 | `routes/*.ts` | ✅ | ✅ | 6个路由模块 |
+| 中间件 | `middleware/*.ts` | ✅ | ✅ | Auth/CORS/RateLimit |
+| WebSocket | Durable Object | ✅ | ✅ | 实时推送 |
+| 定时任务 | `scheduled/` | ✅ | ✅ | Cron 触发器 |
+| 区块链服务 | `services/blockchain.ts` | ✅ | ✅ | DexScreener/Bitquery |
+| 通知服务 | `services/notifications.ts` | ✅ | ✅ | Telegram/Discord |
+
+**已完成**:
+- [x] 配置 Cloudflare Account ID
+- [x] 创建 D1 数据库 (alphanest-db)
+- [x] 创建 KV 命名空间 (CACHE/SESSIONS/RATE_LIMIT)
+- [ ] 配置 API Keys (DexScreener, Bitquery 等) - 待添加到 Secrets
+
+### Telegram Bot (代码完成，未部署)
+
+| 命令 | 代码 | 部署 | 说明 |
+|------|------|------|------|
+| /start, /help | ✅ | 📋 | 基础命令 |
+| /subscribe | ✅ | 📋 | 订阅系统 |
+| /score | ✅ | 📋 | 代币安全评分 |
+| /whale | ✅ | 📋 | 鲸鱼预警 |
+| /dev | ✅ | 📋 | Dev 查询 |
+| /price | ✅ | 📋 | 价格查询 |
+
+**部署前置条件**:
+- [ ] 创建 Telegram Bot (BotFather)
+- [ ] 配置 Bot Token
+- [ ] 部署 Worker
+
+---
+
+## 功能可用性真实评估
+
+### ❌ 完全不可用 (需要部署)
+
+| 功能 | 原因 | 需要 |
+|------|------|------|
+| 代币交易 (Swap) | DEX API 未配置 | 0x/Jupiter API Key |
+| 保险购买/理赔 | 合约未部署 | Sepolia/Base 部署 |
+| Dev 信誉评分 | 合约未部署 + API未部署 | 全栈部署 |
+| 积分系统 | 合约未部署 | 部署 AlphaNestCore |
+| 跟单交易 | 合约未部署 | 部署合约 |
+| 交易机器人 | 无后端逻辑 | API + 合约部署 |
+| 实时价格推送 | WebSocket 未部署 | 部署 Worker |
+| 鲸鱼预警 | API 未部署 | 部署 + 配置数据源 |
+
+### ✅ 可用功能
+
+| 功能 | 说明 |
 |------|------|
-| D1 Schema 设计 (001_init.sql) | ✅ |
-| The Graph 索引器 | ✅ |
-| E2E Playwright 测试套件 | ✅ |
-| PRD 产品需求文档 | ✅ |
-| 工程文档 (ENGINEERING.md) | ✅ |
-| 白皮书 | ✅ |
-
-### 进行中 🚧
-
-| 模块 | 任务 | 优先级 |
-|-----|------|--------|
-| **智能合约** | 实际执行 Base 主网部署 | P1 |
-
-### Sepolia 部署完成 ✅ (2026-01-10)
-
-| 合约 | 地址 |
-|-----|------|
-| MockUSDC | `0xDfB896d01E354F39dbd9125E6790AE65D28a25Cd` |
-| AlphaToken | `0x3eAA60E349d9Bd1E366D19369cF753CBaC1f4488` |
-| AlphaNestCore | `0x687111E43D417c99F993FB6D26F4b06E465c7A94` |
-| ReputationRegistry | `0xC3a8D57aCa3D3d244057b69129621d87c3a37574` |
-| CrossChainVerifier | `0x32229e84F7b63E201d0E4B64931F8ff1571e0a60` |
-| TokenFactory | `0x5461D1F4a6854f509D7FdD1b5722C4ceF1E479d5` |
-| AlphaGuardOracle | `0x3a8D8Fe1bE80B0DD36Ee16758F4108EEFfeEbb57` |
-| AlphaGuard | `0xB72A72EFC2F42092099Af61EFf2B2B8ad8f197a9` |
-
-**部署者**: `0x4C10831CBcF9884ba72051b5287b6c87E4F74A48`
-
-### 待开发 📋
-
-详见下方各阶段任务清单。
+| 钱包连接 | EVM (RainbowKit) + Solana 工作正常 |
+| 设置保存 | localStorage 持久化 |
+| UI 浏览 | 所有页面可访问，显示模拟数据 |
+| 主题切换 | 暗色主题 |
+| 多语言 | 中/英文切换 |
+| PWA 安装 | 可安装到手机 |
 
 ---
 
-## Phase 1: 基础设施完善 ✅ 已完成
+## 部署优先级清单
 
-### 1.1 API 核心功能
+### P0 - 必须立即完成
 
-- [x] **签名验证** - 实现 EVM/Solana 签名验证
-  - `apps/api/src/utils/signature.ts`
-  - 支持 EIP-191, EIP-712 签名
-  - 支持 Solana 签名验证
+1. **部署智能合约到 Sepolia**
+   ```bash
+   # 安装 Foundry
+   curl -L https://foundry.paradigm.xyz | bash && foundryup
+   
+   # 配置环境
+   cd contracts
+   cp .env.example .env  # 填写 PRIVATE_KEY 和 RPC_URL
+   
+   # 部署
+   forge script script/Deploy.s.sol:DeployAllSepolia --rpc-url sepolia --broadcast
+   ```
 
-- [x] **外部 API 集成**
-  - [x] DexScreener API - 代币价格数据 (`services/blockchain.ts`)
-  - [x] Bitquery API - 链上历史数据 (`services/blockchain.ts`)
-  - [x] Covalent API - 多链数据聚合
+2. **部署 API 到 Cloudflare Workers**
+   ```bash
+   cd apps/api
+   npx wrangler deploy
+   ```
 
-### 1.2 数据库与缓存
+3. **部署 Web 到 Cloudflare Pages**
+   ```bash
+   cd apps/web
+   npm run build
+   npx wrangler pages deploy out --project-name alphanest-web
+   ```
 
-- [x] **D1 数据库设计**
-  - Schema 设计完成 (`infrastructure/database/migrations/`)
-  - 索引优化
+### P1 - 本周完成
 
-- [x] **KV 缓存策略** (已在 `services/blockchain.ts` 实现)
-  - 代币价格缓存 (TTL: 10s)
-  - Dev 评分缓存 (TTL: 5min)
-  - 热门列表缓存 (TTL: 1min)
+4. **配置前端环境变量**
+   - 合约地址
+   - API URL
+   - WalletConnect Project ID
 
-### 1.3 前端页面
+5. **配置 API 环境变量**
+   - DexScreener API Key
+   - Bitquery API Key
+   - Telegram Bot Token
 
-- [x] **交易页面** `/trade`
-  - 代币搜索
-  - K 线图表 (Lightweight Charts)
-  - 交易面板 + Jupiter/0x 集成
+6. **测试端到端流程**
+   - 钱包连接 → 查看余额
+   - 购买保险 → 查看保单
+   - 质押 $ALPHA → 赚取积分
 
-- [x] **Dev 详情页** `/devs/[address]`
-  - 信誉评分展示
-  - 发币历史列表
-  - 跟单订阅按钮 (`use-reputation.ts`)
+### P2 - 下周完成
 
-- [x] **保险市场页** `/insurance`
-  - 可投保代币列表
-  - 赔率计算器
-  - 保单管理 (`use-alphaguard.ts`)
-
----
-
-## Phase 2: 核心功能开发 🚧 进行中
-
-### 2.1 Dev 信誉系统 ✅
-
-- [x] **评分算法实现** (`services/blockchain.ts`)
-  ```
-  score = base_score 
-        + win_rate_bonus 
-        + volume_bonus 
-        - rug_penalty 
-        - inactive_penalty
-  ```
-
-- [x] **数据聚合 Worker**
-  - 定时抓取发币数据 (`indexDevHistory`)
-  - 定时更新代币状态 (`updateTokenStats`)
-  - 检测 Rug Pull 事件 (`checkRugStatus`)
-
-- [x] **信誉合约** (`ReputationRegistry.sol`)
-  - Dev 评分存储
-  - 红V认证系统
-  - 跟单订阅管理
-
-### 2.2 AlphaGuard 保险 ✅
-
-- [x] **智能合约开发** (Solidity)
-  - `AlphaGuard.sol` - 保险资金池
-  - `AlphaGuardOracle.sol` - Rug 判定预言机
-
-- [x] **前端交互** (`use-alphaguard.ts`)
-  - 购买保险流程
-  - 理赔申请页面
-  - 保单状态追踪
-
-### 2.3 实时数据推送 ✅
-
-- [x] **WebSocket 频道** (`WebSocketServer` Durable Object)
-  - `price:{token}` - 实时价格
-  - `whale:{token}` - 鲸鱼预警
-  - `dev:{address}` - Dev 新发币
-
-- [x] **通知系统** (`services/notifications.ts`)
-  - Telegram Bot 集成
-  - Discord Webhook
-  - 鲸鱼预警通知
-
-### 2.4 核心合约 ✅ **NEW**
-
-- [x] **AlphaNestCore.sol**
-  - 积分系统
-  - $ALPHA 质押
-  - 挖矿权重计算
-  - 手续费分配
-
-- [x] **CrossChainVerifier.sol**
-  - 跨链持仓验证
-  - 签名消息验证
-  - 状态聚合
-
-- [x] **TokenFactory.sol**
-  - Meme 代币标准化创建
-  - 发行费用管理
-  - 代币追踪索引
-
-- [x] **AlphaToken.sol**
-  - $ALPHA ERC-20 代币
-  - 分配管理
-  - 燃烧机制
+7. **部署到 Base 主网**
+8. **配置域名和 SSL**
+9. **设置监控告警 (Sentry)**
 
 ---
 
-## Phase 3: 生态扩展 (Week 9+)
+## 文件清单
 
-### 3.1 跨链 ETF
+### 前端组件 (已创建)
 
-- [ ] **虚拟质押系统**
-  - Herodotus 存储证明集成
-  - Chainlink CCIP 消息传递
-
-- [ ] **ETF 合成**
-  - 资产组合管理
-  - 权重计算
-
-### 3.2 高级工具
-
-- [ ] **专业 K 线工具**
-  - 技术指标
-  - 绘图工具
-
-- [ ] **狙击 Bot**
-  - 新币监控
-  - 自动买入
-
-### 3.3 DAO 治理
-
-- [ ] **投票系统**
-  - 提案创建
-  - 链上投票
-
----
-
-## 技术债务 & 优化
-
-| 项目 | 描述 | 优先级 |
-|-----|------|--------|
-| 单元测试 | API 路由测试覆盖 | P1 |
-| E2E 测试 | Playwright 集成测试 | P2 |
-| 性能优化 | API 响应时间 < 200ms | P1 |
-| 安全审计 | 智能合约审计 | P0 |
-| 监控告警 | Sentry 错误追踪 | P1 |
-
----
-
-## 部署清单
-
-### 开发环境
-- [x] Web: https://alphanest.pages.dev
-- [ ] API: https://api-dev.alphanest.dev
-
-### 生产环境
-- [ ] Web: https://alphanest.dev
-- [ ] API: https://api.alphanest.dev
-- [ ] 域名 DNS 配置
-- [ ] SSL 证书
-- [ ] CDN 配置
-
----
-
-## 里程碑对照 (PRD)
-
-| 编号 | 交付物 | 目标日期 | 状态 |
-|-----|--------|---------|------|
-| M2.1 | AlphaNest 前端 Beta 版上线 | Week 9 | 🚧 进行中 |
-| M2.2 | 多链钱包连接 + 持仓验证系统 | Week 10 | 📋 待开发 |
-| M2.3 | Dev 信誉评分系统 V1 | Week 11 | 📋 待开发 |
-| M2.4 | 创世积分空投活动启动 | Week 12 | 📋 待开发 |
-| M2.5 | 鲸鱼预警 Bot 上线 | Week 14 | 📋 待开发 |
-| M2.6 | AlphaGuard 保险 V1 上线 | Week 16 | 📋 待开发 |
-
----
-
-**最后更新**: 2026-01-10 19:55
-
----
-
-## 新增完成任务 (2026-01-10)
-
-### 智能合约编译
-- [x] 修复 `ReputationRegistry.sol` 保留关键字 `alias` 问题
-- [x] 修复 `CrossChainVerifier.sol` mapping 局部变量问题
-- [x] 更新 `foundry.toml` solc 版本 (0.8.24) 和 via_ir
-- [x] 所有合约编译成功 ✅
-
-### 跟单系统 UI 组件 ✅ (已实现)
-- [x] `copy-trade-panel.tsx` - 主面板 (标签页/搜索/统计/筛选)
-- [x] `copy-trade-card.tsx` - 交易员卡片组件 (PnL/胜率/跟随)
-- [x] `copy-trade-list.tsx` - 交易员列表 (加载状态/空状态)
-- [x] `copy-trade-modal.tsx` - 跟单设置弹窗 (投资金额/风控参数)
-- [x] `trader-leaderboard.tsx` - 排行榜表格 (可排序列)
-- [x] `index.ts` - 统一导出
-- [x] 更新 `/copy-trade` 页面使用新组件
-
-### API 依赖
-- [x] 安装 `@cloudflare/workers-types` 
-
----
-
-## Sepolia 部署指南
-
-### 前置要求
-1. 安装 Foundry: `curl -L https://foundry.paradigm.xyz | bash && foundryup`
-2. 获取测试网 ETH: https://sepoliafaucet.com
-
-### 环境配置
-在 `contracts/` 目录下创建 `.env` 文件:
-
-```bash
-# 你的钱包私钥 (不带 0x 前缀)
-PRIVATE_KEY=your_private_key_here
-
-# Sepolia RPC URL (从 Alchemy/Infura 获取)
-SEPOLIA_RPC_URL=https://eth-sepolia.g.alchemy.com/v2/YOUR_API_KEY
-
-# (可选) Etherscan API Key 用于合约验证
-ETHERSCAN_API_KEY=your_etherscan_api_key
+```
+apps/web/src/
+├── app/
+│   ├── page.tsx              # Dashboard
+│   ├── trade/page.tsx        # 交易
+│   ├── copy-trade/page.tsx   # 跟单
+│   ├── devs/page.tsx         # Dev排行
+│   ├── insurance/page.tsx    # 保险
+│   ├── points/page.tsx       # 积分
+│   ├── analytics/page.tsx    # 分析
+│   ├── bots/page.tsx         # 机器人
+│   ├── account/page.tsx      # 账户
+│   └── settings/page.tsx     # 设置
+├── components/
+│   ├── account/              # 3 组件
+│   ├── analytics/            # 4 组件
+│   ├── bots/                 # 3 组件
+│   ├── copy-trade/           # 5 组件
+│   ├── dashboard/            # 4 组件
+│   ├── dev/                  # 3 组件
+│   ├── insurance/            # 4 组件
+│   ├── layout/               # 2 组件
+│   ├── notifications/        # 1 组件
+│   ├── points/               # 4 组件
+│   ├── providers/            # 3 组件
+│   ├── trade/                # 6 组件
+│   └── ui/                   # 9 组件
+└── hooks/
+    ├── use-alphaguard.ts     # 保险合约交互
+    ├── use-alphanest-core.ts # 核心合约交互
+    ├── use-jupiter-swap.ts   # Solana Swap
+    ├── use-reputation.ts     # 信誉系统
+    ├── use-swap.ts           # EVM Swap
+    ├── use-verify-to-earn.ts # 验证挖矿
+    └── use-websocket.ts      # WebSocket
 ```
 
-### 部署命令
-```bash
-cd contracts
+### 智能合约 (已创建)
 
-# 加载环境变量
-source .env
-
-# 部署到 Sepolia
-forge script script/Deploy.s.sol:DeployAllSepolia \
-  --rpc-url $SEPOLIA_RPC_URL \
-  --broadcast \
-  --verify
-
-# 部署完成后保存合约地址!
+```
+contracts/src/
+├── AlphaGuard.sol            # 保险池
+├── AlphaGuardOracle.sol      # 预言机
+├── AlphaNestCore.sol         # 核心逻辑
+├── AlphaToken.sol            # $ALPHA
+├── CrossChainVerifier.sol    # 跨链验证
+├── ReputationRegistry.sol    # 信誉系统
+└── TokenFactory.sol          # 代币工厂
 ```
 
-### 部署后检查清单
-- [ ] 验证所有合约在 Etherscan 上显示源码
-- [ ] 测试 MockUSDC mint 功能
-- [ ] 测试 AlphaGuard 保险购买流程
-- [ ] 测试 ReputationRegistry 评分更新
-- [ ] 更新前端配置中的合约地址
+### API 后端 (已创建)
+
+```
+apps/api/src/
+├── index.ts                  # 主入口
+├── routes/
+│   ├── dev.ts
+│   ├── insurance.ts
+│   ├── notifications.ts
+│   ├── tokens.ts
+│   ├── trade.ts
+│   ├── user.ts
+│   └── webhooks.ts
+├── middleware/
+│   ├── auth.ts
+│   ├── cors.ts
+│   ├── geo-block.ts
+│   ├── health.ts
+│   ├── logging.ts
+│   └── rate-limit.ts
+├── services/
+│   ├── blockchain.ts
+│   ├── dev-score.ts
+│   ├── notifications.ts
+│   └── telegram.ts
+└── utils/
+    ├── alerts.ts
+    ├── external-apis.ts
+    ├── logger.ts
+    └── signature.ts
+```
 
 ---
 
-## Base 主网部署指南
+## 🎯 社区运营功能 (待完善)
 
-### 前置要求
-1. 安装 Foundry: `curl -L https://foundry.paradigm.xyz | bash && foundryup`
-2. 准备足够 ETH 用于 gas 费用
-3. 配置多签钱包地址 (推荐用于生产环境)
+### 已有基础 (使用模拟数据)
 
-### 环境配置
-在 `contracts/` 目录下创建 `.env` 文件 (参考 `.env.example`):
+| 功能 | 组件 | 状态 | 说明 |
+|------|------|------|------|
+| 积分任务 | `points-tasks.tsx` | 🔧 | 有"推荐好友"任务，但无实际功能 |
+| 积分排行榜 | `points-leaderboard.tsx` | 🔧 | 显示模拟数据 |
+| Dev 排行榜 | `dev-leaderboard.tsx` | 🔧 | 显示模拟数据 |
+| 交易员排行榜 | `trader-leaderboard.tsx` | 🔧 | 显示模拟数据 |
+| Discord 通知 | `notifications.ts` | 🔧 | API 代码存在，未部署 |
+| Telegram Bot | `telegram-bot/` | 🔧 | 代码存在，未部署 |
 
-```bash
-# 你的钱包私钥 (不带 0x 前缀)
-PRIVATE_KEY=your_private_key_here
+### ❌ 缺失功能 (需要开发)
 
-# Base 主网 RPC URL
-BASE_RPC_URL=https://mainnet.base.org
+#### 1. 推荐系统 (Referral System) - P0
 
-# Basescan API Key 用于合约验证
-BASESCAN_API_KEY=your_basescan_api_key
+| 功能 | 说明 | 优先级 |
+|------|------|--------|
+| 推荐码生成 | 为每个用户生成唯一推荐码 | P0 |
+| 推荐链接页面 | `/referral` 显示推荐链接和统计 | P0 |
+| 推荐追踪 | 记录谁邀请了谁 | P0 |
+| 推荐奖励 | 被邀请人交易时奖励邀请人 | P0 |
+| 推荐排行榜 | 显示邀请最多的用户 | P1 |
+
+**需要实现：**
+```
+apps/web/src/
+├── app/referral/page.tsx           # 推荐页面
+├── components/referral/
+│   ├── referral-link.tsx           # 推荐链接卡片
+│   ├── referral-stats.tsx          # 邀请统计
+│   └── referral-history.tsx        # 邀请历史
+└── hooks/
+    └── use-referral.ts             # 推荐系统 Hook
 ```
 
-### 部署命令
-```bash
-cd contracts
+#### 2. 社交分享 (Social Share) - P0
 
-# 加载环境变量
-source .env
+| 功能 | 说明 | 优先级 |
+|------|------|--------|
+| 分享卡片组件 | 可导出的精美分享图 | P0 |
+| 分享交易结果 | 分享单笔交易详情 | P0 |
+| 分享收益 PnL | 分享投资组合收益 | P0 |
+| 分享到 Twitter | 一键分享到 Twitter | P0 |
+| 分享到 Discord | 一键分享到 Discord | P1 |
 
-# 部署到 Base 主网
-forge script script/Deploy.s.sol:DeployAllBase \
-  --rpc-url $BASE_RPC_URL \
-  --broadcast \
-  --verify
-
-# 部署完成后保存合约地址!
+**需要实现：**
+```
+apps/web/src/components/share/
+├── share-button.tsx                # 分享按钮组件
+├── share-card.tsx                  # 可分享卡片
+├── share-trade.tsx                 # 交易分享
+├── share-pnl.tsx                   # 收益分享
+└── share-modal.tsx                 # 分享弹窗
 ```
 
-### Base 主网部署后检查清单
-- [ ] 验证所有合约在 Basescan 上显示源码
-- [ ] 配置多签钱包作为管理员
-- [ ] 测试 AlphaGuard 保险流程 (使用真实 USDC)
-- [ ] 更新前端配置中的合约地址
-- [ ] 设置监控告警
+#### 3. 用户档案 (User Profile) - P1
+
+| 功能 | 说明 | 优先级 |
+|------|------|--------|
+| 公开用户主页 | `/profile/[address]` | P1 |
+| 关注系统 | 关注其他用户 | P1 |
+| 活动动态 | 显示用户交易动态 | P2 |
+| 交易统计 | 公开展示交易统计 | P1 |
+
+**需要实现：**
+```
+apps/web/src/
+├── app/profile/[address]/page.tsx  # 用户主页
+├── components/profile/
+│   ├── profile-header.tsx          # 用户头像/名称
+│   ├── profile-stats.tsx           # 交易统计
+│   ├── profile-activity.tsx        # 活动动态
+│   └── follow-button.tsx           # 关注按钮
+└── hooks/
+    └── use-follow.ts               # 关注系统 Hook
+```
+
+#### 4. 成就系统 (Achievements) - P2
+
+| 功能 | 说明 | 优先级 |
+|------|------|--------|
+| 成就徽章 | 交易/保险/推荐相关成就 | P2 |
+| 解锁条件 | 达到条件自动解锁 | P2 |
+| 成就展示 | 在用户档案展示 | P2 |
+| 成就通知 | 解锁时推送通知 | P2 |
+
+**需要实现：**
+```
+apps/web/src/components/achievements/
+├── achievement-badge.tsx           # 徽章组件
+├── achievement-list.tsx            # 成就列表
+├── achievement-unlock.tsx          # 解锁动画
+└── achievement-showcase.tsx        # 展示墙
+```
+
+#### 5. 公告系统 (Announcements) - P1
+
+| 功能 | 说明 | 优先级 |
+|------|------|--------|
+| 公告横幅 | 首页顶部公告 | P1 |
+| 公告列表 | 历史公告列表 | P2 |
+| 新功能提示 | 功能更新提示 | P2 |
+
+**需要实现：**
+```
+apps/web/src/components/announcements/
+├── announcement-banner.tsx         # 公告横幅
+├── announcement-list.tsx           # 公告列表
+└── whats-new-modal.tsx             # 新功能弹窗
+```
+
+#### 6. 页脚链接 (Footer) - P0
+
+| 功能 | 说明 | 优先级 |
+|------|------|--------|
+| 页脚组件 | 社交链接 + 文档链接 | P0 |
+| Twitter 链接 | 官方 Twitter | P0 |
+| Discord 链接 | 官方 Discord | P0 |
+| Telegram 链接 | 官方 Telegram | P0 |
+| 文档链接 | Docs/GitHub | P0 |
+
+**需要实现：**
+```
+apps/web/src/components/layout/
+└── footer.tsx                      # 页脚组件
+```
+
+#### 7. 社区统计 (Community Stats) - P1
+
+| 功能 | 说明 | 优先级 |
+|------|------|--------|
+| 总用户数 | 注册/连接钱包用户 | P1 |
+| 总交易量 | 平台累计交易量 | P1 |
+| 活跃用户 | 24h/7d 活跃用户 | P1 |
+| TVL | 总锁仓价值 | P1 |
+
+**显示位置：** Dashboard + Analytics 页面
+
+---
+
+## 社区运营开发优先级
+
+### 第一批 (P0) - 立即开发
+
+1. **推荐系统** - 增长核心
+   - 推荐码生成
+   - 推荐链接页面
+   - 推荐追踪
+   
+2. **社交分享** - 传播裂变
+   - 分享按钮组件
+   - 分享到 Twitter
+   
+3. **页脚组件** - 基础完善
+   - 社交链接
+
+### 第二批 (P1) - 本周完成
+
+4. **用户档案** - 社交属性
+   - 公开用户主页
+   - 关注系统
+
+5. **公告系统** - 运营工具
+   - 公告横幅
+
+6. **社区统计** - 数据展示
+   - Dashboard 显示
+
+### 第三批 (P2) - 下周完成
+
+7. **成就系统** - 游戏化
+8. **活动动态** - 社交属性
+
+---
+
+## 下一步行动
+
+**立即执行** (按顺序):
+
+1. 安装 Foundry 并部署合约到 Sepolia
+2. 在前端配置合约地址
+3. 部署 API Worker
+4. 测试完整流程
+
+**社区功能开发** (优先级):
+
+1. 创建推荐系统组件
+2. 创建社交分享组件
+3. 添加页脚组件
+4. 创建用户档案页面
+
+**完成后**，系统将从"演示模式"变为"可用模式"。
+
+---
+
+**最后更新**: 2026-01-10 20:30

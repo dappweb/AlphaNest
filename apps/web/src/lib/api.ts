@@ -2,7 +2,7 @@
  * API Client for AlphaNest Backend
  */
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://alphanest-api.suiyiwan1.workers.dev';
 
 interface ApiResponse<T> {
   success: boolean;
