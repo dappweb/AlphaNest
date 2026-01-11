@@ -98,7 +98,7 @@ new_sqlite_classes = ["WebSocketServer"]
 ENVIRONMENT = "production"
 LOG_LEVEL = "info"
 API_VERSION = "v1"
-CORS_ORIGIN = "*"
+CORS_ORIGIN = "https://alphanest-web-9w8.pages.dev"
 
 # 链 ID
 BASE_CHAIN_ID = "8453"
