@@ -3,9 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, TrendingUp, TrendingDown } from 'lucide-react';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://alphanest-api.suiyiwan1.workers.dev';
+import { Loader2, TrendingUp, TrendingDown, RefreshCw } from 'lucide-react';
 
 const timeframes = ['1m', '5m', '15m', '1h', '4h', '1d'] as const;
 
@@ -23,11 +21,10 @@ interface TokenChartProps {
   chain?: string;
 }
 
-// 生成更真实的模拟数据
+// 生成模拟数据
 function generateMockData(count: number, interval: string = '15m'): CandleData[] {
   const data: CandleData[] = [];
 
-  // 根据时间间隔计算秒数
   const intervalMap: Record<string, number> = {
     '1m': 60,
     '5m': 300,
@@ -38,27 +35,23 @@ function generateMockData(count: number, interval: string = '15m'): CandleData[]
   };
   const intervalSeconds = intervalMap[interval] || 900;
 
-  // 初始价格
   let basePrice = 0.00001234 + Math.random() * 0.00001;
   const now = Math.floor(Date.now() / 1000);
 
-  // 添加一些波动趋势
   let trend = Math.random() > 0.5 ? 1 : -1;
   let trendDuration = Math.floor(Math.random() * 20) + 10;
 
   for (let i = count; i >= 0; i--) {
     const time = now - i * intervalSeconds;
 
-    // 动态改变趋势
     if (trendDuration <= 0) {
       trend = Math.random() > 0.5 ? 1 : -1;
       trendDuration = Math.floor(Math.random() * 20) + 10;
     }
     trendDuration--;
 
-    // 计算价格变动
     const volatility = 0.03;
-    const trendBias = trend * 0.005; // 趋势偏差
+    const trendBias = trend * 0.005;
     const change = (Math.random() - 0.5) * volatility + trendBias;
 
     const open = basePrice;
@@ -66,112 +59,70 @@ function generateMockData(count: number, interval: string = '15m'): CandleData[]
     const high = Math.max(open, close) * (1 + Math.random() * 0.015);
     const low = Math.min(open, close) * (1 - Math.random() * 0.015);
 
-    data.push({
-      time,
-      open: Number(open.toFixed(12)),
-      high: Number(high.toFixed(12)),
-      low: Number(low.toFixed(12)),
-      close: Number(close.toFixed(12))
-    });
+    data.push({ time, open, high, low, close });
     basePrice = close;
   }
 
   return data;
 }
 
-async function fetchChartData(
-  tokenAddress: string,
-  chain: string,
-  interval: string
-): Promise<CandleData[] | null> {
-  try {
-    const response = await fetch(
-      `${API_URL}/api/v1/tokens/${tokenAddress}/chart?chain=${chain}&interval=${interval}&limit=100`
-    );
-    const result = await response.json();
-
-    if (result.success && result.data?.candles) {
-      return result.data.candles.map((candle: any) => ({
-        time: candle.time || candle.timestamp || Date.now() / 1000,
-        open: parseFloat(candle.open || '0'),
-        high: parseFloat(candle.high || '0'),
-        low: parseFloat(candle.low || '0'),
-        close: parseFloat(candle.close || '0'),
-      }));
-    }
-    return null;
-  } catch (error) {
-    console.error('Error fetching chart data:', error);
-    return null;
-  }
-}
-
-export function TokenChart({ tokenAddress, tokenSymbol = 'MEME', chain = 'solana' }: TokenChartProps) {
-  const [selectedTimeframe, setSelectedTimeframe] = useState<string>('15m');
+export function TokenChart({ tokenSymbol = 'MEME' }: TokenChartProps) {
+  const [selectedTimeframe, setSelectedTimeframe] = useState<string>('1d');
   const [chartData, setChartData] = useState<CandleData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [priceChange, setPriceChange] = useState<number>(0);
   const [currentPrice, setCurrentPrice] = useState<string>('0');
+  const [chartInitialized, setChartInitialized] = useState(false);
   const chartContainerRef = useRef<HTMLDivElement>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const chartRef = useRef<any>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const seriesRef = useRef<any>(null);
 
-  // 加载数据
-  const loadData = useCallback(async () => {
+  // 生成数据
+  const loadData = useCallback(() => {
     setIsLoading(true);
 
-    try {
-      if (tokenAddress) {
-        const data = await fetchChartData(tokenAddress, chain, selectedTimeframe);
-        if (data && data.length > 0) {
-          setChartData(data);
-          const lastCandle = data[data.length - 1];
-          const firstCandle = data[0];
-          setCurrentPrice(lastCandle.close.toFixed(8));
-          setPriceChange(((lastCandle.close - firstCandle.open) / firstCandle.open) * 100);
-          setIsLoading(false);
-          return;
-        }
+    // 模拟加载延迟
+    setTimeout(() => {
+      const mockData = generateMockData(100, selectedTimeframe);
+      setChartData(mockData);
+
+      if (mockData.length > 0) {
+        const lastCandle = mockData[mockData.length - 1];
+        const firstCandle = mockData[0];
+        setCurrentPrice(lastCandle.close.toFixed(8));
+        setPriceChange(((lastCandle.close - firstCandle.open) / firstCandle.open) * 100);
       }
 
-      // 使用模拟数据
-      const mockData = generateMockData(100, selectedTimeframe);
-      setChartData(mockData);
-      const lastCandle = mockData[mockData.length - 1];
-      const firstCandle = mockData[0];
-      setCurrentPrice(lastCandle.close.toFixed(8));
-      setPriceChange(((lastCandle.close - firstCandle.open) / firstCandle.open) * 100);
-    } catch (error) {
-      console.error('Chart data error:', error);
-      const mockData = generateMockData(100, selectedTimeframe);
-      setChartData(mockData);
-    } finally {
       setIsLoading(false);
-    }
-  }, [tokenAddress, chain, selectedTimeframe]);
+    }, 300);
+  }, [selectedTimeframe]);
 
+  // 加载数据
   useEffect(() => {
     loadData();
   }, [loadData]);
 
-  // 初始化图表
+  // 初始化和更新图表
   useEffect(() => {
-    if (!chartContainerRef.current || chartData.length === 0) return;
+    if (isLoading || chartData.length === 0 || !chartContainerRef.current) return;
+
+    let isMounted = true;
 
     const initChart = async () => {
       try {
         const { createChart, ColorType } = await import('lightweight-charts');
 
+        if (!isMounted || !chartContainerRef.current) return;
+
         // 清除旧图表
         if (chartRef.current) {
           chartRef.current.remove();
           chartRef.current = null;
+          seriesRef.current = null;
         }
 
         const container = chartContainerRef.current;
-        if (!container) return;
+        const containerWidth = container.clientWidth || 600;
 
         const chart = createChart(container, {
           layout: {
@@ -182,7 +133,7 @@ export function TokenChart({ tokenAddress, tokenSymbol = 'MEME', chain = 'solana
             vertLines: { color: 'rgba(42, 46, 57, 0.5)' },
             horzLines: { color: 'rgba(42, 46, 57, 0.5)' },
           },
-          width: container.clientWidth,
+          width: containerWidth,
           height: 400,
           timeScale: {
             borderColor: '#374151',
@@ -191,10 +142,7 @@ export function TokenChart({ tokenAddress, tokenSymbol = 'MEME', chain = 'solana
           },
           rightPriceScale: {
             borderColor: '#374151',
-            scaleMargins: {
-              top: 0.1,
-              bottom: 0.1,
-            },
+            scaleMargins: { top: 0.1, bottom: 0.1 },
           },
           crosshair: {
             vertLine: { color: '#6366f1', width: 1, style: 2, labelVisible: true },
@@ -202,7 +150,6 @@ export function TokenChart({ tokenAddress, tokenSymbol = 'MEME', chain = 'solana
           },
         });
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const candlestickSeries = (chart as any).addCandlestickSeries({
           upColor: '#22c55e',
           downColor: '#ef4444',
@@ -212,12 +159,12 @@ export function TokenChart({ tokenAddress, tokenSymbol = 'MEME', chain = 'solana
           wickUpColor: '#22c55e',
         });
 
-        // 设置数据
         candlestickSeries.setData(chartData);
         chart.timeScale().fitContent();
 
         chartRef.current = chart;
         seriesRef.current = candlestickSeries;
+        setChartInitialized(true);
 
         // 响应式处理
         const handleResize = () => {
@@ -239,12 +186,14 @@ export function TokenChart({ tokenAddress, tokenSymbol = 'MEME', chain = 'solana
     initChart();
 
     return () => {
+      isMounted = false;
       if (chartRef.current) {
         chartRef.current.remove();
         chartRef.current = null;
+        seriesRef.current = null;
       }
     };
-  }, [chartData]);
+  }, [isLoading, chartData]);
 
   return (
     <Card>
@@ -261,28 +210,47 @@ export function TokenChart({ tokenAddress, tokenSymbol = 'MEME', chain = 'solana
           </CardTitle>
           <p className="text-2xl font-bold text-primary">${currentPrice}</p>
         </div>
-        <div className="flex gap-1">
-          {timeframes.map((tf) => (
-            <Button
-              key={tf}
-              variant={selectedTimeframe === tf ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setSelectedTimeframe(tf)}
-              disabled={isLoading}
-              className="text-xs"
-            >
-              {tf}
-            </Button>
-          ))}
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={loadData}
+            disabled={isLoading}
+            className="h-8 w-8"
+          >
+            <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+          </Button>
+          <div className="flex gap-1">
+            {timeframes.map((tf) => (
+              <Button
+                key={tf}
+                variant={selectedTimeframe === tf ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setSelectedTimeframe(tf)}
+                disabled={isLoading}
+                className="text-xs h-8"
+              >
+                {tf}
+              </Button>
+            ))}
+          </div>
         </div>
       </CardHeader>
-      <CardContent>
-        {isLoading ? (
-          <div className="flex items-center justify-center h-[400px]">
+      <CardContent className="relative">
+        {isLoading && (
+          <div className="absolute inset-0 flex items-center justify-center bg-background/50 z-10">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
-        ) : (
-          <div ref={chartContainerRef} className="h-[400px] w-full" />
+        )}
+        <div
+          ref={chartContainerRef}
+          className="h-[400px] w-full"
+          style={{ minHeight: '400px' }}
+        />
+        {!isLoading && !chartInitialized && chartData.length === 0 && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <p className="text-muted-foreground">No chart data available</p>
+          </div>
         )}
       </CardContent>
     </Card>

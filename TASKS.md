@@ -129,17 +129,17 @@
 
 ### ✅ 完全可用功能
 
-| 功能 | 说明 |
+| 特性 | 状态 |
 |------|------|
-| 钱包连接 | EVM (RainbowKit) + Solana 工作正常 |
-| 设置保存 | localStorage 持久化 |
-| UI 浏览 | 所有页面可访问 |
-| 主题切换 | 暗色主题 |
-| 多语言 | 中/英文切换 |
-| PWA 安装 | 可安装到手机 |
-| Trending 代币 | 实时 DexScreener 数据 |
-| 推荐系统 | 链接生成/统计/排行榜 |
-| 社交分享 | PnL/交易卡片分享 |
+| 钱包连接 | ✅ 已对接 RainbowKit/Wagmi |
+| 跨链搜索 | ✅ 支持 Solana/Base/Ethereum |
+| K线图表 | ✅ 已集成 Lightweight Charts (模拟数据) |
+| 交易面板 | ✅ 支持 Sepolia & Base (合约对接中) |
+| 法律页面 | ✅ 服务条款/隐私政策/风险免责已部署 |
+| 错误追踪 | ✅ Sentry SDK 已集成 |
+| Trending 代币 | ✅ 实时 DexScreener 数据 |
+| 推荐系统 | ✅ 链接生成/统计/排行榜 |
+| 社交分享 | ✅ PnL/交易卡片分享 |
 
 ---
 
