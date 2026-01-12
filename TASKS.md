@@ -136,6 +136,7 @@
 | K线图表 | ✅ 已集成 Lightweight Charts (模拟数据) |
 | 交易面板 | ✅ 支持 Sepolia & Base (合约对接中) |
 | 法律页面 | ✅ 服务条款/隐私政策/风险免责已部署 |
+| 域名配置 | ✅ 已固化使用 alphanest-web-9w8.pages.dev |
 | 错误追踪 | ✅ Sentry SDK 已集成 |
 | Trending 代币 | ✅ 实时 DexScreener 数据 |
 | 推荐系统 | ✅ 链接生成/统计/排行榜 |

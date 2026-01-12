@@ -67,7 +67,7 @@ export class TelegramService {
   ): Promise<boolean> {
     const emoji = data.type === 'buy' ? '🐋🟢' : '🐋🔴';
     const action = data.type === 'buy' ? 'bought' : 'sold';
-    
+
     const text = `${emoji} <b>Whale Alert!</b>
 
 <b>${data.tokenName}</b> ($${data.tokenSymbol})
@@ -103,7 +103,7 @@ Chain: ${data.chain}
   ): Promise<boolean> {
     const devName = data.devAlias || `${data.devAddress.slice(0, 6)}...${data.devAddress.slice(-4)}`;
     const scoreEmoji = data.devScore >= 80 ? '💎' : data.devScore >= 60 ? '🥇' : '⚠️';
-    
+
     const text = `🚀 <b>New Token Launch!</b>
 
 <b>${data.tokenName}</b> ($${data.tokenSymbol})
@@ -122,11 +122,11 @@ ${scoreEmoji} Dev Score: ${data.devScore}/100
       reply_markup: {
         inline_keyboard: [
           [
-            { text: '📊 View Token', url: `https://alphanest.dev/trade?token=${data.tokenAddress}` },
-            { text: '👤 View Dev', url: `https://alphanest.dev/devs/profile?address=${data.devAddress}` },
+            { text: '📊 View Token', url: `https://alphanest-web-9w8.pages.dev/trade?token=${data.tokenAddress}` },
+            { text: '👤 View Dev', url: `https://alphanest-web-9w8.pages.dev/devs/profile?address=${data.devAddress}` },
           ],
           [
-            { text: '🛡️ Buy Insurance', url: `https://alphanest.dev/insurance?token=${data.tokenAddress}` },
+            { text: '🛡️ Buy Insurance', url: `https://alphanest-web-9w8.pages.dev/insurance?token=${data.tokenAddress}` },
           ],
         ],
       },
@@ -148,7 +148,7 @@ ${scoreEmoji} Dev Score: ${data.devScore}/100
     const isPositive = data.priceChange > 0;
     const emoji = isPositive ? '📈🟢' : '📉🔴';
     const direction = isPositive ? 'up' : 'down';
-    
+
     const text = `${emoji} <b>Price Alert!</b>
 
 <b>${data.tokenName}</b> ($${data.tokenSymbol})
@@ -162,7 +162,7 @@ ${isPositive ? '🚀' : '⬇️'} ${Math.abs(data.priceChange).toFixed(2)}% ${di
       parse_mode: 'HTML',
       reply_markup: {
         inline_keyboard: [
-          [{ text: '📊 View Chart', url: `https://alphanest.dev/trade?token=${data.tokenAddress}` }],
+          [{ text: '📊 View Chart', url: `https://alphanest-web-9w8.pages.dev/trade?token=${data.tokenAddress}` }],
         ],
       },
     });
@@ -183,7 +183,7 @@ ${isPositive ? '🚀' : '⬇️'} ${Math.abs(data.priceChange).toFixed(2)}% ${di
     const isWin = data.outcome === 'win';
     const emoji = isWin ? '🎉💰' : '😔';
     const title = isWin ? 'Insurance Payout!' : 'Insurance Expired';
-    
+
     let text = `${emoji} <b>${title}</b>
 
 Policy #${data.policyId}
@@ -223,7 +223,7 @@ Position: ${data.position === 'rug' ? 'Betting Rug 🔴' : 'Betting Safe 🟢'}`
     try {
       const response = await fetch(`${this.apiUrl}/getMe`);
       const result = await response.json();
-      
+
       if (result.ok) {
         return { id: result.result.id, username: result.result.username };
       }

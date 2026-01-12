@@ -174,10 +174,10 @@ export default function TermsPage() {
                         <p className="text-muted-foreground leading-relaxed">
                             For questions about these Terms, please contact us at{' '}
                             <a
-                                href="mailto:legal@alphanest.dev"
+                                href="mailto:legal@alphanest-web-9w8.pages.dev"
                                 className="text-primary hover:underline font-medium inline-flex items-center gap-1"
                             >
-                                legal@alphanest.dev
+                                legal@alphanest-web-9w8.pages.dev
                             </a>
                         </p>
                     </Section>

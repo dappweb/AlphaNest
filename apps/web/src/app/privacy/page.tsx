@@ -119,8 +119,8 @@ export default function PrivacyPage() {
                     </h2>
                     <p className="text-muted-foreground leading-relaxed">
                         For privacy-related questions, please contact us at{' '}
-                        <a href="mailto:privacy@alphanest.dev" className="text-primary hover:underline">
-                            privacy@alphanest.dev
+                        <a href="mailto:privacy@alphanest-web-9w8.pages.dev" className="text-primary hover:underline">
+                            privacy@alphanest-web-9w8.pages.dev
                         </a>
                     </p>
                 </section>

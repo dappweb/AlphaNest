@@ -105,34 +105,34 @@ export function StatsOverview() {
           if (result.success && result.data) {
             const data = result.data;
             setPlatformStats([
-              {
-                name: 'Total Volume (24h)',
+  {
+    name: 'Total Volume (24h)',
                 value: data.totalVolume || 0,
                 change: 12.5, // TODO: Calculate from historical data
-                icon: TrendingUp,
-                format: 'usd',
-              },
-              {
-                name: 'Active Devs',
+    icon: TrendingUp,
+    format: 'usd',
+  },
+  {
+    name: 'Active Devs',
                 value: 0, // Not available from API yet
-                change: 8.2,
-                icon: Users,
-                format: 'number',
-              },
-              {
-                name: 'Insurance TVL',
+    change: 8.2,
+    icon: Users,
+    format: 'number',
+  },
+  {
+    name: 'Insurance TVL',
                 value: data.tvl || 0,
-                change: -2.1,
-                icon: Shield,
-                format: 'usd',
-              },
-              {
-                name: 'Total Points Distributed',
+    change: -2.1,
+    icon: Shield,
+    format: 'usd',
+  },
+  {
+    name: 'Total Points Distributed',
                 value: 0, // Not available from API yet
-                change: 15.3,
-                icon: Coins,
-                format: 'number',
-              },
+    change: 15.3,
+    icon: Coins,
+    format: 'number',
+  },
             ]);
           }
         }
@@ -308,7 +308,7 @@ export function StatsOverview() {
           ))}
         </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {platformStats.map((stat) => (
         <Card key={stat.name}>
           <CardContent className="p-6">
