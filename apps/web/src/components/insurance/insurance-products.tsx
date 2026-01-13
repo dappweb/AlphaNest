@@ -250,7 +250,26 @@ export function InsuranceProducts() {
               expiresAt,
             };
           });
-          setProducts(mappedProducts);
+
+          // Add PopCow special products at the beginning
+          const popCowProducts: InsuranceProduct[] = [
+            {
+              id: 'popcow-special',
+              tokenName: 'PopCow Alpha Protection Bundle',
+              tokenSymbol: 'COWGUARD',
+              chain: 'multi-chain',
+              address: 'PopCow...Protected',
+              premiumRate: 2, // Even lower premium for PopCow users
+              poolSize: 100000,
+              currentOdds: { rug: 1.5, safe: 3.0 },
+              expiresIn: '30d',
+              riskLevel: 'low',
+              poolId: 999,
+              expiresAt: Date.now() + 2592000000, // 30 days
+            }
+          ];
+
+          setProducts([...popCowProducts, ...mappedProducts]);
         } else {
           setError(response.error || 'Failed to load insurance products');
         }
@@ -313,15 +332,26 @@ export function InsuranceProducts() {
           {products.map((product) => (
             <div
               key={product.id}
-              className="flex items-center justify-between rounded-lg border p-4 transition-colors hover:bg-secondary/50"
+              className={`flex items-center justify-between rounded-lg border p-4 transition-colors hover:bg-secondary/50 ${
+                product.id === 'popcow-special' 
+                  ? 'border-orange-500 bg-gradient-to-r from-orange-50/50 to-orange-100/50 dark:from-orange-950/20 dark:to-orange-900/20' 
+                  : ''
+              }`}
             >
               <div className="flex items-center gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-lg font-bold">
-                  {product.tokenSymbol.charAt(0)}
+                <div className={`flex h-12 w-12 items-center justify-center rounded-full text-lg font-bold ${
+                  product.id === 'popcow-special'
+                    ? 'bg-orange-500 text-white'
+                    : 'bg-primary/10'
+                }`}>
+                  {product.id === 'popcow-special' ? '🐄' : product.tokenSymbol.charAt(0)}
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="font-medium">{product.tokenName}</span>
+                    {product.id === 'popcow-special' && (
+                      <Badge className="bg-orange-500 hover:bg-orange-600">PopCow 专属</Badge>
+                    )}
                     <span className="text-sm text-muted-foreground">
                       ${product.tokenSymbol}
                     </span>
@@ -329,7 +359,10 @@ export function InsuranceProducts() {
                     {getRiskBadge(product.riskLevel)}
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    {formatAddress(product.address)}
+                    {product.id === 'popcow-special' 
+                      ? '🐄 PopCow\'s premium protection package - Maximum coverage, minimum risk' 
+                      : formatAddress(product.address)
+                    }
                   </p>
                 </div>
               </div>

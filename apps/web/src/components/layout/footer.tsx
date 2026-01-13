@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { Github, Twitter, MessageCircle, FileText, ExternalLink } from 'lucide-react';
 
 const socialLinks = [
@@ -52,7 +53,7 @@ const footerLinks = [
     title: 'Resources',
     links: [
       { name: 'Documentation', href: 'https://alphanest-web-9w8.pages.dev', external: true },
-      { name: 'API', href: 'https://alphanest-api.suiyiwan1.workers.dev', external: true },
+      { name: 'API', href: 'https://alphanest-api.dappweb.workers.dev', external: true },
       { name: 'Whitepaper', href: '/AlphaNest-Whitepaper.pdf', external: true },
       { name: 'Brand Kit', href: 'https://github.com/alphanest', external: true },
     ],
@@ -85,13 +86,17 @@ export function Footer() {
           {/* Brand Column */}
           <div className="col-span-2 md:col-span-1">
             <div className="flex items-center gap-2 mb-4">
-              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
-                <span className="text-lg font-bold text-white">🦊</span>
-              </div>
-              <span className="font-bold text-lg">AlphaNest</span>
+              <Image
+                src="/logo.png"
+                alt="PopCow Logo"
+                width={32}
+                height={32}
+                className="rounded-lg"
+              />
+              <span className="font-bold text-lg">PopCow</span>
             </div>
             <p className="text-sm text-muted-foreground mb-4">
-              The premier cross-chain Meme asset platform with curated launches, Dev reputation scoring, and Rug insurance.
+              PopCow - The premier cross-chain Meme asset platform with curated launches, Dev reputation scoring, and CowGuard insurance.
             </p>
             {/* Social Links */}
             <div className="flex gap-3">
@@ -145,7 +150,7 @@ export function Footer() {
         {/* Bottom Bar */}
         <div className="mt-12 pt-8 border-t flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-sm text-muted-foreground">
-            © {new Date().getFullYear()} AlphaNest. All rights reserved.
+            © {new Date().getFullYear()} PopCow. All rights reserved.
           </p>
           <div className="flex items-center gap-4 text-sm text-muted-foreground">
             <span>Built on</span>
@@ -157,6 +162,6 @@ export function Footer() {
           </div>
         </div>
       </div>
-    </footer>
+    </footer >
   );
 }

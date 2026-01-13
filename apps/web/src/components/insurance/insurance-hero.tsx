@@ -29,9 +29,11 @@ export function InsuranceHero() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">AlphaGuard Insurance</h1>
+        <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-orange-500 to-orange-600 bg-clip-text text-transparent">
+          CowGuard Insurance 🛡️🐄
+        </h1>
         <p className="mt-2 text-muted-foreground">
-          Protect your investments against Rug Pulls with parametric insurance
+          PopCow's revolutionary protection system - Keep your investments safe from Rug Pulls
         </p>
       </div>
 
