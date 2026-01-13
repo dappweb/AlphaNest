@@ -29,12 +29,12 @@ export function ReferralLink() {
   };
 
   const shareOnTwitter = () => {
-    const text = encodeURIComponent(`Join AlphaNest - the premier cross-chain Meme asset platform! 🚀\n\nUse my referral link to get bonus rewards:\n${referralLink}`);
+    const text = encodeURIComponent(`Join PopCow - the premier cross-chain Meme asset platform! 🚀\n\nUse my referral link to get bonus rewards:\n${referralLink}`);
     window.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank');
   };
 
   const shareOnTelegram = () => {
-    const text = encodeURIComponent(`Join AlphaNest using my referral link: ${referralLink}`);
+    const text = encodeURIComponent(`Join PopCow using my referral link: ${referralLink}`);
     window.open(`https://t.me/share/url?url=${encodeURIComponent(referralLink)}&text=${text}`, '_blank');
   };
 

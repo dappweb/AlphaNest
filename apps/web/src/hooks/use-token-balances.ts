@@ -77,7 +77,7 @@ const CHAIN_NAMES: Record<number, string> = {
   11155111: 'Sepolia',
 };
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://alphanest-api.suiyiwan1.workers.dev';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://alphanest-api.dappweb.workers.dev';
 
 /**
  * Hook to fetch token balances from blockchain

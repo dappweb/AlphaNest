@@ -21,7 +21,7 @@ interface TokenChartProps {
   chain?: string;
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://alphanest-api.suiyiwan1.workers.dev';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://alphanest-api.dappweb.workers.dev';
 
 export function TokenChart({ 
   tokenAddress = '0x6982508145454Ce325dDbE47a25d4ec3d2311933', // Default: PEPE on Base
@@ -117,7 +117,7 @@ export function TokenChart({
     let chartInstance: any = null;
 
     const init = async () => {
-      const { createChart, ColorType } = await import('lightweight-charts');
+      const { createChart, ColorType, CandlestickSeries } = await import('lightweight-charts');
       if (!chartContainerRef.current) return;
 
       const container = chartContainerRef.current;
@@ -147,7 +147,8 @@ export function TokenChart({
         },
       });
 
-      const candlestickSeries = chartInstance.addCandlestickSeries({
+      // lightweight-charts v5 使用 addSeries(CandlestickSeries) 代替 addCandlestickSeries()
+      const candlestickSeries = chartInstance.addSeries(CandlestickSeries, {
         upColor: '#22c55e',
         downColor: '#ef4444',
         borderDownColor: '#ef4444',

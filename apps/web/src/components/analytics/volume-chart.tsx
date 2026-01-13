@@ -14,7 +14,7 @@ interface VolumeData {
   trades: number;
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://alphanest-api.suiyiwan1.workers.dev';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://alphanest-api.dappweb.workers.dev';
 
 const timeRangeConfig: Record<TimeRange, { label: string; days: number }> = {
   '24h': { label: '24H', days: 1 },

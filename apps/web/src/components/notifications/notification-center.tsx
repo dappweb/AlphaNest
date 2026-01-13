@@ -39,7 +39,7 @@ interface Notification {
   actionLabel?: string;
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://alphanest-api.suiyiwan1.workers.dev';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://alphanest-api.dappweb.workers.dev';
 
 function getNotificationIcon(type: NotificationType) {
   switch (type) {
@@ -98,124 +98,90 @@ export function NotificationCenter({ isOpen, onClose }: NotificationCenterProps)
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // WebSocket connection for real-time notifications
-  const wsUrl = API_URL.replace('http', 'ws') + '/ws';
-  const { isConnected: wsConnected, subscribe, unsubscribe } = useWebSocket({
-    url: wsUrl,
-    onMessage: (message) => {
-      if (message.type === 'notification') {
-        const notification = message.data as Notification;
-        setNotifications((prev) => [notification, ...prev]);
-      }
+  // Mock notifications for demo
+  const mockNotifications: Notification[] = [
+    {
+      id: '1',
+      type: 'price_alert',
+      priority: 'high',
+      title: '🚀 PEPE Pumping!',
+      message: 'PEPE is up 45% in the last hour. High volume detected.',
+      timestamp: '2 mins ago',
+      read: false,
+      actionUrl: '/trade?token=PEPE',
+      actionLabel: 'Trade Now'
     },
-  });
+    {
+      id: '2',
+      type: 'whale_alert',
+      priority: 'medium',
+      title: '🐋 Whale Activity',
+      message: 'Large wallet moved 10M USDC to Binance',
+      timestamp: '15 mins ago',
+      read: false
+    },
+    {
+      id: '3',
+      type: 'insurance',
+      priority: 'low',
+      title: '🛡️ CowGuard Active',
+      message: 'Your insurance coverage is active for 5 positions',
+      timestamp: '1 hour ago',
+      read: true
+    },
+    {
+      id: '4',
+      type: 'points',
+      priority: 'medium',
+      title: '🎯 Points Earned!',
+      message: 'You earned 250 Cow Points from trading activity',
+      timestamp: '2 hours ago',
+      read: true,
+      actionUrl: '/points',
+      actionLabel: 'View Points'
+    },
+    {
+      id: '5',
+      type: 'system',
+      priority: 'low',
+      title: '🔔 System Update',
+      message: 'New features added to PopCow Alpha',
+      timestamp: '3 hours ago',
+      read: true,
+      actionUrl: '/popcow',
+      actionLabel: 'Explore'
+    }
+  ];
 
-  // Fetch notifications from API
+  // Initialize with mock data
   useEffect(() => {
-    if (!isConnected || !address) {
-      setNotifications([]);
-      return;
+    if (isOpen) {
+      setNotifications(mockNotifications);
+      setIsLoading(false);
     }
-
-    const fetchNotifications = async () => {
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const response = await fetch(`${API_URL}/api/v1/notifications`, {
-          headers: getAuthHeaders(),
-        });
-
-        if (response.ok) {
-          const result = await response.json();
-          if (result.success && result.data) {
-            setNotifications(result.data);
-          } else {
-            setNotifications([]);
-          }
-        } else {
-          throw new Error('Failed to fetch notifications');
-        }
-      } catch (err) {
-        console.error('Error fetching notifications:', err);
-        setError('Failed to load notifications');
-        // Fallback to empty array
-        setNotifications([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchNotifications();
-
-    // Subscribe to notifications channel
-    if (wsConnected) {
-      subscribe(`notifications:${address}`);
-      return () => unsubscribe(`notifications:${address}`);
-    }
-  }, [isConnected, address, wsConnected, subscribe, unsubscribe]);
+  }, [isOpen]);
 
   const unreadCount = notifications.filter(n => !n.read).length;
   const filteredNotifications = filter === 'all' 
     ? notifications 
     : notifications.filter(n => !n.read);
 
-  const markAsRead = async (id: string) => {
+  const markAsRead = (id: string) => {
     setNotifications(prev => 
       prev.map(n => n.id === id ? { ...n, read: true } : n)
     );
-
-    // Update on server
-    try {
-      await fetch(`${API_URL}/api/v1/notifications/${id}/read`, {
-        method: 'PUT',
-        headers: getAuthHeaders(),
-      });
-    } catch (err) {
-      console.error('Error marking notification as read:', err);
-    }
   };
 
-  const markAllAsRead = async () => {
+  const markAllAsRead = () => {
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-
-    // Update on server
-    try {
-      await fetch(`${API_URL}/api/v1/notifications/read-all`, {
-        method: 'PUT',
-        headers: getAuthHeaders(),
-      });
-    } catch (err) {
-      console.error('Error marking all as read:', err);
-    }
   };
 
-  const deleteNotification = async (id: string) => {
+  const deleteNotification = (id: string) => {
     setNotifications(prev => prev.filter(n => n.id !== id));
-
-    // Delete on server
-    try {
-      await fetch(`${API_URL}/api/v1/notifications/${id}`, {
-        method: 'DELETE',
-        headers: getAuthHeaders(),
-      });
-    } catch (err) {
-      console.error('Error deleting notification:', err);
-    }
   };
 
-  const clearAll = async () => {
+  const clearAll = () => {
     setNotifications([]);
-
-    // Clear on server
-    try {
-      await fetch(`${API_URL}/api/v1/notifications`, {
-        method: 'DELETE',
-        headers: getAuthHeaders(),
-      });
-    } catch (err) {
-      console.error('Error clearing notifications:', err);
-    }
   };
 
   if (!isOpen) return null;

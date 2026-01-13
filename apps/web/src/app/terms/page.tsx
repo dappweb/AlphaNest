@@ -174,10 +174,10 @@ export default function TermsPage() {
                         <p className="text-muted-foreground leading-relaxed">
                             For questions about these Terms, please contact us at{' '}
                             <a
-                                href="mailto:legal@alphanest-web-9w8.pages.dev"
+                                href="mailto:legal@popcow.xyz"
                                 className="text-primary hover:underline font-medium inline-flex items-center gap-1"
                             >
-                                legal@alphanest-web-9w8.pages.dev
+                                legal@popcow.xyz
                             </a>
                         </p>
                     </Section>
@@ -186,7 +186,7 @@ export default function TermsPage() {
                 {/* Footer CTA */}
                 <div className="text-center pt-8 border-t border-border/50">
                     <p className="text-sm text-muted-foreground mb-4">
-                        By continuing to use AlphaNest, you acknowledge that you have read and understood these terms.
+                        By continuing to use PopCow, you acknowledge that you have read and understood these terms.
                     </p>
                     <div className="flex items-center justify-center gap-4">
                         <Link

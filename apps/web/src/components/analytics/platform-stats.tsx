@@ -24,7 +24,7 @@ interface StatItem {
   format: 'usd' | 'number' | 'percent' | 'string';
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://alphanest-api.suiyiwan1.workers.dev';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://alphanest-api.dappweb.workers.dev';
 
 function formatValue(value: string | number, format: string): string {
   if (typeof value === 'string') return value;

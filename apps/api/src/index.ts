@@ -181,17 +181,19 @@ api.route('/blockchain', blockchainRoutes);
 api.route('/traders', traderRoutes);
 api.route('/analytics', analyticsRoutes);
 api.route('/meme', memeRoutes);
+api.route('/insurance', insuranceRoutes); // 部分公开路由
 
 // 需要认证的路由
 api.use('/trade/*', authMiddleware());
-api.use('/insurance/*', authMiddleware());
+api.use('/insurance/purchase', authMiddleware());
+api.use('/insurance/policies', authMiddleware());
+api.use('/insurance/claim', authMiddleware());
 api.use('/copy-trades/*', authMiddleware());
 api.use('/referral/*', authMiddleware());
 api.use('/notifications/*', authMiddleware());
 api.use('/bots/*', authMiddleware());
 
 api.route('/trade', tradeRoutes);
-api.route('/insurance', insuranceRoutes);
 api.route('/referral', referralRoutes);
 api.route('/notifications', notificationRoutes);
 api.route('/bots', botRoutes);

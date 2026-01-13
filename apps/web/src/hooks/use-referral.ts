@@ -7,7 +7,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useAccount } from 'wagmi';
 import { getAuthHeaders } from '@/lib/auth';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://alphanest-api.suiyiwan1.workers.dev';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://alphanest-api.dappweb.workers.dev';
 
 export interface ReferralStats {
   totalReferrals: number;
@@ -59,7 +59,7 @@ function generateReferralCode(address: string): string {
 function getReferralLink(code: string): string {
   const baseUrl = typeof window !== 'undefined' 
     ? window.location.origin 
-    : 'https://alphanest-web-9w8.pages.dev';
+    : 'https://app.popcow.xyz';
   return `${baseUrl}/?ref=${code}`;
 }
 

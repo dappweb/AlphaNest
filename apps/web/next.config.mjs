@@ -13,7 +13,7 @@ const nextConfig = {
       },
     ],
   },
-  trailingSlash: true,
+  trailingSlash: false,
   
   // 性能优化
   compiler: {

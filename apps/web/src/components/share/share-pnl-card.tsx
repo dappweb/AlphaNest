@@ -22,7 +22,7 @@ export function SharePnlCard({ totalValue, pnl, pnlPercent, period = '24h' }: Sh
     'all': 'All Time',
   };
 
-  const shareText = `💰 My ${periodLabels[period]} performance on @AlphaNestApp:\n\n${isPositive ? '📈' : '📉'} ${isPositive ? '+' : ''}${pnlPercent.toFixed(2)}% (${isPositive ? '+' : ''}$${pnl.toFixed(2)})\n\nJoin the #1 cross-chain Meme platform! 🚀`;
+  const shareText = `💰 My ${periodLabels[period]} performance on @popcowxyz:\n\n${isPositive ? '📈' : '📉'} ${isPositive ? '+' : ''}${pnlPercent.toFixed(2)}% (${isPositive ? '+' : ''}$${pnl.toFixed(2)})\n\nJoin the #1 cross-chain Meme platform! 🚀`;
 
   return (
     <Card className="overflow-hidden">
@@ -32,7 +32,7 @@ export function SharePnlCard({ totalValue, pnl, pnlPercent, period = '24h' }: Sh
             <div className="h-8 w-8 rounded-lg bg-primary/20 flex items-center justify-center">
               <span className="text-lg font-bold">🦊</span>
             </div>
-            <span className="font-bold">AlphaNest</span>
+            <span className="font-bold">PopCow</span>
           </div>
           <span className="text-sm text-muted-foreground">{periodLabels[period]}</span>
         </div>
@@ -64,7 +64,7 @@ export function SharePnlCard({ totalValue, pnl, pnlPercent, period = '24h' }: Sh
       <CardContent className="p-4">
         <ShareButton 
           text={shareText}
-          title="My AlphaNest Performance"
+          title="My PopCow Performance"
           className="w-full"
         />
       </CardContent>

@@ -9,7 +9,7 @@ interface DevStatsProps {
   address: string;
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://alphanest-api.suiyiwan1.workers.dev';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://alphanest-api.dappweb.workers.dev';
 
 export function DevStats({ address }: DevStatsProps) {
   const [stats, setStats] = useState({

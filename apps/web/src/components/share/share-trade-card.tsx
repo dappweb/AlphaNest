@@ -31,8 +31,8 @@ export function ShareTradeCard({
   const isProfit = hasPnl && pnl >= 0;
 
   const shareText = hasPnl
-    ? `${isProfit ? '🚀' : '📉'} Just ${isBuy ? 'bought' : 'sold'} $${tokenSymbol} on @AlphaNestApp!\n\n${isProfit ? '✅' : '❌'} ${isProfit ? '+' : ''}${pnlPercent?.toFixed(2)}% PnL\n\n💰 ${amount.toLocaleString()} ${tokenSymbol} @ $${price.toFixed(6)}\n⛓️ ${chain}\n\nJoin the #1 cross-chain Meme platform! 🦊`
-    : `${isBuy ? '🟢' : '🔴'} Just ${isBuy ? 'bought' : 'sold'} $${tokenSymbol} on @AlphaNestApp!\n\n💰 ${amount.toLocaleString()} ${tokenSymbol} @ $${price.toFixed(6)}\n⛓️ ${chain}\n\nJoin the #1 cross-chain Meme platform! 🦊`;
+    ? `${isProfit ? '🚀' : '📉'} Just ${isBuy ? 'bought' : 'sold'} $${tokenSymbol} on @popcowxyz!\n\n${isProfit ? '✅' : '❌'} ${isProfit ? '+' : ''}${pnlPercent?.toFixed(2)}% PnL\n\n💰 ${amount.toLocaleString()} ${tokenSymbol} @ $${price.toFixed(6)}\n⛓️ ${chain}\n\nJoin the #1 cross-chain Meme platform! 🦊`
+    : `${isBuy ? '🟢' : '🔴'} Just ${isBuy ? 'bought' : 'sold'} $${tokenSymbol} on @popcowxyz!\n\n💰 ${amount.toLocaleString()} ${tokenSymbol} @ $${price.toFixed(6)}\n⛓️ ${chain}\n\nJoin the #1 cross-chain Meme platform! 🦊`;
 
   return (
     <Card className="overflow-hidden">
@@ -45,7 +45,7 @@ export function ShareTradeCard({
             <span className="text-sm text-muted-foreground">{chain}</span>
           </div>
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <span className="font-bold">AlphaNest</span>
+            <span className="font-bold">PopCow</span>
             <span>🦊</span>
           </div>
         </div>

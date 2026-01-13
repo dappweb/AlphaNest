@@ -2,7 +2,7 @@
  * API Client for AlphaNest Backend
  */
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://alphanest-api.suiyiwan1.workers.dev';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://alphanest-api.dappweb.workers.dev';
 
 interface ApiResponse<T> {
   success: boolean;

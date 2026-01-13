@@ -8,7 +8,7 @@ export const POPCOW_CONFIG = {
   // Social Links
   social: {
     twitter: 'https://x.com/popcowxyz',
-    telegram: 'https://t.me/popcowofficial',
+    telegram: 'https://t.me/popcowxyz',
     discord: 'https://discord.gg/popcow',
   },
   

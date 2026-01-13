@@ -49,7 +49,7 @@ export function StatsOverview() {
         try {
           // Fetch portfolio value from token balances
           const holdingsResponse = await fetch(
-            `${process.env.NEXT_PUBLIC_API_URL || 'https://alphanest-api.suiyiwan1.workers.dev'}/api/v1/blockchain/balance?address=${address}&token=0x0000000000000000000000000000000000000000&chainId=1`
+            `${process.env.NEXT_PUBLIC_API_URL || 'https://alphanest-api.dappweb.workers.dev'}/api/v1/blockchain/balance?address=${address}&token=0x0000000000000000000000000000000000000000&chainId=1`
           );
           
           // Fetch points balance
@@ -98,7 +98,7 @@ export function StatsOverview() {
       setIsLoadingPlatform(true);
       try {
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL || 'https://alphanest-api.suiyiwan1.workers.dev'}/api/v1/analytics/platform`
+          `${process.env.NEXT_PUBLIC_API_URL || 'https://alphanest-api.dappweb.workers.dev'}/api/v1/analytics/platform`
         );
         if (response.ok) {
           const result = await response.json();

@@ -91,7 +91,7 @@ export function WalletOverview({ className }: WalletOverviewProps) {
 
         // Fetch user stats from API
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL || 'https://alphanest-api.suiyiwan1.workers.dev'}/api/v1/user/${userAddress}/stats`
+          `${process.env.NEXT_PUBLIC_API_URL || 'https://alphanest-api.dappweb.workers.dev'}/api/v1/user/${userAddress}/stats`
         );
 
         if (response.ok) {

@@ -19,7 +19,7 @@ export interface Transaction {
   blockNumber?: number;
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://alphanest-api.suiyiwan1.workers.dev';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://alphanest-api.dappweb.workers.dev';
 
 const CHAIN_NAMES: Record<number, string> = {
   1: 'Ethereum',

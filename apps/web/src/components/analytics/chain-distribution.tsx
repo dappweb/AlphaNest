@@ -15,7 +15,7 @@ interface ChainData {
   icon: string;
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://alphanest-api.suiyiwan1.workers.dev';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://alphanest-api.dappweb.workers.dev';
 
 const CHAIN_COLORS: Record<string, { color: string; icon: string }> = {
   ethereum: { color: 'bg-blue-500', icon: 'Ξ' },

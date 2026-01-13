@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
+import { useState, useEffect, useMemo } from 'react';
 import {
   LayoutDashboard,
   TrendingUp,
@@ -16,26 +17,124 @@ import {
   Copy,
   Gift,
   Rocket,
+  ChevronLeft,
+  ChevronRight,
+  Search,
+  Menu,
+  X,
+  Zap,
+  Star,
+  ArrowRight,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 
 const navigation = [
-  { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-  { name: 'PopCow Alpha 🐄', href: '/popcow', icon: Rocket, special: true },
-  { name: 'Trade', href: '/trade', icon: TrendingUp },
-  { name: 'Meme Hunter', href: '/meme', icon: Rocket },
-  { name: 'Copy Trading', href: '/copy-trade', icon: Copy },
-  { name: 'Dev Rankings', href: '/devs', icon: Users },
-  { name: 'CowGuard Insurance', href: '/insurance', icon: Shield },
-  { name: 'Cow Points', href: '/points', icon: Coins },
-  { name: 'Analytics', href: '/analytics', icon: BarChart3 },
-  { name: 'Trading Bots', href: '/bots', icon: Bot },
+  { 
+    name: 'Dashboard', 
+    href: '/', 
+    icon: LayoutDashboard,
+    description: 'Overview and stats',
+    shortcut: 'Ctrl+D',
+    badge: null
+  },
+  { 
+    name: 'PopCow Alpha 🐄', 
+    href: '/popcow', 
+    icon: Rocket, 
+    special: true,
+    description: 'AI-powered alpha discoveries',
+    shortcut: 'Ctrl+P',
+    badge: { text: 'NEW', variant: 'destructive' as const }
+  },
+  { 
+    name: 'Trade', 
+    href: '/trade', 
+    icon: TrendingUp,
+    description: 'Smart trading interface',
+    shortcut: 'Ctrl+T',
+    badge: null
+  },
+  { 
+    name: 'Meme Hunter', 
+    href: '/meme', 
+    icon: Zap,
+    description: 'Find trending meme tokens',
+    shortcut: 'Ctrl+M',
+    badge: { text: 'HOT', variant: 'default' as const }
+  },
+  { 
+    name: 'Copy Trading', 
+    href: '/copy-trade', 
+    icon: Copy,
+    description: 'Follow top traders',
+    shortcut: 'Ctrl+C',
+    badge: null
+  },
+  { 
+    name: 'Dev Rankings', 
+    href: '/devs', 
+    icon: Users,
+    description: 'Developer reputation system',
+    shortcut: 'Ctrl+R',
+    badge: null
+  },
+  { 
+    name: 'CowGuard Insurance', 
+    href: '/insurance', 
+    icon: Shield,
+    description: 'Parametric insurance protection',
+    shortcut: 'Ctrl+I',
+    badge: { text: 'PRO', variant: 'secondary' as const }
+  },
+  { 
+    name: 'Cow Points', 
+    href: '/points', 
+    icon: Coins,
+    description: 'Earn rewards and points',
+    shortcut: 'Ctrl+O',
+    badge: { text: '2.5x', variant: 'outline' as const }
+  },
+  { 
+    name: 'Analytics', 
+    href: '/analytics', 
+    icon: BarChart3,
+    description: 'Advanced analytics and insights',
+    shortcut: 'Ctrl+A',
+    badge: null
+  },
+  { 
+    name: 'Trading Bots', 
+    href: '/bots', 
+    icon: Bot,
+    description: 'Automated trading strategies',
+    shortcut: 'Ctrl+B',
+    badge: null
+  },
 ];
 
 const userNavigation = [
-  { name: 'Account', href: '/account', icon: Wallet },
-  { name: 'Referral', href: '/referral', icon: Gift },
-  { name: 'Settings', href: '/settings', icon: Settings },
+  { 
+    name: 'Account', 
+    href: '/account', 
+    icon: Wallet,
+    description: 'Wallet and profile settings'
+  },
+  { 
+    name: 'Referral', 
+    href: '/referral', 
+    icon: Gift,
+    description: 'Refer and earn rewards',
+    badge: { text: '10%', variant: 'default' as const }
+  },
+  { 
+    name: 'Settings', 
+    href: '/settings', 
+    icon: Settings,
+    description: 'App preferences and configuration'
+  },
 ];
 
 export function Sidebar() {
@@ -74,8 +173,17 @@ export function Sidebar() {
                 )}
               >
                 <item.icon className="h-5 w-5" />
-                {item.name}
-                {isSpecial && <span className="ml-auto text-xs bg-orange-500 text-white px-1.5 py-0.5 rounded-full">NEW</span>}
+                <span className="flex-1">{item.name}</span>
+                {item.badge && (
+                  <Badge variant={item.badge.variant} className="text-xs">
+                    {item.badge.text}
+                  </Badge>
+                )}
+                {isSpecial && (
+                  <Badge variant="destructive" className="text-xs">
+                    NEW
+                  </Badge>
+                )}
               </Link>
             );
           })}
@@ -103,7 +211,12 @@ export function Sidebar() {
                 )}
               >
                 <item.icon className="h-5 w-5" />
-                {item.name}
+                <span className="flex-1">{item.name}</span>
+                {item.badge && (
+                  <Badge variant={item.badge.variant} className="text-xs">
+                    {item.badge.text}
+                  </Badge>
+                )}
               </Link>
             );
           })}
@@ -114,8 +227,12 @@ export function Sidebar() {
         <div className="rounded-lg bg-secondary p-4">
           <p className="text-xs text-muted-foreground">Network Status</p>
           <div className="mt-2 flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-success animate-pulse" />
+            <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
             <span className="text-sm font-medium">All Systems Operational</span>
+          </div>
+          <div className="mt-2 text-xs text-muted-foreground">
+            <p>⚡ Fast response</p>
+            <p>🔒 Secure connection</p>
           </div>
         </div>
       </div>

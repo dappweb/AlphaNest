@@ -51,7 +51,7 @@ export function ShareButton({ title, text, url, className }: ShareButtonProps) {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: title || 'AlphaNest',
+          title: title || 'PopCow',
           text,
           url: shareUrl,
         });

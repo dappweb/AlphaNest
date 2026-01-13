@@ -18,7 +18,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://alphanest-web.pages.dev'),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://app.popcow.xyz'),
   title: {
     default: 'PopCow - The Smartest Cow in Crypto 🐄',
     template: '%s | PopCow Platform',
@@ -59,7 +59,7 @@ export const metadata: Metadata = {
     description:
       'Follow PopCow for Alpha discoveries, Rug Pull protection, and safe Meme coin trading.',
     type: 'website',
-    url: 'https://popcow.xyz',
+    url: 'https://app.popcow.xyz',
     siteName: 'PopCow Platform',
     images: [
       {

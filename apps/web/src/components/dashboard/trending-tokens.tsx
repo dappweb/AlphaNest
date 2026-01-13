@@ -55,7 +55,7 @@ export function TrendingTokens() {
     async function fetchTrendingTokens() {
       try {
         setLoading(true);
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://alphanest-api.suiyiwan1.workers.dev';
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://alphanest-api.dappweb.workers.dev';
         const res = await fetch(`${apiUrl}/api/v1/tokens/trending?limit=10`);
         
         if (!res.ok) throw new Error('Failed to fetch tokens');

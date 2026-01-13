@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { usePointsInfo } from '@/hooks/use-alphanest-core';
 import { useUserPolicies } from '@/hooks/use-alphaguard';
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://alphanest-api.suiyiwan1.workers.dev';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://alphanest-api.dappweb.workers.dev';
 
 interface Task {
   id: string;
@@ -61,7 +61,7 @@ const TASKS: Task[] = [
   {
     id: 'refer-friend',
     title: 'Refer a Friend',
-    description: 'Invite friends to join AlphaNest',
+    description: 'Invite friends to join PopCow',
     points: 1000,
     icon: <Users className="h-5 w-5" />,
     status: 'available',
