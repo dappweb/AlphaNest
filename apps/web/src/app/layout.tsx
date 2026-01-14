@@ -5,6 +5,8 @@ import { Providers } from '@/components/providers';
 import { Header } from '@/components/layout/header';
 import { Sidebar } from '@/components/layout/sidebar';
 import { Footer } from '@/components/layout/footer';
+import { MobileNav } from '@/components/layout/mobile-nav';
+import { PageTransition } from '@/components/layout/page-transition';
 import { PWAComponents } from '@/components/pwa/pwa-wrapper';
 
 const inter = Inter({ 
@@ -129,10 +131,13 @@ export default function RootLayout({
             <Sidebar />
             <div className="flex flex-1 flex-col">
               <Header />
-              <main className="flex-1 overflow-auto p-6">{children}</main>
-              <Footer />
+              <main className="flex-1 overflow-auto p-4 md:p-6 pb-20 md:pb-6">
+                <PageTransition>{children}</PageTransition>
+              </main>
+              <Footer className="hidden md:block" />
             </div>
           </div>
+          <MobileNav />
           <PWAComponents />
         </Providers>
       </body>

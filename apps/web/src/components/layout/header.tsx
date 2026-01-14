@@ -2,15 +2,18 @@
 
 import { useState, useEffect } from 'react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
-import { Bell, Search, X } from 'lucide-react';
+import { Bell, Search, X, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { NotificationCenter } from '@/components/notifications';
 import Image from 'next/image';
+import { useSidebarStore } from '@/stores/sidebar-store';
+import { cn } from '@/lib/utils';
 
 export function Header() {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const { isCollapsed, toggleMobileOpen } = useSidebarStore();
 
   // Mock unread count - in production, get from API/state
   const unreadCount = 3;
@@ -55,31 +58,49 @@ export function Header() {
 
   return (
     <>
-      <header className="sticky top-0 z-50 flex h-16 items-center justify-between border-b bg-background/95 px-6 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="flex items-center gap-4">
-          {/* PopCow Logo */}
-          <div className="flex items-center gap-2">
+      <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background/95 px-4 md:px-6 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="flex items-center gap-2 md:gap-4">
+          {/* Mobile Menu Toggle */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="md:hidden"
+            onClick={toggleMobileOpen}
+          >
+            <Menu className="h-5 w-5" />
+          </Button>
+
+          {/* PopCow Logo - Show when sidebar is collapsed or on mobile */}
+          <div className={cn(
+            "items-center gap-2 transition-opacity duration-200",
+            isCollapsed ? "hidden md:flex" : "flex md:hidden"
+          )}>
             <Image
               src="/logo.png"
               alt="PopCow Logo"
-              width={32}
-              height={32}
+              width={28}
+              height={28}
               className="rounded-lg"
             />
-            <span className="text-sm font-bold bg-gradient-to-r from-orange-500 to-orange-600 bg-clip-text text-transparent">PopCow Platform</span>
+            <span className="text-sm font-bold bg-gradient-to-r from-orange-500 to-orange-600 bg-clip-text text-transparent hidden sm:inline">
+              PopCow
+            </span>
           </div>
 
-          <form onSubmit={handleSearch} className="relative">
+          <form onSubmit={handleSearch} className="relative hidden sm:block">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <input
               id="global-search"
               type="text"
-              placeholder="Search with PopCow intelligence... 🐄 (Ctrl+K)"
+              placeholder="Search... (Ctrl+K)"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onFocus={() => setShowSuggestions(true)}
               onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-              className="h-10 w-64 rounded-lg border bg-secondary pl-10 pr-4 text-sm outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-orange-500 transition-all duration-200"
+              className={cn(
+                "h-10 rounded-lg border bg-secondary pl-10 pr-4 text-sm outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-orange-500 transition-all duration-200",
+                "w-48 md:w-64 lg:w-80 focus:w-64 md:focus:w-80 lg:focus:w-96"
+              )}
             />
             {searchQuery && (
               <button
@@ -118,7 +139,23 @@ export function Header() {
           </form>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 md:gap-4">
+          {/* Mobile Search Button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="sm:hidden"
+            onClick={() => {
+              const searchInput = document.getElementById('global-search');
+              if (searchInput) {
+                searchInput.closest('form')?.classList.remove('hidden');
+                searchInput.focus();
+              }
+            }}
+          >
+            <Search className="h-5 w-5" />
+          </Button>
+
           <Button
             variant="ghost"
             size="icon"

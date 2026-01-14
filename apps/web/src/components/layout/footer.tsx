@@ -77,9 +77,13 @@ const footerLinks = [
   },
 ];
 
-export function Footer() {
+interface FooterProps {
+  className?: string;
+}
+
+export function Footer({ className }: FooterProps) {
   return (
-    <footer className="border-t bg-background/50 backdrop-blur-sm">
+    <footer className={`border-t bg-background/50 backdrop-blur-sm ${className || ''}`}>
       <div className="mx-auto max-w-7xl px-6 py-12">
         {/* Main Footer Content */}
         <div className="grid grid-cols-2 gap-8 md:grid-cols-5">
