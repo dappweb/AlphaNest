@@ -1,7 +1,7 @@
 import { TokenSearch } from '@/components/trade/token-search';
-import { TokenChart } from '@/components/trade/token-chart';
 import { TradePanel } from '@/components/trade/trade-panel';
 import { TokenInfo } from '@/components/trade/token-info';
+import { LazyTokenChart } from '@/components/trade/lazy-token-chart';
 
 export default function TradePage() {
   return (
@@ -13,7 +13,7 @@ export default function TradePage() {
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-6">
-          <TokenChart />
+          <LazyTokenChart />
           <TokenInfo />
         </div>
         <div>

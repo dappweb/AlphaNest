@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { cn } from '@/lib/utils';
 
 interface PopCowAvatarProps {
@@ -9,21 +10,14 @@ interface PopCowAvatarProps {
   animated?: boolean;
   className?: string;
   onClick?: () => void;
+  showBorder?: boolean;
 }
 
-const sizeClasses = {
-  sm: 'w-8 h-8',
-  md: 'w-12 h-12', 
-  lg: 'w-16 h-16',
-  xl: 'w-24 h-24'
-};
-
-const moodEmojis = {
-  happy: '🐄',
-  thinking: '🤔🐄',
-  alert: '⚠️🐄', 
-  sleeping: '😴🐄',
-  excited: '🚀🐄'
+const sizeConfig = {
+  sm: { container: 'w-8 h-8', image: 24 },
+  md: { container: 'w-12 h-12', image: 40 }, 
+  lg: { container: 'w-16 h-16', image: 56 },
+  xl: { container: 'w-24 h-24', image: 88 }
 };
 
 export function PopCowAvatar({ 
@@ -31,26 +25,34 @@ export function PopCowAvatar({
   mood = 'happy', 
   animated = false,
   className,
-  onClick 
+  onClick,
+  showBorder = true
 }: PopCowAvatarProps) {
   const [isHovered, setIsHovered] = useState(false);
+  const config = sizeConfig[size];
 
   return (
     <div
       className={cn(
-        sizeClasses[size],
-        'flex items-center justify-center rounded-full bg-gradient-to-br from-orange-400 to-orange-600 cursor-pointer transition-all duration-300',
-        animated && 'hover:scale-110 hover:rotate-12',
-        isHovered && 'shadow-lg shadow-orange-500/25',
+        config.container,
+        'flex items-center justify-center rounded-full cursor-pointer transition-all duration-300 overflow-hidden',
+        showBorder && 'border-4 border-orange-500/30 bg-gradient-to-br from-orange-400/20 to-orange-600/20',
+        animated && 'hover:scale-110',
+        isHovered && 'shadow-lg shadow-orange-500/40 border-orange-500',
         className
       )}
       onClick={onClick}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <span className="text-lg select-none">
-        {moodEmojis[mood]}
-      </span>
+      <Image
+        src="/logo.png"
+        alt="PopCow"
+        width={config.image}
+        height={config.image}
+        className="object-contain"
+        priority
+      />
     </div>
   );
 }

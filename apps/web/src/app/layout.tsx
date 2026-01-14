@@ -5,9 +5,14 @@ import { Providers } from '@/components/providers';
 import { Header } from '@/components/layout/header';
 import { Sidebar } from '@/components/layout/sidebar';
 import { Footer } from '@/components/layout/footer';
-import { InstallPrompt, OfflineIndicator } from '@/components/pwa/install-prompt';
+import { PWAComponents } from '@/components/pwa/pwa-wrapper';
 
-const inter = Inter({ subsets: ['latin'], variable: '--font-geist-sans' });
+const inter = Inter({ 
+  subsets: ['latin'], 
+  variable: '--font-geist-sans',
+  display: 'swap', // 优化字体加载
+  preload: true,
+});
 
 export const viewport: Viewport = {
   themeColor: '#22c55e',
@@ -104,8 +109,17 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <head>
+        {/* DNS 预解析 */}
+        <link rel="dns-prefetch" href="https://alphanest-api.dappweb.workers.dev" />
+        <link rel="dns-prefetch" href="https://api.dexscreener.com" />
+        <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+        <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
+        
+        {/* 预连接关键资源 */}
+        <link rel="preconnect" href="https://alphanest-api.dappweb.workers.dev" crossOrigin="anonymous" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
       </head>
@@ -119,8 +133,7 @@ export default function RootLayout({
               <Footer />
             </div>
           </div>
-          <InstallPrompt />
-          <OfflineIndicator />
+          <PWAComponents />
         </Providers>
       </body>
     </html>

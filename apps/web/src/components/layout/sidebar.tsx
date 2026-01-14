@@ -47,7 +47,7 @@ const navigation = [
     special: true,
     description: 'AI-powered alpha discoveries',
     shortcut: 'Ctrl+P',
-    badge: { text: 'NEW', variant: 'destructive' as const }
+    badge: null  // 移除重复的 NEW 徽章，使用 special 属性的徽章
   },
   { 
     name: 'Trade', 

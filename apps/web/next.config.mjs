@@ -20,6 +20,20 @@ const nextConfig = {
     removeConsole: process.env.NODE_ENV === 'production',
   },
   
+  // 实验性优化
+  experimental: {
+    optimizePackageImports: [
+      'lucide-react',
+      '@radix-ui/react-avatar',
+      '@radix-ui/react-dialog',
+      '@radix-ui/react-dropdown-menu',
+      '@radix-ui/react-tabs',
+      '@radix-ui/react-tooltip',
+      '@radix-ui/react-progress',
+      '@radix-ui/react-scroll-area',
+    ],
+  },
+  
   // 减少打包体积
   modularizeImports: {
     'lucide-react': {
@@ -44,6 +58,47 @@ const nextConfig = {
         'pino-pretty': false,
       };
     }
+    
+    // 优化分块策略
+    config.optimization = {
+      ...config.optimization,
+      splitChunks: {
+        chunks: 'all',
+        cacheGroups: {
+          // 将大型库分离
+          wagmi: {
+            test: /[\\/]node_modules[\\/](wagmi|viem|@wagmi)[\\/]/,
+            name: 'wagmi',
+            priority: 30,
+            reuseExistingChunk: true,
+          },
+          rainbowkit: {
+            test: /[\\/]node_modules[\\/](@rainbow-me)[\\/]/,
+            name: 'rainbowkit',
+            priority: 25,
+            reuseExistingChunk: true,
+          },
+          solana: {
+            test: /[\\/]node_modules[\\/](@solana)[\\/]/,
+            name: 'solana',
+            priority: 20,
+            reuseExistingChunk: true,
+          },
+          charts: {
+            test: /[\\/]node_modules[\\/](lightweight-charts)[\\/]/,
+            name: 'charts',
+            priority: 15,
+            reuseExistingChunk: true,
+          },
+          radix: {
+            test: /[\\/]node_modules[\\/](@radix-ui)[\\/]/,
+            name: 'radix',
+            priority: 10,
+            reuseExistingChunk: true,
+          },
+        },
+      },
+    };
     
     return config;
   },
