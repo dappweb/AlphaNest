@@ -30,13 +30,19 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 const navigation = [
   { 
     name: 'Dashboard', 
     href: '/', 
     icon: LayoutDashboard,
-    description: 'Overview and stats',
+    description: '平台概览与实时数据统计',
     shortcut: 'Ctrl+D',
     badge: null
   },
@@ -45,15 +51,15 @@ const navigation = [
     href: '/popcow', 
     icon: Rocket, 
     special: true,
-    description: 'AI-powered alpha discoveries',
+    description: 'AI 驱动的 Alpha 项目发现',
     shortcut: 'Ctrl+P',
-    badge: null  // 移除重复的 NEW 徽章，使用 special 属性的徽章
+    badge: null
   },
   { 
     name: 'Trade', 
     href: '/trade', 
     icon: TrendingUp,
-    description: 'Smart trading interface',
+    description: '智能交易界面与 K 线图表',
     shortcut: 'Ctrl+T',
     badge: null
   },
@@ -61,7 +67,7 @@ const navigation = [
     name: 'Meme Hunter', 
     href: '/meme', 
     icon: Zap,
-    description: 'Find trending meme tokens',
+    description: '聚合多平台热门 Meme 代币数据',
     shortcut: 'Ctrl+M',
     badge: { text: 'HOT', variant: 'default' as const }
   },
@@ -69,7 +75,7 @@ const navigation = [
     name: 'Copy Trading', 
     href: '/copy-trade', 
     icon: Copy,
-    description: 'Follow top traders',
+    description: '跟随顶级交易员自动跟单',
     shortcut: 'Ctrl+C',
     badge: null
   },
@@ -77,7 +83,7 @@ const navigation = [
     name: 'Dev Rankings', 
     href: '/devs', 
     icon: Users,
-    description: 'Developer reputation system',
+    description: '开发者信誉评分与排行榜',
     shortcut: 'Ctrl+R',
     badge: null
   },
@@ -85,7 +91,7 @@ const navigation = [
     name: 'CowGuard Insurance', 
     href: '/insurance', 
     icon: Shield,
-    description: 'Parametric insurance protection',
+    description: '参数化保险保护，防范 Rug Pull',
     shortcut: 'Ctrl+I',
     badge: { text: 'PRO', variant: 'secondary' as const }
   },
@@ -93,7 +99,7 @@ const navigation = [
     name: 'Cow Points', 
     href: '/points', 
     icon: Coins,
-    description: 'Earn rewards and points',
+    description: '完成任务赚取积分与奖励',
     shortcut: 'Ctrl+O',
     badge: { text: '2.5x', variant: 'outline' as const }
   },
@@ -101,7 +107,7 @@ const navigation = [
     name: 'Analytics', 
     href: '/analytics', 
     icon: BarChart3,
-    description: 'Advanced analytics and insights',
+    description: '深度数据分析与市场洞察',
     shortcut: 'Ctrl+A',
     badge: null
   },
@@ -109,7 +115,7 @@ const navigation = [
     name: 'Trading Bots', 
     href: '/bots', 
     icon: Bot,
-    description: 'Automated trading strategies',
+    description: '自动化交易策略与机器人',
     shortcut: 'Ctrl+B',
     badge: null
   },
@@ -120,20 +126,20 @@ const userNavigation = [
     name: 'Account', 
     href: '/account', 
     icon: Wallet,
-    description: 'Wallet and profile settings'
+    description: '钱包连接与个人资料设置'
   },
   { 
     name: 'Referral', 
     href: '/referral', 
     icon: Gift,
-    description: 'Refer and earn rewards',
+    description: '推荐好友获得 10% 返佣奖励',
     badge: { text: '10%', variant: 'default' as const }
   },
   { 
     name: 'Settings', 
     href: '/settings', 
     icon: Settings,
-    description: 'App preferences and configuration'
+    description: '应用偏好设置与配置'
   },
 ];
 
@@ -155,72 +161,95 @@ export function Sidebar() {
 
       <nav className="flex-1 space-y-1 p-4 overflow-y-auto">
         {/* Main Navigation */}
-        <div className="space-y-1">
-          {navigation.map((item) => {
-            const isActive = pathname === item.href;
-            const isSpecial = 'special' in item && item.special;
-            return (
-              <Link
-                key={item.name}
-                href={item.href}
-                className={cn(
-                  'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                  isActive
-                    ? 'bg-primary text-primary-foreground'
-                    : isSpecial
-                      ? 'text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-950/20 hover:text-orange-600'
-                      : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
-                )}
-              >
-                <item.icon className="h-5 w-5" />
-                <span className="flex-1">{item.name}</span>
-                {item.badge && (
-                  <Badge variant={item.badge.variant} className="text-xs">
-                    {item.badge.text}
-                  </Badge>
-                )}
-                {isSpecial && (
-                  <Badge variant="destructive" className="text-xs">
-                    NEW
-                  </Badge>
-                )}
-              </Link>
-            );
-          })}
-        </div>
+        <TooltipProvider delayDuration={300}>
+          <div className="space-y-1">
+            {navigation.map((item) => {
+              const isActive = pathname === item.href;
+              const isSpecial = 'special' in item && item.special;
+              return (
+                <Tooltip key={item.name}>
+                  <TooltipTrigger asChild>
+                    <Link
+                      href={item.href}
+                      className={cn(
+                        'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                        isActive
+                          ? 'bg-primary text-primary-foreground'
+                          : isSpecial
+                            ? 'text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-950/20 hover:text-orange-600'
+                            : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
+                      )}
+                    >
+                      <item.icon className="h-5 w-5" />
+                      <span className="flex-1">{item.name}</span>
+                      {item.badge && (
+                        <Badge variant={item.badge.variant} className="text-xs">
+                          {item.badge.text}
+                        </Badge>
+                      )}
+                      {isSpecial && (
+                        <Badge variant="destructive" className="text-xs">
+                          NEW
+                        </Badge>
+                      )}
+                    </Link>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="max-w-xs">
+                    <p className="font-medium">{item.name}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{item.description}</p>
+                    {item.shortcut && (
+                      <p className="text-xs text-muted-foreground mt-1 opacity-70">
+                        快捷键: {item.shortcut}
+                      </p>
+                    )}
+                  </TooltipContent>
+                </Tooltip>
+              );
+            })}
+          </div>
+        </TooltipProvider>
 
         {/* Divider */}
         <div className="my-4 border-t" />
 
         {/* User Navigation */}
-        <div className="space-y-1">
-          <p className="px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-            Account
-          </p>
-          {userNavigation.map((item) => {
-            const isActive = pathname === item.href;
-            return (
-              <Link
-                key={item.name}
-                href={item.href}
-                className={cn(
-                  'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                  isActive
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
-                )}
-              >
-                <item.icon className="h-5 w-5" />
-                <span className="flex-1">{item.name}</span>
-                {item.badge && (
-                  <Badge variant={item.badge.variant} className="text-xs">
-                    {item.badge.text}
-                  </Badge>
-                )}
-              </Link>
-            );
-          })}
-        </div>
+        <TooltipProvider delayDuration={300}>
+          <div className="space-y-1">
+            <p className="px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+              Account
+            </p>
+            {userNavigation.map((item) => {
+              const isActive = pathname === item.href;
+              return (
+                <Tooltip key={item.name}>
+                  <TooltipTrigger asChild>
+                    <Link
+                      href={item.href}
+                      className={cn(
+                        'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                        isActive
+                          ? 'bg-primary text-primary-foreground'
+                          : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
+                      )}
+                    >
+                      <item.icon className="h-5 w-5" />
+                      <span className="flex-1">{item.name}</span>
+                      {item.badge && (
+                        <Badge variant={item.badge.variant} className="text-xs">
+                          {item.badge.text}
+                        </Badge>
+                      )}
+                    </Link>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="max-w-xs">
+                    <p className="font-medium">{item.name}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{item.description}</p>
+                  </TooltipContent>
+                </Tooltip>
+              );
+            })}
+          </div>
+        </TooltipProvider>
       </nav>
 
       <div className="border-t p-4">
