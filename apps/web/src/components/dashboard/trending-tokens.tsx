@@ -1,11 +1,13 @@
 'use client';
 
 import { useState, useEffect, memo, useCallback } from 'react';
-import { ArrowUpRight, ArrowDownRight, ExternalLink, Loader2 } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, ExternalLink, Loader2, RefreshCw, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { formatUSD, formatPercent } from '@/lib/utils';
+import { apiRequest } from '@/lib/api-client';
+import { ListSkeleton } from '@/components/ui/skeleton';
 
 interface TrendingToken {
   contract_address: string;
@@ -50,33 +52,48 @@ export function TrendingTokens() {
   const [tokens, setTokens] = useState<TrendingToken[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [retrying, setRetrying] = useState(false);
+
+  const fetchTrendingTokens = useCallback(async (showRetry = false) => {
+    try {
+      if (showRetry) {
+        setRetrying(true);
+      } else {
+        setLoading(true);
+      }
+      setError(null);
+
+      const data = await apiRequest<{ success: boolean; data?: TrendingToken[] }>(
+        '/api/v1/tokens/trending?limit=10',
+        {
+          timeout: 8000, // 8秒超时
+          retries: 2,
+          useCache: true,
+          cacheTTL: 30000, // 30秒缓存
+        }
+      );
+
+      if (data.success && data.data) {
+        setTokens(data.data);
+      } else {
+        throw new Error('Invalid response format');
+      }
+    } catch (err) {
+      console.error('Error fetching trending tokens:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load trending tokens';
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
+      setRetrying(false);
+    }
+  }, []);
 
   useEffect(() => {
-    async function fetchTrendingTokens() {
-      try {
-        setLoading(true);
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://alphanest-api.dappweb.workers.dev';
-        const res = await fetch(`${apiUrl}/api/v1/tokens/trending?limit=10`);
-        
-        if (!res.ok) throw new Error('Failed to fetch tokens');
-        
-        const data = await res.json();
-        if (data.success && data.data) {
-          setTokens(data.data);
-        }
-      } catch (err) {
-        console.error('Error fetching trending tokens:', err);
-        setError('Failed to load trending tokens');
-      } finally {
-        setLoading(false);
-      }
-    }
-
     fetchTrendingTokens();
     // 每 2 分钟刷新一次
-    const interval = setInterval(fetchTrendingTokens, 120000);
+    const interval = setInterval(() => fetchTrendingTokens(false), 120000);
     return () => clearInterval(interval);
-  }, []);
+  }, [fetchTrendingTokens]);
 
   return (
     <Card>
@@ -91,11 +108,32 @@ export function TrendingTokens() {
       </CardHeader>
       <CardContent>
         {loading ? (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          </div>
+          <ListSkeleton count={5} />
         ) : error ? (
-          <div className="py-8 text-center text-muted-foreground">{error}</div>
+          <div className="py-8 text-center space-y-4">
+            <div className="flex items-center justify-center gap-2 text-destructive">
+              <AlertCircle className="h-5 w-5" />
+              <p className="text-sm">{error}</p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fetchTrendingTokens(true)}
+              disabled={retrying}
+            >
+              {retrying ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  重试中...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  重试
+                </>
+              )}
+            </Button>
+          </div>
         ) : tokens.length === 0 ? (
           <div className="py-8 text-center text-muted-foreground">No trending tokens found</div>
         ) : (

@@ -1,12 +1,13 @@
 'use client';
 
 import { useAccount, useBalance } from 'wagmi';
-import { TrendingUp, Users, Shield, Coins, Wallet, Eye, EyeOff } from 'lucide-react';
+import { TrendingUp, Users, Shield, Coins, Wallet, Eye, EyeOff, RefreshCw, AlertCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { formatUSD, formatNumber } from '@/lib/utils';
 import { useState, useEffect } from 'react';
-import { Loading } from '@/components/ui/loading';
+import { apiRequest } from '@/lib/api-client';
+import { StatsCardSkeleton } from '@/components/ui/skeleton';
 
 // Platform-wide stats will be fetched from API
 
@@ -28,6 +29,8 @@ export function StatsOverview() {
     format: 'usd' | 'number' | 'percent' | 'string';
   }>>([]);
   const [isLoadingPlatform, setIsLoadingPlatform] = useState(true);
+  const [platformError, setPlatformError] = useState<string | null>(null);
+  const [retrying, setRetrying] = useState(false);
 
   // Load user preference for hiding balance
   useEffect(() => {
@@ -93,56 +96,69 @@ export function StatsOverview() {
   }, [isConnected, balance, address]);
 
   // Fetch platform stats
-  useEffect(() => {
-    const fetchPlatformStats = async () => {
-      setIsLoadingPlatform(true);
-      try {
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL || 'https://alphanest-api.dappweb.workers.dev'}/api/v1/analytics/platform`
-        );
-        if (response.ok) {
-          const result = await response.json();
-          if (result.success && result.data) {
-            const data = result.data;
-            setPlatformStats([
-  {
-    name: 'Total Volume (24h)',
-                value: data.totalVolume || 0,
-                change: 12.5, // TODO: Calculate from historical data
-    icon: TrendingUp,
-    format: 'usd',
-  },
-  {
-    name: 'Active Devs',
-                value: 0, // Not available from API yet
-    change: 8.2,
-    icon: Users,
-    format: 'number',
-  },
-  {
-    name: 'Insurance TVL',
-                value: data.tvl || 0,
-    change: -2.1,
-    icon: Shield,
-    format: 'usd',
-  },
-  {
-    name: 'Total Points Distributed',
-                value: 0, // Not available from API yet
-    change: 15.3,
-    icon: Coins,
-    format: 'number',
-  },
-            ]);
-          }
-        }
-      } catch (err) {
-        console.error('Error fetching platform stats:', err);
-      } finally {
-        setIsLoadingPlatform(false);
+  const fetchPlatformStats = async (showRetry = false) => {
+    try {
+      if (showRetry) {
+        setRetrying(true);
+      } else {
+        setIsLoadingPlatform(true);
       }
-    };
+      setPlatformError(null);
 
+      const result = await apiRequest<{ success: boolean; data?: any }>(
+        '/api/v1/analytics/platform',
+        {
+          timeout: 8000,
+          retries: 2,
+          useCache: true,
+          cacheTTL: 60000, // 1分钟缓存
+        }
+      );
+
+      if (result.success && result.data) {
+        const data = result.data;
+        setPlatformStats([
+          {
+            name: 'Total Volume (24h)',
+            value: data.totalVolume || 0,
+            change: 12.5,
+            icon: TrendingUp,
+            format: 'usd',
+          },
+          {
+            name: 'Active Devs',
+            value: 0,
+            change: 8.2,
+            icon: Users,
+            format: 'number',
+          },
+          {
+            name: 'Insurance TVL',
+            value: data.tvl || 0,
+            change: -2.1,
+            icon: Shield,
+            format: 'usd',
+          },
+          {
+            name: 'Total Points Distributed',
+            value: 0,
+            change: 15.3,
+            icon: Coins,
+            format: 'number',
+          },
+        ]);
+      }
+    } catch (err) {
+      console.error('Error fetching platform stats:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load platform stats';
+      setPlatformError(errorMessage);
+    } finally {
+      setIsLoadingPlatform(false);
+      setRetrying(false);
+    }
+  };
+
+  useEffect(() => {
     fetchPlatformStats();
   }, []);
 
@@ -248,16 +264,59 @@ export function StatsOverview() {
         </div>
 
         {/* Platform Stats */}
-        <h2 className="text-lg font-semibold mt-6">Platform Stats</h2>
+        <div className="flex items-center justify-between mt-6">
+          <h2 className="text-lg font-semibold">Platform Stats</h2>
+          {platformError && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => fetchPlatformStats(true)}
+              disabled={retrying}
+            >
+              {retrying ? (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  重试中...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  重试
+                </>
+              )}
+            </Button>
+          )}
+        </div>
         {isLoadingPlatform ? (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             {[1, 2, 3, 4].map((i) => (
-              <Card key={i}>
-                <CardContent className="p-6">
-                  <Loading size="sm" />
-                </CardContent>
-              </Card>
+              <StatsCardSkeleton key={i} />
             ))}
+          </div>
+        ) : platformError ? (
+          <div className="rounded-lg border p-6 text-center space-y-4">
+            <div className="flex items-center justify-center gap-2 text-destructive">
+              <AlertCircle className="h-5 w-5" />
+              <p className="text-sm">{platformError}</p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fetchPlatformStats(true)}
+              disabled={retrying}
+            >
+              {retrying ? (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  重试中...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  重试
+                </>
+              )}
+            </Button>
           </div>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -300,12 +359,33 @@ export function StatsOverview() {
       {isLoadingPlatform ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {[1, 2, 3, 4].map((i) => (
-            <Card key={i}>
-              <CardContent className="p-6">
-                <Loading size="sm" />
-              </CardContent>
-            </Card>
+            <StatsCardSkeleton key={i} />
           ))}
+        </div>
+      ) : platformError ? (
+        <div className="rounded-lg border p-6 text-center space-y-4">
+          <div className="flex items-center justify-center gap-2 text-destructive">
+            <AlertCircle className="h-5 w-5" />
+            <p className="text-sm">{platformError}</p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => fetchPlatformStats(true)}
+            disabled={retrying}
+          >
+            {retrying ? (
+              <>
+                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                重试中...
+              </>
+            ) : (
+              <>
+                <RefreshCw className="h-4 w-4 mr-2" />
+                重试
+              </>
+            )}
+          </Button>
         </div>
       ) : (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
