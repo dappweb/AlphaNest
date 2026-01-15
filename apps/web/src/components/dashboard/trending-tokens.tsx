@@ -6,21 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { formatUSD, formatPercent } from '@/lib/utils';
-import { apiRequest } from '@/lib/api-client';
+import { ApiService, type TrendingToken } from '@/lib/api-services';
 import { ListSkeleton } from '@/components/ui/skeleton';
-
-interface TrendingToken {
-  contract_address: string;
-  chain: string;
-  name: string;
-  symbol: string;
-  logo_url?: string;
-  price_usd: string;
-  price_change_24h: number;
-  volume_24h: string | number;
-  market_cap: string | number;
-  url?: string;
-}
+import { useRealtimeMarket } from '@/hooks/use-realtime-data';
 
 function getChainColor(chain: string) {
   switch (chain?.toLowerCase()) {
@@ -32,7 +20,7 @@ function getChainColor(chain: string) {
     case 'bnb':
       return 'bg-yellow-500/10 text-yellow-500';
     case 'ethereum':
-      return 'bg-slate-500/10 text-slate-400';
+      return 'bg-blue-600/10 text-blue-600';
     default:
       return 'bg-gray-500/10 text-gray-500';
   }
@@ -48,57 +36,117 @@ function formatChainName(chain: string) {
   return names[chain?.toLowerCase()] || chain;
 }
 
-export function TrendingTokens() {
+export const TrendingTokens = memo(function TrendingTokens() {
   const [tokens, setTokens] = useState<TrendingToken[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [retrying, setRetrying] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  
+  // 实时市场数据
+  const { marketData, isConnected: isRealtimeConnected } = useRealtimeMarket();
 
-  const fetchTrendingTokens = useCallback(async (showRetry = false) => {
+  // 获取趋势代币数据
+  const fetchTrendingTokens = useCallback(async (showLoading = true) => {
     try {
-      if (showRetry) {
-        setRetrying(true);
+      if (showLoading) {
+        setIsLoading(true);
       } else {
-        setLoading(true);
+        setIsRefreshing(true);
       }
       setError(null);
 
-      const data = await apiRequest<{ success: boolean; data?: TrendingToken[] }>(
-        '/api/v1/tokens/trending?limit=10',
-        {
-          timeout: 8000, // 8秒超时
-          retries: 2,
-          useCache: true,
-          cacheTTL: 30000, // 30秒缓存
-        }
-      );
-
-      if (data.success && data.data) {
-        setTokens(data.data);
+      const response = await ApiService.getTrendingTokens(10);
+      
+      if (response.success && response.data) {
+        setTokens(response.data);
       } else {
-        throw new Error('Invalid response format');
+        throw new Error(response.error || 'Failed to fetch trending tokens');
       }
     } catch (err) {
       console.error('Error fetching trending tokens:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Failed to load trending tokens';
-      setError(errorMessage);
+      setError(err instanceof Error ? err.message : 'Failed to load trending tokens');
+      
+      // 设置默认数据
+      setTokens([
+        {
+          contract_address: '0x1234567890abcdef1234567890abcdef12345678',
+          chain: 'base',
+          name: 'Pepe Token',
+          symbol: 'PEPE',
+          logo_url: '/icons/pepe.png',
+          price_usd: '0.00001523',
+          price_change_24h: 45.2,
+          volume_24h: 12500000,
+          market_cap: 64000000,
+          url: 'https://example.com',
+        },
+        {
+          contract_address: '0xabcdef1234567890abcdef1234567890abcdef12',
+          chain: 'solana',
+          name: 'Bonk',
+          symbol: 'BONK',
+          price_usd: '0.00002345',
+          price_change_24h: -12.3,
+          volume_24h: 8900000,
+          market_cap: 156000000,
+        },
+        {
+          contract_address: '0x5678901234abcdef5678901234abcdef56789012',
+          chain: 'ethereum',
+          name: 'Shiba Inu',
+          symbol: 'SHIB',
+          price_usd: '0.00000876',
+          price_change_24h: 8.7,
+          volume_24h: 15600000,
+          market_cap: 5140000000,
+        },
+      ]);
     } finally {
-      setLoading(false);
-      setRetrying(false);
+      setIsLoading(false);
+      setIsRefreshing(false);
     }
   }, []);
 
+  // 实时更新价格数据
+  useEffect(() => {
+    if (marketData.length > 0 && tokens.length > 0) {
+      setTokens(prevTokens => 
+        prevTokens.map(token => {
+          const realtimeData = marketData.find(
+            data => data.token === token.contract_address && data.chain === token.chain
+          );
+          
+          if (realtimeData) {
+            return {
+              ...token,
+              price_usd: realtimeData.price.toString(),
+              price_change_24h: realtimeData.change24h,
+              volume_24h: realtimeData.volume24h,
+            };
+          }
+          
+          return token;
+        })
+      );
+    }
+  }, [marketData, tokens.length]);
+
   useEffect(() => {
     fetchTrendingTokens();
-    // 每 2 分钟刷新一次
-    const interval = setInterval(() => fetchTrendingTokens(false), 120000);
-    return () => clearInterval(interval);
   }, [fetchTrendingTokens]);
 
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Trending Tokens</CardTitle>
+        <div className="flex items-center gap-2">
+          <CardTitle>Trending Tokens</CardTitle>
+          {isRealtimeConnected && (
+            <div className="flex items-center gap-1">
+              <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+              <span className="text-xs text-muted-foreground">Live</span>
+            </div>
+          )}
+        </div>
         <Button variant="ghost" size="sm" asChild>
           <a href="/trade">
             View All
@@ -107,7 +155,7 @@ export function TrendingTokens() {
         </Button>
       </CardHeader>
       <CardContent>
-        {loading ? (
+        {isLoading ? (
           <ListSkeleton count={5} />
         ) : error ? (
           <div className="py-8 text-center space-y-4">
@@ -118,18 +166,18 @@ export function TrendingTokens() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => fetchTrendingTokens(true)}
-              disabled={retrying}
+              onClick={() => fetchTrendingTokens(false)}
+              disabled={isRefreshing}
             >
-              {retrying ? (
+              {isRefreshing ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  重试中...
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  Retrying...
                 </>
               ) : (
                 <>
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  重试
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Retry
                 </>
               )}
             </Button>
@@ -140,62 +188,46 @@ export function TrendingTokens() {
           <div className="space-y-4">
             {tokens.map((token, index) => (
               <a
-                key={token.contract_address || index}
+                key={index}
                 href={token.url || `/trade?token=${token.contract_address}`}
-                target={token.url ? '_blank' : undefined}
-                rel={token.url ? 'noopener noreferrer' : undefined}
-                className="flex items-center justify-between rounded-lg border p-4 transition-colors hover:bg-secondary/50"
+                className="block p-4 rounded-lg border hover:bg-muted/50 transition-colors"
               >
-                <div className="flex items-center gap-4">
-                  {token.logo_url ? (
-                    <img
-                      src={token.logo_url}
-                      alt={token.symbol}
-                      className="h-10 w-10 rounded-full object-cover"
-                      loading="lazy"
-                      decoding="async"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = 'none';
-                      }}
-                    />
-                  ) : (
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-lg font-bold">
-                      {token.symbol?.charAt(0) || '?'}
-                    </div>
-                  )}
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">{token.symbol || '???'}</span>
-                      <Badge
-                        variant="outline"
-                        className={getChainColor(token.chain)}
-                      >
-                        {formatChainName(token.chain)}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <span>Vol: {formatUSD(Number(token.volume_24h) || 0)}</span>
-                      <span>|</span>
-                      <span>MCap: {formatUSD(Number(token.market_cap) || 0)}</span>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    {token.logo_url ? (
+                      <img
+                        src={token.logo_url}
+                        alt={token.symbol}
+                        className="w-10 h-10 rounded-full"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                        <span className="text-xs font-medium">{token.symbol.slice(0, 2)}</span>
+                      </div>
+                    )}
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium">{token.name}</p>
+                        <Badge variant="secondary" className={getChainColor(token.chain)}>
+                          {formatChainName(token.chain)}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground">{token.symbol}</p>
                     </div>
                   </div>
-                </div>
-                <div className="text-right">
-                  <p className="font-medium">
-                    ${Number(token.price_usd || 0).toFixed(8)}
-                  </p>
-                  <p
-                    className={`flex items-center justify-end text-sm ${
-                      (token.price_change_24h || 0) >= 0 ? 'text-success' : 'text-destructive'
-                    }`}
-                  >
-                    {(token.price_change_24h || 0) >= 0 ? (
-                      <ArrowUpRight className="mr-1 h-4 w-4" />
-                    ) : (
-                      <ArrowDownRight className="mr-1 h-4 w-4" />
-                    )}
-                    {formatPercent(token.price_change_24h || 0)}
-                  </p>
+                  <div className="text-right">
+                    <p className="font-medium">{formatUSD(parseFloat(token.price_usd))}</p>
+                    <p className={`text-sm flex items-center justify-end ${
+                      (token.price_change_24h || 0) >= 0 ? 'text-green-500' : 'text-red-500'
+                    }`}>
+                      {(token.price_change_24h || 0) >= 0 ? (
+                        <ArrowUpRight className="mr-1 h-4 w-4" />
+                      ) : (
+                        <ArrowDownRight className="mr-1 h-4 w-4" />
+                      )}
+                      {formatPercent(token.price_change_24h || 0)}
+                    </p>
+                  </div>
                 </div>
               </a>
             ))}
@@ -204,4 +236,4 @@ export function TrendingTokens() {
       </CardContent>
     </Card>
   );
-}
+});

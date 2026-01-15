@@ -69,7 +69,7 @@ const navigation = [
   },
   { 
     name: 'Copy Trading', 
-    href: '/copy-trade', 
+    href: '/copy-trading', 
     icon: Copy,
     description: '跟随顶级交易员自动跟单',
     shortcut: 'Ctrl+C',
