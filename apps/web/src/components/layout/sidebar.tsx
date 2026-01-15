@@ -32,110 +32,107 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { useSidebarStore, useSidebarHydration } from '@/stores/sidebar-store';
+import { useTranslation } from '@/hooks/use-translation';
 
-const navigation = [
+const getNavigation = (t: any) => [
   { 
-    name: 'Dashboard', 
+    name: t.nav.dashboard, 
     href: '/', 
     icon: LayoutDashboard,
-    description: '平台概览与实时数据统计',
     shortcut: 'Ctrl+D',
     badge: null
   },
   { 
-    name: 'PopCow Alpha 🐄', 
+    name: `🔥 ${t.nav.staking}`, 
+    href: '/staking', 
+    icon: Coins,
+    special: true,
+    featured: true,
+    shortcut: 'Ctrl+S',
+    badge: { text: 'HOT', variant: 'destructive' as const }
+  },
+  { 
+    name: `${t.nav.popcowAlpha} 🐄`, 
     href: '/popcow', 
     icon: Rocket, 
     special: true,
-    description: 'AI 驱动的 Alpha 项目发现',
     shortcut: 'Ctrl+P',
     badge: null
   },
   { 
-    name: 'Trade', 
+    name: t.nav.trade, 
     href: '/trade', 
     icon: TrendingUp,
-    description: '智能交易界面与 K 线图表',
     shortcut: 'Ctrl+T',
     badge: null
   },
   { 
-    name: 'Meme Hunter', 
+    name: t.nav.memeHunter, 
     href: '/meme', 
     icon: Zap,
-    description: '聚合多平台热门 Meme 代币数据',
     shortcut: 'Ctrl+M',
     badge: { text: 'HOT', variant: 'default' as const }
   },
   { 
-    name: 'Copy Trading', 
+    name: t.nav.copyTrading, 
     href: '/copy-trade', 
     icon: Copy,
-    description: '跟随顶级交易员自动跟单',
     shortcut: 'Ctrl+C',
     badge: null
   },
   { 
-    name: 'Dev Rankings', 
+    name: t.nav.devRankings, 
     href: '/devs', 
     icon: Users,
-    description: '开发者信誉评分与排行榜',
     shortcut: 'Ctrl+R',
     badge: null
   },
   { 
-    name: 'CowGuard Insurance', 
+    name: t.nav.insurance, 
     href: '/insurance', 
     icon: Shield,
-    description: '参数化保险保护，防范 Rug Pull',
     shortcut: 'Ctrl+I',
     badge: { text: 'PRO', variant: 'secondary' as const }
   },
   { 
-    name: 'Cow Points', 
+    name: t.nav.cowPoints, 
     href: '/points', 
     icon: Coins,
-    description: '完成任务赚取积分与奖励',
     shortcut: 'Ctrl+O',
     badge: { text: '2.5x', variant: 'outline' as const }
   },
   { 
-    name: 'Analytics', 
+    name: t.nav.analytics, 
     href: '/analytics', 
     icon: BarChart3,
-    description: '深度数据分析与市场洞察',
     shortcut: 'Ctrl+A',
     badge: null
   },
   { 
-    name: 'Trading Bots', 
+    name: t.nav.tradingBots, 
     href: '/bots', 
     icon: Bot,
-    description: '自动化交易策略与机器人',
     shortcut: 'Ctrl+B',
     badge: null
   },
 ];
 
-const userNavigation = [
+const getUserNavigation = (t: any) => [
   { 
-    name: 'Account', 
+    name: t.nav.account, 
     href: '/account', 
     icon: Wallet,
-    description: '钱包连接与个人资料设置'
   },
   { 
-    name: 'Referral', 
+    name: t.nav.referral, 
     href: '/referral', 
     icon: Gift,
-    description: '推荐好友获得 10% 返佣奖励',
     badge: { text: '10%', variant: 'default' as const }
   },
   { 
-    name: 'Settings', 
+    name: t.nav.settings, 
     href: '/settings', 
     icon: Settings,
-    description: '应用偏好设置与配置'
   },
 ];
 
@@ -143,6 +140,10 @@ export function Sidebar() {
   const pathname = usePathname();
   const { isCollapsed, isMobileOpen, toggleCollapsed, setMobileOpen } = useSidebarStore();
   const hydrated = useSidebarHydration();
+  const { t } = useTranslation();
+  
+  const navigation = getNavigation(t);
+  const userNavigation = getUserNavigation(t);
 
   // Close mobile sidebar on route change
   useEffect(() => {
@@ -176,8 +177,8 @@ export function Sidebar() {
           className="rounded-lg flex-shrink-0"
         />
         {!collapsed && (
-          <span className="text-xl font-bold bg-gradient-to-r from-orange-500 to-orange-600 bg-clip-text text-transparent whitespace-nowrap overflow-hidden">
-            PopCow
+          <span className="font-bold text-lg bg-gradient-to-r from-orange-500 to-orange-600 bg-clip-text text-transparent">
+            PopCowDefi
           </span>
         )}
       </div>
@@ -229,10 +230,9 @@ export function Sidebar() {
                   {collapsed && (
                     <TooltipContent side="right" className="max-w-xs">
                       <p className="font-medium">{item.name}</p>
-                      <p className="text-xs text-muted-foreground mt-1">{item.description}</p>
                       {item.shortcut && (
                         <p className="text-xs text-muted-foreground mt-1 opacity-70">
-                          快捷键: {item.shortcut}
+                          {item.shortcut}
                         </p>
                       )}
                     </TooltipContent>
@@ -286,7 +286,6 @@ export function Sidebar() {
                   {collapsed && (
                     <TooltipContent side="right" className="max-w-xs">
                       <p className="font-medium">{item.name}</p>
-                      <p className="text-xs text-muted-foreground mt-1">{item.description}</p>
                     </TooltipContent>
                   )}
                 </Tooltip>

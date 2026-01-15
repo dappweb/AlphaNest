@@ -27,8 +27,8 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://app.popcow.xyz'),
   title: {
-    default: 'PopCow - The Smartest Cow in Crypto 🐄',
-    template: '%s | PopCow Platform',
+    default: 'PopCowDefi - The Smartest Cow in Crypto 🐄',
+    template: '%s | PopCowDefi',
   },
   description:
     'Follow PopCow, the smartest cow in crypto! Discover Alpha projects, avoid Rug Pulls, and trade safely with PopCow\'s intelligence and CowGuard insurance.',
@@ -51,23 +51,23 @@ export const metadata: Metadata = {
   ],
   authors: [{ name: 'PopCow Team' }],
   creator: 'PopCow',
-  publisher: 'PopCow Platform',
+  publisher: 'PopCowDefi Platform',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'PopCow Platform',
+    title: 'PopCowDefi',
   },
   formatDetection: {
     telephone: false,
   },
   openGraph: {
-    title: 'PopCow - The Smartest Cow in Crypto 🐄',
+    title: 'PopCowDefi - The Smartest Cow in Crypto 🐄',
     description:
       'Follow PopCow for Alpha discoveries, Rug Pull protection, and safe Meme coin trading.',
     type: 'website',
     url: 'https://app.popcow.xyz',
-    siteName: 'PopCow Platform',
+    siteName: 'PopCowDefi',
     images: [
       {
         url: '/og-image.png',

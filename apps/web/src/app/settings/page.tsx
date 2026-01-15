@@ -7,11 +7,11 @@ import {
   Bell, 
   Shield, 
   Palette, 
-  Globe, 
   Sliders,
   CheckCircle,
   AlertCircle
 } from 'lucide-react';
+import { useTranslation } from '@/hooks/use-translation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,7 +34,6 @@ interface Settings {
   // Display
   theme: 'dark' | 'light' | 'system';
   language: 'en' | 'zh';
-  currency: 'USD' | 'EUR' | 'CNY';
   // Privacy
   hideBalance: boolean;
   hideActivity: boolean;
@@ -53,13 +52,13 @@ const defaultSettings: Settings = {
   telegramNotifications: false,
   theme: 'dark',
   language: 'en',
-  currency: 'USD',
   hideBalance: false,
   hideActivity: false,
 };
 
 export default function SettingsPage() {
   const { isConnected } = useAccount();
+  const { t } = useTranslation();
   const [settings, setSettings] = useState<Settings>(defaultSettings);
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
@@ -140,9 +139,9 @@ export default function SettingsPage() {
     <div className="space-y-6 max-w-3xl">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Settings</h1>
+          <h1 className="text-3xl font-bold">{t.settings.title}</h1>
           <p className="text-muted-foreground">
-            Manage your preferences and account settings
+            {t.settings.subtitle}
           </p>
         </div>
         <Button onClick={handleSave} disabled={isSaving}>
@@ -293,58 +292,34 @@ export default function SettingsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label>Theme</Label>
-              <div className="flex gap-2">
-                {(['dark', 'light', 'system'] as const).map((theme) => (
-                  <Button
-                    key={theme}
-                    variant={settings.theme === theme ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => updateSetting('theme', theme)}
-                    className="flex-1"
-                  >
-                    {theme.charAt(0).toUpperCase() + theme.slice(1)}
-                  </Button>
-                ))}
-              </div>
+          <div className="space-y-2">
+            <Label>Theme</Label>
+            <div className="flex gap-2">
+              {(['dark', 'light', 'system'] as const).map((theme) => (
+                <Button
+                  key={theme}
+                  variant={settings.theme === theme ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => {
+                    updateSetting('theme', theme);
+                    // 实际切换主题
+                    if (theme === 'system') {
+                      document.documentElement.classList.remove('dark', 'light');
+                    } else {
+                      document.documentElement.classList.remove('dark', 'light');
+                      document.documentElement.classList.add(theme);
+                    }
+                    localStorage.setItem('theme', theme);
+                  }}
+                  className="flex-1"
+                >
+                  {theme.charAt(0).toUpperCase() + theme.slice(1)}
+                </Button>
+              ))}
             </div>
-            <div className="space-y-2">
-              <Label>Language</Label>
-              <div className="flex gap-2">
-                {([
-                  { value: 'en', label: 'English' },
-                  { value: 'zh', label: '中文' },
-                ] as const).map((lang) => (
-                  <Button
-                    key={lang.value}
-                    variant={settings.language === lang.value ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => updateSetting('language', lang.value)}
-                    className="flex-1"
-                  >
-                    {lang.label}
-                  </Button>
-                ))}
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>Currency</Label>
-              <div className="flex gap-2">
-                {(['USD', 'EUR', 'CNY'] as const).map((currency) => (
-                  <Button
-                    key={currency}
-                    variant={settings.currency === currency ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => updateSetting('currency', currency)}
-                    className="flex-1"
-                  >
-                    {currency}
-                  </Button>
-                ))}
-              </div>
-            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              语言切换已移至顶部导航栏
+            </p>
           </div>
         </CardContent>
       </Card>

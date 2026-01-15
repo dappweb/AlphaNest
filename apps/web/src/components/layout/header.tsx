@@ -2,18 +2,20 @@
 
 import { useState, useEffect } from 'react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
-import { Bell, Search, X, Menu } from 'lucide-react';
+import { Bell, Search, X, Menu, Globe } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { NotificationCenter } from '@/components/notifications';
 import Image from 'next/image';
 import { useSidebarStore } from '@/stores/sidebar-store';
 import { cn } from '@/lib/utils';
+import { useTranslation } from '@/hooks/use-translation';
 
 export function Header() {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const { isCollapsed, toggleMobileOpen } = useSidebarStore();
+  const { t, language, toggleLanguage } = useTranslation();
 
   // Mock unread count - in production, get from API/state
   const unreadCount = 3;
@@ -83,7 +85,7 @@ export function Header() {
               className="rounded-lg"
             />
             <span className="text-sm font-bold bg-gradient-to-r from-orange-500 to-orange-600 bg-clip-text text-transparent hidden sm:inline">
-              PopCow
+              PopCowDefi
             </span>
           </div>
 
@@ -92,7 +94,7 @@ export function Header() {
             <input
               id="global-search"
               type="text"
-              placeholder="Search... (Ctrl+K)"
+              placeholder={t.header.search}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onFocus={() => setShowSuggestions(true)}
@@ -168,6 +170,17 @@ export function Header() {
                 {unreadCount > 9 ? '9+' : unreadCount}
               </span>
             )}
+          </Button>
+
+          {/* Language Switcher */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={toggleLanguage}
+            className="gap-1.5 px-2"
+          >
+            <Globe className="h-4 w-4" />
+            <span className="text-xs font-medium">{language === 'en' ? 'EN' : '中'}</span>
           </Button>
 
           <ConnectButton
