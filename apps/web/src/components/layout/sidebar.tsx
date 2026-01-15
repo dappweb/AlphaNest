@@ -74,8 +74,8 @@ const getNavigation = (t: any) => [
     badge: { text: 'HOT', variant: 'default' as const }
   },
   { 
-    name: t.nav.copyTrading, 
-    href: '/copy-trade', 
+name: t.nav.copyTrading, 
+    href: '/copy-trade',
     icon: Copy,
     shortcut: 'Ctrl+C',
     badge: null

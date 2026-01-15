@@ -9,7 +9,9 @@ import {
   Palette, 
   Sliders,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  TrendingUp,
+  Users
 } from 'lucide-react';
 import { useTranslation } from '@/hooks/use-translation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -17,6 +19,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { SettingsTest } from '@/components/settings-test';
 
 interface Settings {
   // Trading
@@ -37,6 +40,15 @@ interface Settings {
   // Privacy
   hideBalance: boolean;
   hideActivity: boolean;
+  // Insurance
+  autoInsurance: boolean;
+  insuranceThreshold: string;
+  preferredCoverage: 'rug_pull' | 'price_drop' | 'smart_contract' | 'comprehensive';
+  // Copy Trading
+  copyTradingEnabled: boolean;
+  maxCopyAmount: string;
+  copyRiskLevel: 'low' | 'medium' | 'high';
+  autoStopLoss: boolean;
 }
 
 const defaultSettings: Settings = {
@@ -54,6 +66,15 @@ const defaultSettings: Settings = {
   language: 'en',
   hideBalance: false,
   hideActivity: false,
+  // Insurance
+  autoInsurance: false,
+  insuranceThreshold: '1000',
+  preferredCoverage: 'comprehensive',
+  // Copy Trading
+  copyTradingEnabled: false,
+  maxCopyAmount: '500',
+  copyRiskLevel: 'medium',
+  autoStopLoss: true,
 };
 
 export default function SettingsPage() {
@@ -351,6 +372,135 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
+      {/* Insurance Settings */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Shield className="h-5 w-5 text-primary" />
+            CowGuard Insurance
+          </CardTitle>
+          <CardDescription>
+            Configure automatic insurance protection
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Toggle
+              checked={settings.autoInsurance}
+              onChange={(v) => updateSetting('autoInsurance', v)}
+              label="Auto Insurance"
+              description="Automatically purchase insurance for high-risk trades"
+            />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="threshold">Insurance Threshold ($)</Label>
+                <Input
+                  id="threshold"
+                  type="number"
+                  value={settings.insuranceThreshold}
+                  onChange={(e) => updateSetting('insuranceThreshold', e.target.value)}
+                  min="100"
+                  max="10000"
+                  step="100"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Auto-insure trades above this amount
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label>Preferred Coverage</Label>
+                <div className="flex flex-wrap gap-2">
+                  {([
+                    { value: 'rug_pull', label: 'Rug Pull', color: 'bg-red-500/10 text-red-500' },
+                    { value: 'price_drop', label: 'Price Drop', color: 'bg-yellow-500/10 text-yellow-500' },
+                    { value: 'smart_contract', label: 'Contract', color: 'bg-blue-500/10 text-blue-500' },
+                    { value: 'comprehensive', label: 'All', color: 'bg-green-500/10 text-green-500' },
+                  ] as const).map((coverage) => (
+                    <Badge
+                      key={coverage.value}
+                      variant={settings.preferredCoverage === coverage.value ? 'default' : 'secondary'}
+                      className={`cursor-pointer ${
+                        settings.preferredCoverage === coverage.value ? coverage.color : ''
+                      }`}
+                      onClick={() => updateSetting('preferredCoverage', coverage.value)}
+                    >
+                      {coverage.label}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Copy Trading Settings */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5 text-primary" />
+            Copy Trading
+          </CardTitle>
+          <CardDescription>
+            Manage your copy trading preferences
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Toggle
+              checked={settings.copyTradingEnabled}
+              onChange={(v) => updateSetting('copyTradingEnabled', v)}
+              label="Enable Copy Trading"
+              description="Allow others to copy your trades"
+            />
+            <Toggle
+              checked={settings.autoStopLoss}
+              onChange={(v) => updateSetting('autoStopLoss', v)}
+              label="Auto Stop Loss"
+              description="Automatically set stop loss for copied trades"
+            />
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="maxCopyAmount">Max Copy Amount ($)</Label>
+              <Input
+                id="maxCopyAmount"
+                type="number"
+                value={settings.maxCopyAmount}
+                onChange={(e) => updateSetting('maxCopyAmount', e.target.value)}
+                min="10"
+                max="10000"
+                step="10"
+              />
+              <p className="text-xs text-muted-foreground">
+                Maximum amount per copied trade
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label>Risk Level</Label>
+              <div className="flex gap-2">
+                {([
+                  { value: 'low', label: 'Low', color: 'bg-green-500/10 text-green-500' },
+                  { value: 'medium', label: 'Medium', color: 'bg-yellow-500/10 text-yellow-500' },
+                  { value: 'high', label: 'High', color: 'bg-red-500/10 text-red-500' },
+                ] as const).map((risk) => (
+                  <Button
+                    key={risk.value}
+                    variant={settings.copyRiskLevel === risk.value ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => updateSetting('copyRiskLevel', risk.value)}
+                    className="flex-1"
+                  >
+                    {risk.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Danger Zone */}
       {isConnected && (
         <Card className="border-destructive/50">
@@ -382,6 +532,9 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Settings Test Component */}
+      <SettingsTest />
     </div>
   );
 }

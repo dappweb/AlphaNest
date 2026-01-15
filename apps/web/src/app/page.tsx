@@ -13,7 +13,7 @@ export default function HomePage() {
   
   return (
     <>
-      <div className="space-y-6">
+<div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-orange-500 to-orange-600 bg-clip-text text-transparent">
@@ -35,7 +35,10 @@ export default function HomePage() {
           <DevLeaderboard />
         </div>
 
-        <RecentActivity />
+        {/* Recent Activity */}
+        <div className="animate-fade-in-up">
+          <RecentActivity />
+        </div>
       </div>
       
       {/* PopCow 智能助手 */}
