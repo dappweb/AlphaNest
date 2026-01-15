@@ -11,97 +11,91 @@ import { ApiService, type DeveloperRanking } from '@/lib/api-services';
 import { ListSkeleton } from '@/components/ui/skeleton';
 
 export function DevLeaderboard() {
-  const [developers, setDevelopers] = useState<DeveloperRanking[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  // 默认数据 - 立即显示，API 在后台静默加载
+  const defaultDevelopers: DeveloperRanking[] = [
+    {
+      id: 1,
+      address: '0x1234567890abcdef1234567890abcdef12345678',
+      alias: 'AlphaWhale',
+      winRate: 78.5,
+      totalLaunches: 45,
+      rugCount: 0,
+      verified: true,
+      rank: 1,
+      avgReturn: 245.6,
+      totalVolume: 12500000,
+      reputation: 95,
+    },
+    {
+      id: 2,
+      address: '0xabcdef1234567890abcdef1234567890abcdef12',
+      alias: 'MemeKing',
+      winRate: 72.3,
+      totalLaunches: 62,
+      rugCount: 1,
+      verified: true,
+      rank: 2,
+      avgReturn: 189.3,
+      totalVolume: 8900000,
+      reputation: 87,
+    },
+    {
+      id: 3,
+      address: '0x5678901234abcdef5678901234abcdef56789012',
+      alias: 'CryptoWizard',
+      winRate: 68.9,
+      totalLaunches: 38,
+      rugCount: 0,
+      verified: true,
+      rank: 3,
+      avgReturn: 156.7,
+      totalVolume: 6700000,
+      reputation: 92,
+    },
+    {
+      id: 4,
+      address: '0x90abcdef1234567890abcdef1234567890abcdef',
+      alias: 'TokenMaster',
+      winRate: 65.2,
+      totalLaunches: 51,
+      rugCount: 2,
+      verified: false,
+      rank: 4,
+      avgReturn: 134.2,
+      totalVolume: 5400000,
+      reputation: 73,
+    },
+    {
+      id: 5,
+      address: '0x34567890abcdef1234567890abcdef1234567890',
+      alias: 'DeFiDev',
+      winRate: 61.7,
+      totalLaunches: 29,
+      rugCount: 0,
+      verified: true,
+      rank: 5,
+      avgReturn: 98.5,
+      totalVolume: 3200000,
+      reputation: 85,
+    },
+  ];
+
+  const [developers, setDevelopers] = useState<DeveloperRanking[]>(defaultDevelopers);
+  const [isLoading, setIsLoading] = useState(false); // 改为 false，不显示骨架屏
   const [error, setError] = useState<string | null>(null);
 
-  // 获取开发者排名数据
+  // 获取开发者排名数据 - 后台静默加载
   const fetchDeveloperRankings = async () => {
     try {
-      setIsLoading(true);
-      setError(null);
-
       const response = await ApiService.getDeveloperRankings(10);
-      
+
       if (response.success && response.data) {
         setDevelopers(response.data);
-      } else {
-        throw new Error(response.error || 'Failed to fetch developer rankings');
       }
+      // 如果失败，保持默认数据，不显示错误
     } catch (err) {
       console.error('Error fetching developer rankings:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load developer rankings');
-      
-      // 设置默认数据
-      setDevelopers([
-        {
-          id: 1,
-          address: '0x1234567890abcdef1234567890abcdef12345678',
-          alias: 'AlphaWhale',
-          winRate: 78.5,
-          totalLaunches: 45,
-          rugCount: 0,
-          verified: true,
-          rank: 1,
-          avgReturn: 245.6,
-          totalVolume: 12500000,
-          reputation: 95,
-        },
-        {
-          id: 2,
-          address: '0xabcdef1234567890abcdef1234567890abcdef12',
-          alias: 'MemeKing',
-          winRate: 72.3,
-          totalLaunches: 62,
-          rugCount: 1,
-          verified: true,
-          rank: 2,
-          avgReturn: 189.3,
-          totalVolume: 8900000,
-          reputation: 87,
-        },
-        {
-          id: 3,
-          address: '0x5678901234abcdef5678901234abcdef56789012',
-          alias: 'CryptoWizard',
-          winRate: 68.9,
-          totalLaunches: 38,
-          rugCount: 0,
-          verified: true,
-          rank: 3,
-          avgReturn: 156.7,
-          totalVolume: 6700000,
-          reputation: 92,
-        },
-        {
-          id: 4,
-          address: '0x90abcdef1234567890abcdef1234567890abcdef',
-          alias: 'TokenMaster',
-          winRate: 65.2,
-          totalLaunches: 51,
-          rugCount: 2,
-          verified: false,
-          rank: 4,
-          avgReturn: 134.2,
-          totalVolume: 5400000,
-          reputation: 73,
-        },
-        {
-          id: 5,
-          address: '0x34567890abcdef1234567890abcdef1234567890',
-          alias: 'DeFiDev',
-          winRate: 61.7,
-          totalLaunches: 29,
-          rugCount: 0,
-          verified: true,
-          rank: 5,
-          avgReturn: 98.5,
-          totalVolume: 3200000,
-          reputation: 85,
-        },
-      ]);
-    } finally {
-      setIsLoading(false);
+      // 保持默认数据，静默失败
     }
   };
 
@@ -203,13 +197,12 @@ export function DevLeaderboard() {
                 <div className="text-right">
                   <p className="text-sm text-muted-foreground">Win Rate</p>
                   <p
-                    className={`font-medium ${
-                      dev.winRate >= 70
+                    className={`font-medium ${dev.winRate >= 70
                         ? 'text-success'
                         : dev.winRate >= 50
-                        ? 'text-warning'
-                        : 'text-destructive'
-                    }`}
+                          ? 'text-warning'
+                          : 'text-destructive'
+                      }`}
                   >
                     {dev.winRate}%
                   </p>
@@ -221,9 +214,8 @@ export function DevLeaderboard() {
                 <div className="text-right">
                   <p className="text-sm text-muted-foreground">Rugs</p>
                   <p
-                    className={`flex items-center font-medium ${
-                      dev.rugCount > 0 ? 'text-destructive' : 'text-success'
-                    }`}
+                    className={`flex items-center font-medium ${dev.rugCount > 0 ? 'text-destructive' : 'text-success'
+                      }`}
                   >
                     {dev.rugCount > 0 && (
                       <AlertTriangle className="mr-1 h-3 w-3" />

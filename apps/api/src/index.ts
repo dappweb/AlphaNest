@@ -37,47 +37,47 @@ import { geoBlockMiddleware } from './middleware/geo-block';
 export interface Env {
   // D1 数据库
   DB: D1Database;
-  
+
   // KV 命名空间
   CACHE: KVNamespace;
   SESSIONS: KVNamespace;
   RATE_LIMIT: KVNamespace;
-  
+
   // R2 存储 (可选)
   ASSETS?: R2Bucket;
-  
+
   // Queues (可选)
   TASK_QUEUE?: Queue;
   NOTIFICATION_QUEUE?: Queue;
-  
+
   // Durable Objects
   WEBSOCKET_SERVER: DurableObjectNamespace;
-  
+
   // 环境变量
   ENVIRONMENT: string;
   LOG_LEVEL: string;
   API_VERSION: string;
   CORS_ORIGIN: string;
-  
+
   // RPC 节点
   SOLANA_RPC_URL: string;
   BASE_RPC_URL: string;
   ETH_RPC_URL: string;
-  
+
   // API 密钥
   BITQUERY_API_KEY: string;
   COVALENT_API_KEY: string;
   DEXSCREENER_API_KEY: string;
   BIRDEYE_API_KEY: string;
-  
+
   // 安全
   JWT_SECRET: string;
-  
+
   // 合约地址
   CONTRACT_ALPHANEST_CORE: string;
   CONTRACT_REPUTATION_REGISTRY: string;
   CONTRACT_ALPHAGUARD: string;
-  
+
   // Sentry
   SENTRY_DSN: string;
 }
@@ -176,12 +176,15 @@ const api = new Hono<{ Bindings: Env }>();
 // 公开路由 (无需认证)
 api.route('/user', userRoutes);
 api.route('/dev', devRoutes);
+api.route('/developers', devRoutes); // Alias for developers/rankings
 api.route('/tokens', tokenRoutes);
 api.route('/blockchain', blockchainRoutes);
 api.route('/traders', traderRoutes);
 api.route('/analytics', analyticsRoutes);
+api.route('/platform', analyticsRoutes); // Alias for platform/stats
 api.route('/meme', memeRoutes);
-api.route('/insurance', insuranceRoutes); // 部分公开路由
+api.route('/insurance', insuranceRoutes);
+api.route('/activity', analyticsRoutes); // Alias for activity/recent
 
 // 需要认证的路由
 api.use('/trade/*', authMiddleware());

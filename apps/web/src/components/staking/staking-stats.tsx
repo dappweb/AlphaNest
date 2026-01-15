@@ -1,14 +1,15 @@
 'use client';
 
 import { Card, CardContent } from '@/components/ui/card';
-import { 
-  Coins, 
-  Users, 
-  TrendingUp, 
+import {
+  Coins,
+  Users,
+  TrendingUp,
   Percent,
   ArrowUpRight,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useTranslation } from '@/hooks/use-translation';
 
 interface StakingStatsProps {
   totalStaked: number;
@@ -23,9 +24,11 @@ export function StakingStats({
   totalRewardsDistributed = 0,
   averageApy = 100,
 }: StakingStatsProps) {
+  const { t } = useTranslation();
+
   const stats = [
     {
-      label: '总质押量',
+      label: t.staking.totalStaked,
       value: totalStaked.toLocaleString(),
       suffix: 'Pump',
       icon: Coins,
@@ -35,9 +38,9 @@ export function StakingStats({
       changePositive: true,
     },
     {
-      label: '质押用户数',
+      label: t.staking.totalStakers,
       value: totalStakers.toLocaleString(),
-      suffix: '人',
+      suffix: '',
       icon: Users,
       color: 'text-blue-500',
       bgColor: 'bg-blue-500/10',
@@ -45,7 +48,7 @@ export function StakingStats({
       changePositive: true,
     },
     {
-      label: '已发放奖励',
+      label: t.staking.rewardsDistributed,
       value: totalRewardsDistributed.toLocaleString(),
       suffix: '$PopCowDefi',
       icon: TrendingUp,
@@ -55,13 +58,13 @@ export function StakingStats({
       changePositive: true,
     },
     {
-      label: '平均 APY',
+      label: t.staking.averageApy,
       value: averageApy.toString(),
       suffix: '%',
       icon: Percent,
       color: 'text-purple-500',
       bgColor: 'bg-purple-500/10',
-      change: '稳定',
+      change: 'Stable',
       changePositive: true,
     },
   ];

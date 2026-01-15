@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input';
 import { ChevronDown, Search, Star, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { STAKEABLE_TOKENS } from '@/lib/solana';
+import { useTranslation } from '@/hooks/use-translation';
 
 interface TokenSelectorProps {
   selectedToken: typeof STAKEABLE_TOKENS[0] | null;
@@ -26,6 +27,7 @@ export function TokenSelector({
   onSelectToken,
   balances = {},
 }: TokenSelectorProps) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
 
@@ -35,8 +37,8 @@ export function TokenSelector({
       token.name.toLowerCase().includes(search.toLowerCase())
   );
 
-  const featuredTokens = filteredTokens.filter((t) => t.featured);
-  const otherTokens = filteredTokens.filter((t) => !t.featured);
+  const featuredTokens = filteredTokens.filter((token) => token.featured);
+  const otherTokens = filteredTokens.filter((token) => !token.featured);
 
   const handleSelect = (token: typeof STAKEABLE_TOKENS[0]) => {
     onSelectToken(token);
@@ -60,7 +62,7 @@ export function TokenSelector({
               </div>
             </div>
           ) : (
-            <span className="text-muted-foreground">选择质押代币</span>
+            <span className="text-muted-foreground">{t.staking.selectToken}</span>
           )}
           <ChevronDown className="h-4 w-4 text-muted-foreground" />
         </Button>
@@ -68,7 +70,7 @@ export function TokenSelector({
 
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>选择质押代币</DialogTitle>
+          <DialogTitle>{t.staking.selectToken}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -76,7 +78,7 @@ export function TokenSelector({
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="搜索代币..."
+              placeholder={`${t.common.search}...`}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-10"
@@ -124,7 +126,7 @@ export function TokenSelector({
 
           {filteredTokens.length === 0 && (
             <div className="text-center py-8 text-muted-foreground">
-              未找到匹配的代币
+              {t.common.search} - No results
             </div>
           )}
         </div>

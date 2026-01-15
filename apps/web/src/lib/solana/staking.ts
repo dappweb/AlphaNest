@@ -12,7 +12,7 @@ import {
   TOKEN_PROGRAM_ID,
 } from '@solana/spl-token';
 import {
-  PUMP_TOKEN_MINT,
+  POPCOW_TOKEN_MINT,
   POPCOWDEFI_TOKEN_MINT,
   STAKING_POOLS,
   SOLANA_RPC_ENDPOINT,
@@ -51,12 +51,12 @@ export async function getTokenBalance(
   }
 }
 
-// 获取用户 Pump 代币余额
-export async function getPumpTokenBalance(
+// 获取用户 PopCow 代币余额
+export async function getPopCowTokenBalance(
   connection: Connection,
   owner: PublicKey
 ): Promise<number> {
-  return getTokenBalance(connection, owner, PUMP_TOKEN_MINT);
+  return getTokenBalance(connection, owner, POPCOW_TOKEN_MINT);
 }
 
 // 获取用户 PopCowDefi 代币余额
@@ -67,8 +67,8 @@ export async function getPopCowDefiBalance(
   return getTokenBalance(connection, owner, POPCOWDEFI_TOKEN_MINT);
 }
 
-// 质押 Pump 代币
-export async function stakePumpTokens(
+// 质押 PopCow 代币
+export async function stakePopCowTokens(
   connection: Connection,
   owner: PublicKey,
   amount: number,
@@ -79,11 +79,11 @@ export async function stakePumpTokens(
   if (!pool) throw new Error('Invalid pool');
 
   // 获取用户代币账户
-  const userTokenAccount = await getAssociatedTokenAddress(PUMP_TOKEN_MINT, owner);
-  
+  const userTokenAccount = await getAssociatedTokenAddress(POPCOW_TOKEN_MINT, owner);
+
   // TODO: 替换为实际的质押金库地址
   const stakingVault = new PublicKey('11111111111111111111111111111111');
-  
+
   // 创建转账指令
   const transferIx = createTransferInstruction(
     userTokenAccount,
@@ -98,9 +98,9 @@ export async function stakePumpTokens(
 
   const signedTx = await signTransaction(transaction);
   const signature = await connection.sendRawTransaction(signedTx.serialize());
-  
+
   await connection.confirmTransaction(signature, 'confirmed');
-  
+
   return signature;
 }
 
@@ -117,7 +117,7 @@ export async function unstakePumpTokens(
 
   // TODO: 实现解除质押逻辑
   // 需要调用质押合约的 unstake 方法
-  
+
   throw new Error('Unstaking not yet implemented - pending contract deployment');
 }
 
@@ -130,7 +130,7 @@ export async function claimRewards(
 ): Promise<string> {
   // TODO: 实现领取奖励逻辑
   // 需要调用质押合约的 claim 方法
-  
+
   throw new Error('Claim rewards not yet implemented - pending contract deployment');
 }
 
@@ -172,7 +172,7 @@ export function estimateRewards(
 
   const daily = calculateDailyReward(amount, poolId);
   const total = calculatePendingReward(amount, poolId, days);
-  
+
   return {
     daily,
     total,

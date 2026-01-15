@@ -163,8 +163,11 @@ export const STAKING_POOLS = {
   },
 };
 
-// RPC 端点
-export const SOLANA_RPC_ENDPOINT = process.env.NEXT_PUBLIC_SOLANA_RPC || 'https://api.mainnet-beta.solana.com';
+// RPC 端点 - 优先使用 Helius RPC
+const HELIUS_API_KEY = process.env.NEXT_PUBLIC_HELIUS_API_KEY || '';
+export const SOLANA_RPC_ENDPOINT = HELIUS_API_KEY
+  ? `https://mainnet.helius-rpc.com/?api-key=${HELIUS_API_KEY}`
+  : (process.env.NEXT_PUBLIC_SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com');
 
 // 奖励计算
 export const calculateDailyReward = (

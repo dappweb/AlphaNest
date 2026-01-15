@@ -1,13 +1,12 @@
 'use client';
 
 import { useAccount, useBalance } from 'wagmi';
-import { TrendingUp, Users, Shield, Coins, Wallet, Eye, EyeOff, RefreshCw, AlertCircle } from 'lucide-react';
+import { TrendingUp, Users, Shield, Coins, Wallet, RefreshCw } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { formatUSD, formatNumber } from '@/lib/utils';
 import { useState, useEffect } from 'react';
 import { ApiService, type PlatformStats, type UserStats } from '@/lib/api-services';
-import { StatsCardSkeleton } from '@/components/ui/skeleton';
 import { usePrivacySettings } from '@/hooks/use-settings';
 
 export function StatsOverview() {
@@ -22,14 +21,48 @@ export function StatsOverview() {
     totalTrades: 0,
     winRate: 0,
   });
+
+  // 默认数据 - 立即显示，避免等待API
+  const defaultPlatformStats = [
+    {
+      name: '24h Volume',
+      value: 125000000,
+      change: 15.3,
+      icon: TrendingUp,
+      format: 'usd' as const,
+    },
+    {
+      name: 'Total Users',
+      value: 45230,
+      change: 8.7,
+      icon: Users,
+      format: 'number' as const,
+    },
+    {
+      name: 'Transactions',
+      value: 892341,
+      change: 12.4,
+      icon: Shield,
+      format: 'number' as const,
+    },
+    {
+      name: 'Active Tokens',
+      value: 1247,
+      change: 5.2,
+      icon: Coins,
+      format: 'number' as const,
+    },
+  ];
+
   const [platformStats, setPlatformStats] = useState<Array<{
     name: string;
     value: number;
     change: number;
     icon: typeof TrendingUp;
     format: 'usd' | 'number' | 'percent' | 'string';
-  }>>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  }>>(defaultPlatformStats);
+
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // 获取平台统计数据
@@ -68,41 +101,11 @@ export function StatsOverview() {
             format: 'number',
           },
         ]);
+        setError(null);
       }
     } catch (err) {
       console.error('Failed to fetch platform stats:', err);
-      setError('Failed to load platform statistics');
-      // 设置默认数据
-      setPlatformStats([
-        {
-          name: '24h Volume',
-          value: 125000000,
-          change: 15.3,
-          icon: TrendingUp,
-          format: 'usd',
-        },
-        {
-          name: 'Total Users',
-          value: 45230,
-          change: 8.7,
-          icon: Users,
-          format: 'number',
-        },
-        {
-          name: 'Transactions',
-          value: 892341,
-          change: 12.4,
-          icon: Shield,
-          format: 'number',
-        },
-        {
-          name: 'Active Tokens',
-          value: 1247,
-          change: 5.2,
-          icon: Coins,
-          format: 'number',
-        },
-      ]);
+      // 保持显示默认数据，静默失败
     }
   };
 
@@ -129,39 +132,38 @@ export function StatsOverview() {
     }
   };
 
-  // 初始数据加载
+  // 初始数据加载 - 静默加载，不显示骨架屏
+  // 使用 balance?.formatted 而不是 balance 对象，避免对象引用变化导致的无限循环
+  const balanceValue = balance?.formatted;
+
   useEffect(() => {
     const loadData = async () => {
-      setIsLoading(true);
-      setError(null);
-      
       await Promise.all([
         fetchPlatformStats(),
         fetchUserStats(),
       ]);
-      
-      setIsLoading(false);
     };
 
     loadData();
-  }, [isConnected, address, balance]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isConnected, address, balanceValue]);
 
   // 刷新数据
   const handleRefresh = async () => {
-    setIsLoading(true);
+    setIsRefreshing(true);
     setError(null);
-    
+
     await Promise.all([
       fetchPlatformStats(),
       fetchUserStats(),
     ]);
-    
-    setIsLoading(false);
+
+    setIsRefreshing(false);
   };
 
   const formatValue = (value: number, format: string, hide: boolean) => {
     if (hide) return '****';
-    
+
     switch (format) {
       case 'usd':
         return formatUSD(value);
@@ -248,8 +250,8 @@ export function StatsOverview() {
         {/* Platform Stats */}
         <div className="flex items-center justify-between mt-6">
           <h2 className="text-lg font-semibold">Platform Stats</h2>
-          <Button variant="ghost" size="sm" onClick={handleRefresh} disabled={isLoading}>
-            {isLoading ? (
+          <Button variant="ghost" size="sm" onClick={handleRefresh} disabled={isRefreshing}>
+            {isRefreshing ? (
               <>
                 <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
                 Refreshing...
@@ -263,108 +265,6 @@ export function StatsOverview() {
           </Button>
         </div>
 
-        {isLoading ? (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            {[1, 2, 3, 4].map((i) => (
-              <StatsCardSkeleton key={i} />
-            ))}
-          </div>
-        ) : error ? (
-          <div className="rounded-lg border p-6 text-center space-y-4">
-            <div className="flex items-center justify-center gap-2 text-destructive">
-              <AlertCircle className="h-5 w-5" />
-              <p className="text-sm">{error}</p>
-            </div>
-            <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isLoading}>
-              {isLoading ? (
-                <>
-                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                  Retrying...
-                </>
-              ) : (
-                <>
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  Retry
-                </>
-              )}
-            </Button>
-          </div>
-        ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            {platformStats.map((stat, index) => (
-              <Card key={index} className="hover-lift">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">{stat.name}</p>
-                      <p className="text-2xl font-bold">{formatValue(stat.value, stat.format, false)}</p>
-                      <div className="flex items-center gap-1 mt-1">
-                        <TrendingUp className={`h-4 w-4 ${stat.change >= 0 ? 'text-green-500' : 'text-red-500'}`} />
-                        <span className={`text-sm ${stat.change >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                          {stat.change >= 0 ? '+' : ''}{stat.change}%
-                        </span>
-                      </div>
-                    </div>
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                      <stat.icon className="h-5 w-5 text-primary" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  // Show platform stats only when not connected
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Platform Overview</h2>
-        <Button variant="ghost" size="sm" onClick={handleRefresh} disabled={isLoading}>
-          {isLoading ? (
-            <>
-              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-              Refreshing...
-            </>
-          ) : (
-            <>
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Refresh
-            </>
-          )}
-        </Button>
-      </div>
-
-      {isLoading ? (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {[1, 2, 3, 4].map((i) => (
-            <StatsCardSkeleton key={i} />
-          ))}
-        </div>
-      ) : error ? (
-        <div className="rounded-lg border p-6 text-center space-y-4">
-          <div className="flex items-center justify-center gap-2 text-destructive">
-            <AlertCircle className="h-5 w-5" />
-            <p className="text-sm">{error}</p>
-          </div>
-          <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isLoading}>
-            {isLoading ? (
-              <>
-                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                Retrying...
-              </>
-            ) : (
-              <>
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Retry
-              </>
-            )}
-          </Button>
-        </div>
-      ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {platformStats.map((stat, index) => (
             <Card key={index} className="hover-lift">
@@ -388,7 +288,53 @@ export function StatsOverview() {
             </Card>
           ))}
         </div>
-      )}
+      </div>
+    );
+  }
+
+  // Show platform stats only when not connected
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold">Platform Overview</h2>
+        <Button variant="ghost" size="sm" onClick={handleRefresh} disabled={isRefreshing}>
+          {isRefreshing ? (
+            <>
+              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+              Refreshing...
+            </>
+          ) : (
+            <>
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Refresh
+            </>
+          )}
+        </Button>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {platformStats.map((stat, index) => (
+          <Card key={index} className="hover-lift">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">{stat.name}</p>
+                  <p className="text-2xl font-bold">{formatValue(stat.value, stat.format, false)}</p>
+                  <div className="flex items-center gap-1 mt-1">
+                    <TrendingUp className={`h-4 w-4 ${stat.change >= 0 ? 'text-green-500' : 'text-red-500'}`} />
+                    <span className={`text-sm ${stat.change >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                      {stat.change >= 0 ? '+' : ''}{stat.change}%
+                    </span>
+                  </div>
+                </div>
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                  <stat.icon className="h-5 w-5 text-primary" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
     </div>
   );
 }

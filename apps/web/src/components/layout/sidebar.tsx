@@ -21,6 +21,7 @@ import {
   ChevronRight,
   X,
   Zap,
+  Brain,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -35,103 +36,110 @@ import { useSidebarStore, useSidebarHydration } from '@/stores/sidebar-store';
 import { useTranslation } from '@/hooks/use-translation';
 
 const getNavigation = (t: any) => [
-  { 
-    name: t.nav.dashboard, 
-    href: '/', 
+  {
+    name: t.nav.dashboard,
+    href: '/',
     icon: LayoutDashboard,
     shortcut: 'Ctrl+D',
     badge: null
   },
-  { 
-    name: `🔥 ${t.nav.staking}`, 
-    href: '/staking', 
+  {
+    name: `🔥 ${t.nav.staking}`,
+    href: '/staking',
     icon: Coins,
     special: true,
     featured: true,
     shortcut: 'Ctrl+S',
     badge: { text: 'HOT', variant: 'destructive' as const }
   },
-  { 
-    name: `${t.nav.popcowAlpha} 🐄`, 
-    href: '/popcow', 
-    icon: Rocket, 
+  {
+    name: `${t.nav.popcowAlpha} 🐄`,
+    href: '/popcow',
+    icon: Rocket,
     special: true,
     shortcut: 'Ctrl+P',
     badge: null
   },
-  { 
-    name: t.nav.trade, 
-    href: '/trade', 
+  {
+    name: t.nav.trade,
+    href: '/trade',
     icon: TrendingUp,
     shortcut: 'Ctrl+T',
     badge: null
   },
-  { 
-    name: t.nav.memeHunter, 
-    href: '/meme', 
+  {
+    name: t.nav.memeHunter,
+    href: '/meme',
     icon: Zap,
     shortcut: 'Ctrl+M',
     badge: { text: 'HOT', variant: 'default' as const }
   },
-  { 
-name: t.nav.copyTrading, 
+  {
+    name: t.nav.copyTrading,
     href: '/copy-trade',
     icon: Copy,
     shortcut: 'Ctrl+C',
     badge: null
   },
-  { 
-    name: t.nav.devRankings, 
-    href: '/devs', 
+  {
+    name: t.nav.devRankings,
+    href: '/devs',
     icon: Users,
     shortcut: 'Ctrl+R',
     badge: null
   },
-  { 
-    name: t.nav.insurance, 
-    href: '/insurance', 
+  {
+    name: t.nav.insurance,
+    href: '/insurance',
     icon: Shield,
     shortcut: 'Ctrl+I',
     badge: { text: 'PRO', variant: 'secondary' as const }
   },
-  { 
-    name: t.nav.cowPoints, 
-    href: '/points', 
+  {
+    name: t.nav.cowPoints,
+    href: '/points',
     icon: Coins,
     shortcut: 'Ctrl+O',
     badge: { text: '2.5x', variant: 'outline' as const }
   },
-  { 
-    name: t.nav.analytics, 
-    href: '/analytics', 
+  {
+    name: t.nav.analytics,
+    href: '/analytics',
     icon: BarChart3,
     shortcut: 'Ctrl+A',
     badge: null
   },
-  { 
-    name: t.nav.tradingBots, 
-    href: '/bots', 
+  {
+    name: t.nav.tradingBots,
+    href: '/bots',
     icon: Bot,
     shortcut: 'Ctrl+B',
     badge: null
   },
+  {
+    name: t.nav.smartMoney,
+    href: '/smart-money',
+    icon: Brain,
+    shortcut: 'Ctrl+U',
+    badge: { text: 'NEW', variant: 'destructive' as const }
+  },
 ];
 
 const getUserNavigation = (t: any) => [
-  { 
-    name: t.nav.account, 
-    href: '/account', 
+  {
+    name: t.nav.account,
+    href: '/account',
     icon: Wallet,
   },
-  { 
-    name: t.nav.referral, 
-    href: '/referral', 
+  {
+    name: t.nav.referral,
+    href: '/referral',
     icon: Gift,
     badge: { text: '10%', variant: 'default' as const }
   },
-  { 
-    name: t.nav.settings, 
-    href: '/settings', 
+  {
+    name: t.nav.settings,
+    href: '/settings',
     icon: Settings,
   },
 ];
@@ -141,7 +149,7 @@ export function Sidebar() {
   const { isCollapsed, isMobileOpen, toggleCollapsed, setMobileOpen } = useSidebarStore();
   const hydrated = useSidebarHydration();
   const { t } = useTranslation();
-  
+
   const navigation = getNavigation(t);
   const userNavigation = getUserNavigation(t);
 

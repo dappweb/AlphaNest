@@ -183,6 +183,14 @@ app.get('/leaderboard', async (c) => {
 });
 
 /**
+ * GET /rankings
+ * Alias for /leaderboard
+ */
+app.get('/rankings', async (c) => {
+  return c.redirect(`/api/v1/dev/leaderboard?${new URLSearchParams(c.req.query()).toString()}`);
+});
+
+/**
  * GET /:address/tokens
  * 获取 Dev 发行的代币列表
  */

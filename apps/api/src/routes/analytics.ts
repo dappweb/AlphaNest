@@ -7,6 +7,42 @@ import { Hono } from 'hono';
 const app = new Hono();
 
 /**
+ * GET /recent
+ * 获取最近活动
+ */
+app.get('/recent', async (c) => {
+  const limit = Math.min(parseInt(c.req.query('limit') || '20'), 100);
+
+  try {
+    const logs = await c.env.DB.prepare(`
+      SELECT 
+        id,
+        user_id as user,
+        'buy' as type, -- Mock type for now
+        token_mint as token,
+        amount,
+        created_at as timestamp,
+        'solana' as chain,
+        signature as tx_hash
+      FROM trade_logs
+      ORDER BY created_at DESC
+      LIMIT ?
+    `).bind(limit).all();
+
+    return c.json({
+      success: true,
+      data: logs.results || [],
+    });
+  } catch (error) {
+    console.error('Error fetching recent activity:', error);
+    return c.json({
+      success: false,
+      error: { code: 'ACTIVITY_ERROR', message: 'Failed to fetch activity data' },
+    }, 500);
+  }
+});
+
+/**
  * GET /volume
  * 获取交易量统计
  */
@@ -59,8 +95,8 @@ app.get('/tokens', async (c) => {
 
   try {
     const orderBy = sortBy === 'volume' ? 'volume_24h DESC' :
-                    sortBy === 'market_cap' ? 'market_cap DESC' :
-                    'holder_count DESC';
+      sortBy === 'market_cap' ? 'market_cap DESC' :
+        'holder_count DESC';
 
     const tokens = await c.env.DB.prepare(`
       SELECT 
@@ -153,7 +189,7 @@ app.get('/platform', async (c) => {
       WHERE status = 'active'
     `).first();
     let tvl = parseFloat((tvlResult as any)?.total || '0');
-    
+
     // If database doesn't have insurance_pools table or no data, try to query contract
     if (tvl === 0 && c.env.CONTRACT_ALPHAGUARD) {
       // TODO: Query AlphaGuard contract for total TVL
@@ -183,6 +219,14 @@ app.get('/platform', async (c) => {
       error: { code: 'PLATFORM_ERROR', message: 'Failed to fetch platform data' },
     }, 500);
   }
+});
+
+/**
+ * GET /stats
+ * Alias for /platform
+ */
+app.get('/stats', async (c) => {
+  return c.redirect('/api/v1/analytics/platform');
 });
 
 
