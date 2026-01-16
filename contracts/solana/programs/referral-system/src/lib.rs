@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Token, TokenAccount, Transfer, Mint};
 
-declare_id!("Cd2NZkSS5K4kqyWQcdaGv8deE8k75JrWjwU3byQRqEju");
+declare_id!("7VdsqQyUwFYzbkroYA6uRfz4n899NfoCcMLpkNg2bHAi");
 
 #[program]
 pub mod referral_system {
