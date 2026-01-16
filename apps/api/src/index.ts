@@ -29,6 +29,7 @@ import { botRoutes } from './routes/bots';
 import { memeRoutes } from './routes/meme';
 import { sniperRoutes } from './routes/sniper';
 import { whaleAlertRoutes } from './routes/whale-alert';
+import { adminRoutes } from './routes/admin';
 
 // 中间件
 import { authMiddleware } from './middleware/auth';
@@ -79,6 +80,15 @@ export interface Env {
   CONTRACT_ALPHANEST_CORE: string;
   CONTRACT_REPUTATION_REGISTRY: string;
   CONTRACT_ALPHAGUARD: string;
+  
+  // Solana 合约地址（用于管理员验证）
+  CONTRACT_STAKING_POOL?: string;
+  CONTRACT_INSURANCE_PROTOCOL?: string;
+  CONTRACT_YIELD_VAULT?: string;
+  CONTRACT_STAKING_PROGRAM_ID?: string;
+  CONTRACT_INSURANCE_PROGRAM_ID?: string;
+  CONTRACT_REPUTATION_PROGRAM_ID?: string;
+  CONTRACT_VAULT_PROGRAM_ID?: string;
 
   // Sentry
   SENTRY_DSN: string;
@@ -187,6 +197,7 @@ api.route('/platform', analyticsRoutes); // Alias for platform/stats
 api.route('/meme', memeRoutes);
 api.route('/insurance', insuranceRoutes);
 api.route('/activity', analyticsRoutes); // Alias for activity/recent
+api.route('/admin', adminRoutes);
 
 // 需要认证的路由
 api.use('/trade/*', authMiddleware());

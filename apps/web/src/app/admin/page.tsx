@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,8 +16,17 @@ import {
   AlertTriangle,
   CheckCircle,
   Loader2,
+  LogOut,
 } from 'lucide-react';
 import { useTranslation } from '@/hooks/use-translation';
+import { 
+  adminLogin, 
+  adminLogout, 
+  getCurrentAdmin, 
+  getAdminInfo,
+  isAdminTokenExpired,
+  type AdminInfo,
+} from '@/lib/admin-auth';
 
 // 管理功能模块
 const ADMIN_MODULES = [
@@ -59,26 +68,112 @@ const ADMIN_MODULES = [
 ];
 
 export default function AdminPage() {
-  const { connected, publicKey } = useWallet();
+  const { connected, publicKey, signMessage } = useWallet();
   const { t } = useTranslation();
   const [activeModule, setActiveModule] = useState<string>('tokens');
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [adminInfo, setAdminInfo] = useState<AdminInfo | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  // TODO: 验证管理员权限
+  // 检查管理员登录状态
   useEffect(() => {
-    if (connected && publicKey) {
-      // 检查是否为管理员
-      // const checkAdmin = async () => {
-      //   const adminAddress = 'YOUR_ADMIN_ADDRESS';
-      //   setIsAdmin(publicKey.equals(adminAddress));
-      // };
-      // checkAdmin();
-      
-      // 临时：允许所有连接的钱包访问（仅用于开发）
-      setIsAdmin(true);
-    }
-  }, [connected, publicKey]);
+    const checkAdminStatus = async () => {
+      setIsLoading(true);
+      setError(null);
 
+      // 检查是否有有效的管理员token
+      const info = getAdminInfo();
+      if (info && !isAdminTokenExpired()) {
+        // 验证token是否仍然有效
+        try {
+          const currentAdmin = await getCurrentAdmin();
+          if (currentAdmin) {
+            setAdminInfo(currentAdmin);
+            setIsAdmin(true);
+          } else {
+            setIsAdmin(false);
+            setAdminInfo(null);
+          }
+        } catch (err) {
+          console.error('Check admin status error:', err);
+          setIsAdmin(false);
+          setAdminInfo(null);
+        }
+      } else {
+        setIsAdmin(false);
+        setAdminInfo(null);
+      }
+
+      setIsLoading(false);
+    };
+
+    checkAdminStatus();
+  }, []);
+
+  // 处理管理员登录
+  const handleLogin = useCallback(async () => {
+    if (!connected || !publicKey || !signMessage) {
+      setError('请先连接钱包');
+      return;
+    }
+
+    setIsLoggingIn(true);
+    setError(null);
+
+    try {
+      const walletAddress = publicKey.toBase58();
+      const timestamp = Date.now();
+      const message = `AlphaNest Admin Login\n\nWallet: ${walletAddress}\nTimestamp: ${timestamp}\n\n请签名以验证您的管理员身份`;
+
+      // 签名消息
+      const encodedMessage = new TextEncoder().encode(message);
+      const signatureBytes = await signMessage(encodedMessage);
+      const signature = Buffer.from(signatureBytes).toString('base64');
+
+      // 调用登录API
+      const adminInfo = await adminLogin(
+        walletAddress,
+        'solana',
+        signature,
+        message
+      );
+
+      setAdminInfo(adminInfo);
+      setIsAdmin(true);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : '登录失败';
+      setError(errorMessage);
+      setIsAdmin(false);
+      setAdminInfo(null);
+    } finally {
+      setIsLoggingIn(false);
+    }
+  }, [connected, publicKey, signMessage]);
+
+  // 处理登出
+  const handleLogout = useCallback(async () => {
+    try {
+      await adminLogout();
+      setAdminInfo(null);
+      setIsAdmin(false);
+    } catch (err) {
+      console.error('Logout error:', err);
+    }
+  }, []);
+
+  // 加载状态
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
+        <Loader2 className="h-12 w-12 text-primary animate-spin" />
+        <p className="text-muted-foreground">正在验证管理员权限...</p>
+      </div>
+    );
+  }
+
+  // 未连接钱包
   if (!connected) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
@@ -90,15 +185,41 @@ export default function AdminPage() {
     );
   }
 
-  if (!isAdmin) {
+  // 未登录或没有管理员权限
+  if (!isAdmin || !adminInfo) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
         <AlertTriangle className="h-12 w-12 text-destructive" />
-        <h2 className="text-2xl font-bold">访问被拒绝</h2>
-        <p className="text-muted-foreground">您没有管理员权限</p>
+        <h2 className="text-2xl font-bold">
+          {adminInfo ? '访问被拒绝' : '管理员登录'}
+        </h2>
+        <p className="text-muted-foreground">
+          {adminInfo 
+            ? '您没有管理员权限或权限已过期' 
+            : '请使用管理员钱包签名登录'}
+        </p>
+        {error && (
+          <div className="bg-destructive/10 text-destructive px-4 py-2 rounded-md text-sm">
+            {error}
+          </div>
+        )}
         <p className="text-sm text-muted-foreground font-mono">
           {publicKey?.toString().slice(0, 8)}...{publicKey?.toString().slice(-6)}
         </p>
+        <Button 
+          onClick={handleLogin} 
+          disabled={isLoggingIn}
+          className="mt-4"
+        >
+          {isLoggingIn ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              登录中...
+            </>
+          ) : (
+            '管理员登录'
+          )}
+        </Button>
       </div>
     );
   }
@@ -119,8 +240,18 @@ export default function AdminPage() {
         <div className="flex items-center gap-2">
           <Badge variant="outline" className="bg-green-500/10 text-green-500">
             <CheckCircle className="h-3 w-3 mr-1" />
-            管理员模式
+            {adminInfo.role === 'super_admin' ? '超级管理员' : 
+             adminInfo.role === 'admin' ? '管理员' : '操作员'}
           </Badge>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleLogout}
+            className="flex items-center gap-2"
+          >
+            <LogOut className="h-4 w-4" />
+            登出
+          </Button>
           <WalletMultiButton />
         </div>
       </div>
