@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Token, TokenAccount, Mint};
 
-declare_id!("GGDkeiEwToEz8jsGKwHTkv8u1heeiDPvNhamp7jcwRc6");
+declare_id!("TYKKXnQUGs6Gqv7cwR7gATd6odzYhANjBw72xC53tsv");
 
 #[program]
 pub mod reputation_registry {

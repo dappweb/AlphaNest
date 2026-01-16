@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Token, TokenAccount, Transfer, Mint};
 
-declare_id!("495U83QWQBxYRzsZfnchFme2Jo71NsTDxpUhbyAmZfBd");
+declare_id!("46iXDwHRE9FZcoeMUPQD8Bc8B55Bz3Gb9mTPrVJhZP9v");
 
 #[program]
 pub mod points_system {

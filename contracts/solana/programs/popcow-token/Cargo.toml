@@ -18,3 +18,4 @@ default = []
 [dependencies]
 anchor-lang = { workspace = true }
 anchor-spl = { workspace = true }
+constant_time_eq = "=0.3.1"
