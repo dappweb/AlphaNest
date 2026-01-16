@@ -6,22 +6,15 @@ import { usePathname } from 'next/navigation';
 import { useEffect } from 'react';
 import {
   LayoutDashboard,
-  TrendingUp,
-  Users,
-  Shield,
   Coins,
   Settings,
-  Bot,
-  BarChart3,
   Wallet,
   Copy,
   Gift,
-  Rocket,
   ChevronLeft,
   ChevronRight,
   X,
   Zap,
-  Brain,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -53,21 +46,6 @@ const getNavigation = (t: any) => [
     badge: { text: 'HOT', variant: 'destructive' as const }
   },
   {
-    name: `${t.nav.popcowAlpha} 🐄`,
-    href: '/popcow',
-    icon: Rocket,
-    special: true,
-    shortcut: 'Ctrl+P',
-    badge: null
-  },
-  {
-    name: t.nav.trade,
-    href: '/trade',
-    icon: TrendingUp,
-    shortcut: 'Ctrl+T',
-    badge: null
-  },
-  {
     name: t.nav.memeHunter,
     href: '/meme',
     icon: Zap,
@@ -75,53 +53,11 @@ const getNavigation = (t: any) => [
     badge: { text: 'HOT', variant: 'default' as const }
   },
   {
-    name: t.nav.copyTrading,
-    href: '/copy-trade',
-    icon: Copy,
-    shortcut: 'Ctrl+C',
-    badge: null
-  },
-  {
-    name: t.nav.devRankings,
-    href: '/devs',
-    icon: Users,
-    shortcut: 'Ctrl+R',
-    badge: null
-  },
-  {
-    name: t.nav.insurance,
-    href: '/insurance',
-    icon: Shield,
-    shortcut: 'Ctrl+I',
-    badge: { text: 'PRO', variant: 'secondary' as const }
-  },
-  {
     name: t.nav.cowPoints,
     href: '/points',
     icon: Coins,
     shortcut: 'Ctrl+O',
     badge: { text: '2.5x', variant: 'outline' as const }
-  },
-  {
-    name: t.nav.analytics,
-    href: '/analytics',
-    icon: BarChart3,
-    shortcut: 'Ctrl+A',
-    badge: null
-  },
-  {
-    name: t.nav.tradingBots,
-    href: '/bots',
-    icon: Bot,
-    shortcut: 'Ctrl+B',
-    badge: null
-  },
-  {
-    name: t.nav.smartMoney,
-    href: '/smart-money',
-    icon: Brain,
-    shortcut: 'Ctrl+U',
-    badge: { text: 'NEW', variant: 'destructive' as const }
   },
 ];
 
@@ -201,41 +137,49 @@ export function Sidebar() {
             {navigation.map((item) => {
               const isActive = pathname === item.href;
               const isSpecial = 'special' in item && item.special;
-              return (
-                <Tooltip key={item.name}>
-                  <TooltipTrigger asChild>
-                    <Link
-                      href={item.href}
-                      className={cn(
-                        'flex items-center rounded-lg text-sm font-medium transition-all duration-200',
-                        collapsed ? 'justify-center p-2' : 'gap-3 px-3 py-2',
-                        isActive
-                          ? 'bg-primary text-primary-foreground shadow-sm'
-                          : isSpecial
-                            ? 'text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-950/20 hover:text-orange-600'
-                            : 'text-muted-foreground hover:bg-secondary hover:text-foreground',
-                        'hover:scale-[1.02] active:scale-[0.98]'
+              const linkContent = (
+                <Link
+                  href={item.href}
+                  className={cn(
+                    'flex items-center rounded-lg text-sm font-medium transition-all duration-200',
+                    collapsed ? 'justify-center p-2' : 'gap-3 px-3 py-2',
+                    isActive
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : isSpecial
+                        ? 'text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-950/20 hover:text-orange-600'
+                        : 'text-muted-foreground hover:bg-secondary hover:text-foreground',
+                    'hover:scale-[1.02] active:scale-[0.98]'
+                  )}
+                  onClick={(e) => {
+                    // Ensure navigation works even if tooltip interferes
+                    e.stopPropagation();
+                  }}
+                >
+                  <item.icon className={cn("flex-shrink-0", collapsed ? "h-5 w-5" : "h-5 w-5")} />
+                  {!collapsed && (
+                    <>
+                      <span className="flex-1 truncate">{item.name}</span>
+                      {item.badge && (
+                        <Badge variant={item.badge.variant} className="text-xs">
+                          {item.badge.text}
+                        </Badge>
                       )}
-                    >
-                      <item.icon className={cn("flex-shrink-0", collapsed ? "h-5 w-5" : "h-5 w-5")} />
-                      {!collapsed && (
-                        <>
-                          <span className="flex-1 truncate">{item.name}</span>
-                          {item.badge && (
-                            <Badge variant={item.badge.variant} className="text-xs">
-                              {item.badge.text}
-                            </Badge>
-                          )}
-                          {isSpecial && (
-                            <Badge variant="destructive" className="text-xs animate-pulse">
-                              NEW
-                            </Badge>
-                          )}
-                        </>
+                      {isSpecial && (
+                        <Badge variant="destructive" className="text-xs animate-pulse">
+                          NEW
+                        </Badge>
                       )}
-                    </Link>
-                  </TooltipTrigger>
-                  {collapsed && (
+                    </>
+                  )}
+                </Link>
+              );
+
+              if (collapsed) {
+                return (
+                  <Tooltip key={item.name}>
+                    <TooltipTrigger asChild>
+                      {linkContent}
+                    </TooltipTrigger>
                     <TooltipContent side="right" className="max-w-xs">
                       <p className="font-medium">{item.name}</p>
                       {item.shortcut && (
@@ -244,9 +188,11 @@ export function Sidebar() {
                         </p>
                       )}
                     </TooltipContent>
-                  )}
-                </Tooltip>
-              );
+                  </Tooltip>
+                );
+              }
+
+              return <div key={item.name}>{linkContent}</div>;
             })}
           </div>
         </TooltipProvider>
@@ -264,40 +210,50 @@ export function Sidebar() {
             )}
             {userNavigation.map((item) => {
               const isActive = pathname === item.href;
-              return (
-                <Tooltip key={item.name}>
-                  <TooltipTrigger asChild>
-                    <Link
-                      href={item.href}
-                      className={cn(
-                        'flex items-center rounded-lg text-sm font-medium transition-all duration-200',
-                        collapsed ? 'justify-center p-2' : 'gap-3 px-3 py-2',
-                        isActive
-                          ? 'bg-primary text-primary-foreground shadow-sm'
-                          : 'text-muted-foreground hover:bg-secondary hover:text-foreground',
-                        'hover:scale-[1.02] active:scale-[0.98]'
+              const linkContent = (
+                <Link
+                  href={item.href}
+                  className={cn(
+                    'flex items-center rounded-lg text-sm font-medium transition-all duration-200',
+                    collapsed ? 'justify-center p-2' : 'gap-3 px-3 py-2',
+                    isActive
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'text-muted-foreground hover:bg-secondary hover:text-foreground',
+                    'hover:scale-[1.02] active:scale-[0.98]'
+                  )}
+                  onClick={(e) => {
+                    // Ensure navigation works even if tooltip interferes
+                    e.stopPropagation();
+                  }}
+                >
+                  <item.icon className="h-5 w-5 flex-shrink-0" />
+                  {!collapsed && (
+                    <>
+                      <span className="flex-1 truncate">{item.name}</span>
+                      {item.badge && (
+                        <Badge variant={item.badge.variant} className="text-xs">
+                          {item.badge.text}
+                        </Badge>
                       )}
-                    >
-                      <item.icon className="h-5 w-5 flex-shrink-0" />
-                      {!collapsed && (
-                        <>
-                          <span className="flex-1 truncate">{item.name}</span>
-                          {item.badge && (
-                            <Badge variant={item.badge.variant} className="text-xs">
-                              {item.badge.text}
-                            </Badge>
-                          )}
-                        </>
-                      )}
-                    </Link>
-                  </TooltipTrigger>
-                  {collapsed && (
+                    </>
+                  )}
+                </Link>
+              );
+
+              if (collapsed) {
+                return (
+                  <Tooltip key={item.name}>
+                    <TooltipTrigger asChild>
+                      {linkContent}
+                    </TooltipTrigger>
                     <TooltipContent side="right" className="max-w-xs">
                       <p className="font-medium">{item.name}</p>
                     </TooltipContent>
-                  )}
-                </Tooltip>
-              );
+                  </Tooltip>
+                );
+              }
+
+              return <div key={item.name}>{linkContent}</div>;
             })}
           </div>
         </TooltipProvider>
