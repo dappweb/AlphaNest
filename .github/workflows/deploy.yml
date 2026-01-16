@@ -1,0 +1,90 @@
+name: Deploy to Cloudflare
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch: # 允许手动触发
+
+env:
+  NODE_VERSION: '20'
+  PNPM_VERSION: '8'
+
+jobs:
+  # 部署 API 到 Cloudflare Workers
+  deploy-api:
+    name: Deploy API to Cloudflare Workers
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/api
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+          cache-dependency-path: apps/api/package-lock.json
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build API
+        run: pnpm build
+
+      - name: Deploy to Cloudflare Workers
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: apps/api
+          command: deploy
+
+  # 部署 Web 到 Cloudflare Pages
+  deploy-web:
+    name: Deploy Web to Cloudflare Pages
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build Web App
+        run: pnpm run pages:build
+        env:
+          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL || 'https://alphanest-api.dappweb.workers.dev' }}
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/pages-action@v1
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          projectName: alphanest
+          directory: apps/web/.vercel/output/static
