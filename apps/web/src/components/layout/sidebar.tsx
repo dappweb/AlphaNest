@@ -17,6 +17,7 @@ import {
   Zap,
   FileText,
   Rocket,
+  Vote,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -74,6 +75,13 @@ const getNavigation = (t: any) => [
     icon: Rocket,
     shortcut: 'Ctrl+L',
     badge: { text: 'NEW', variant: 'default' as const }
+  },
+  {
+    name: t.nav.governance || 'Governance',
+    href: '/governance',
+    icon: Vote,
+    shortcut: 'Ctrl+G',
+    badge: null
   },
 ];
 

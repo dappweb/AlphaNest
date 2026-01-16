@@ -7,9 +7,10 @@ import {
   ASSOCIATED_TOKEN_PROGRAM_ID,
 } from '@solana/spl-token';
 import { useState, useEffect, useCallback } from 'react';
+import { SOLANA_PROGRAM_IDS } from '@/config/solana';
 
-// 程序 ID（需要替换为实际部署的地址）
-const YIELD_VAULT_PROGRAM_ID = new PublicKey('YieldVault1111111111111111111111111111111111');
+// 使用配置的程序 ID
+const YIELD_VAULT_PROGRAM_ID = SOLANA_PROGRAM_IDS.YIELD_VAULT;
 
 // 代币 Mint 地址（示例）
 const USDC_MINT = new PublicKey('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v');
@@ -142,6 +143,8 @@ export function useYieldVault() {
         wallet as any,
         { commitment: 'confirmed' }
       );
+
+      // 使用已配置的程序 ID
 
       // 获取 PDA
       const [vaultPda] = PublicKey.findProgramAddressSync(

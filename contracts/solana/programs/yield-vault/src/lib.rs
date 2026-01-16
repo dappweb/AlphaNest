@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Token, TokenAccount, Transfer, Mint};
 use anchor_spl::associated_token::AssociatedToken;
 
-declare_id!("YieldVault1111111111111111111111111111111111");
+declare_id!("ECAnyfJmCxVxUSgv4MW7uvAkMophVnG5VTvEAgQt2vrP");
 
 #[program]
 pub mod yield_vault {

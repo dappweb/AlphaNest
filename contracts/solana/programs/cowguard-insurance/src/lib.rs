@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Token, TokenAccount, Transfer};
 
-declare_id!("CowGuard1111111111111111111111111111111111");
+declare_id!("3vq7cmrWBVQZF11mHCKnDhppSyyBy9xstbz6tzZqDYcg");
 
 // Pyth Network 价格预言机账户（需要根据实际部署调整）
 const PYTH_PROGRAM_ID: &str = "FsJ3A3u2vn5cTVofAjvy6y5kwABJAqYWpe4975bi2epH";

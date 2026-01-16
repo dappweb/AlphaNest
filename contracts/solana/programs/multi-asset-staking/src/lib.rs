@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Token, TokenAccount, Transfer, Mint};
 use anchor_spl::associated_token::AssociatedToken;
 
-declare_id!("MultiAssetStake1111111111111111111111111111111");
+declare_id!("EUN7ptUWascGEbBgFVQTxmFWzMSoN95YG5JGvabNtKYF");
 
 #[program]
 pub mod multi_asset_staking {

@@ -31,6 +31,7 @@ export const translations = {
       smartMoney: 'Smart Money',
       whitepaper: 'Whitepaper',
       launch: 'Launch Token',
+      governance: 'Governance',
       account: 'Account',
       referral: 'Referral',
       settings: 'Settings',

@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer};
 
-declare_id!("PopCow1111111111111111111111111111111111111");
+declare_id!("GB13aFFGs6G76dSWWNwHfH596npdwFcxkR5x4Ur4uBjS");
 
 #[program]
 pub mod popcow_token {

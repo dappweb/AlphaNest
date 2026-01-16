@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useAccount } from 'wagmi';
+import { useWallet } from '@solana/wallet-adapter-react';
 import { Rocket, Coins, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,13 +11,17 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useTranslation } from '@/hooks/use-translation';
+import { useSolanaTokenFactory } from '@/hooks/use-solana-token-factory';
 import { cn } from '@/lib/utils';
 
 export default function LaunchPage() {
-  const { isConnected } = useAccount();
+  const { isConnected: evmConnected } = useAccount();
+  const { connected: solanaConnected } = useWallet();
   const { t } = useTranslation();
-  const [isLoading, setIsLoading] = useState(false);
+  const { createToken, isLoading: isCreatingToken, error: tokenError } = useSolanaTokenFactory();
   const [step, setStep] = useState(1);
+  
+  const isConnected = evmConnected || solanaConnected;
   
   // 表单数据
   const [formData, setFormData] = useState({
@@ -81,20 +86,20 @@ export default function LaunchPage() {
       return;
     }
 
-    setIsLoading(true);
     try {
-      // TODO: 调用智能合约创建代币
-      // const tokenAddress = await createToken({
-      //   name: formData.name,
-      //   symbol: formData.symbol,
-      //   totalSupply: parseFloat(formData.totalSupply) * 1e18,
-      // });
-
-      // 模拟创建
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      const result = await createToken({
+        name: formData.name,
+        symbol: formData.symbol,
+        totalSupply: parseFloat(formData.totalSupply),
+        decimals: 9,
+        description: formData.description,
+        website: formData.website,
+        twitter: formData.twitter,
+        telegram: formData.telegram,
+      });
 
       setCreatedToken({
-        address: '0x' + Math.random().toString(16).substr(2, 40),
+        address: result.mint,
         name: formData.name,
         symbol: formData.symbol,
       });

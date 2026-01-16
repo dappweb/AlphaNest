@@ -1,0 +1,23 @@
+[workspace]
+members = [
+    "programs/popcow-token",
+    "programs/cowguard-insurance",
+    "programs/staking",
+    "programs/token-vesting",
+    "programs/yield-vault",
+    "programs/multi-asset-staking",
+    "programs/reputation-registry",
+    "programs/governance",
+    "programs/points-system",
+    "programs/referral-system",
+]
+resolver = "2"
+
+[profile.release]
+overflow-checks = true
+lto = true
+codegen-units = 1
+
+[workspace.dependencies]
+anchor-lang = "0.30.1"
+anchor-spl = "0.30.1"

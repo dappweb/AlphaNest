@@ -6,8 +6,11 @@ export const POPCOW_TOKEN_MINT = new PublicKey('8mrMRf8QwGh5bSrgzKsMmHPTTGqDcENU
 // PopCowDefi 平台代币地址 (部署后更新)
 export const POPCOWDEFI_TOKEN_MINT = new PublicKey('11111111111111111111111111111111'); // TODO: 部署后替换
 
-// 质押合约程序 ID (部署后更新)
-export const STAKING_PROGRAM_ID = new PublicKey('11111111111111111111111111111111'); // TODO: 部署后替换
+// 质押合约程序 ID (soldev 网络)
+export const STAKING_PROGRAM_ID = new PublicKey('4pMUmKCTvxCiM6ccGyc851yhyKnaKfJ3q2umLhyZ9Y2d'); // PopCow Staking Program
+
+// 多资产质押程序 ID
+export const MULTI_ASSET_STAKING_PROGRAM_ID = new PublicKey('EUN7ptUWascGEbBgFVQTxmFWzMSoN95YG5JGvabNtKYF');
 
 // 股票代币化产品支持
 // 导入股票代币配置（可选，需要时启用）
