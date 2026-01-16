@@ -74,7 +74,7 @@ export function StatsOverview() {
         setPlatformStats([
           {
             name: '24h Volume',
-            value: stats.totalVolume || stats.totalVolume24h || 0,
+            value: stats.totalVolume24h || 0,
             change: stats.volumeChange24h || 0,
             icon: TrendingUp,
             format: 'usd',

@@ -9,6 +9,10 @@ export const POPCOWDEFI_TOKEN_MINT = new PublicKey('1111111111111111111111111111
 // 质押合约程序 ID (部署后更新)
 export const STAKING_PROGRAM_ID = new PublicKey('11111111111111111111111111111111'); // TODO: 部署后替换
 
+// 股票代币化产品支持
+// 导入股票代币配置（可选，需要时启用）
+// import { ALL_STOCK_TOKENS } from './stock-tokens';
+
 // 主流代币地址 (Solana Mainnet)
 export const MAINSTREAM_TOKENS = {
   SOL: {

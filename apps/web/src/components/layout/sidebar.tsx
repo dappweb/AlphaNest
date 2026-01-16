@@ -15,6 +15,8 @@ import {
   ChevronRight,
   X,
   Zap,
+  FileText,
+  Rocket,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -58,6 +60,20 @@ const getNavigation = (t: any) => [
     icon: Coins,
     shortcut: 'Ctrl+O',
     badge: { text: '2.5x', variant: 'outline' as const }
+  },
+  {
+    name: t.nav.whitepaper,
+    href: '/whitepaper',
+    icon: FileText,
+    shortcut: 'Ctrl+W',
+    badge: null
+  },
+  {
+    name: t.nav.launch,
+    href: '/launch',
+    icon: Rocket,
+    shortcut: 'Ctrl+L',
+    badge: { text: 'NEW', variant: 'default' as const }
   },
 ];
 

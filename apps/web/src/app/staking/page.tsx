@@ -117,7 +117,7 @@ export default function StakingPage() {
       {/* 页面标题 */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
+          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
             <Coins className="h-6 w-6 text-orange-500" />
             {t.staking.title}
           </h1>

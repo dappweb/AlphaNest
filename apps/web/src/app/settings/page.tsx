@@ -14,6 +14,7 @@ import {
   Users
 } from 'lucide-react';
 import { useTranslation } from '@/hooks/use-translation';
+import { useTheme, type Theme } from '@/stores/theme-store';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -80,6 +81,7 @@ const defaultSettings: Settings = {
 export default function SettingsPage() {
   const { isConnected } = useAccount();
   const { t } = useTranslation();
+  const { theme: currentTheme, setTheme } = useTheme();
   const [settings, setSettings] = useState<Settings>(defaultSettings);
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
@@ -160,8 +162,8 @@ export default function SettingsPage() {
     <div className="space-y-6 max-w-3xl">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">{t.settings.title}</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-3xl font-bold tracking-tight">{t.settings.title}</h1>
+          <p className="text-muted-foreground mt-1">
             {t.settings.subtitle}
           </p>
         </div>
@@ -316,30 +318,20 @@ export default function SettingsPage() {
           <div className="space-y-2">
             <Label>Theme</Label>
             <div className="flex gap-2">
-              {(['dark', 'light', 'system'] as const).map((theme) => (
+              {(['dark', 'light', 'system'] as const).map((themeOption) => (
                 <Button
-                  key={theme}
-                  variant={settings.theme === theme ? 'default' : 'outline'}
+                  key={themeOption}
+                  variant={currentTheme === themeOption ? 'default' : 'outline'}
                   size="sm"
-                  onClick={() => {
-                    updateSetting('theme', theme);
-                    // 实际切换主题
-                    if (theme === 'system') {
-                      document.documentElement.classList.remove('dark', 'light');
-                    } else {
-                      document.documentElement.classList.remove('dark', 'light');
-                      document.documentElement.classList.add(theme);
-                    }
-                    localStorage.setItem('theme', theme);
-                  }}
+                  onClick={() => setTheme(themeOption)}
                   className="flex-1"
                 >
-                  {theme.charAt(0).toUpperCase() + theme.slice(1)}
+                  {themeOption === 'dark' ? '深色' : themeOption === 'light' ? '浅色' : '跟随系统'}
                 </Button>
               ))}
             </div>
             <p className="text-xs text-muted-foreground mt-2">
-              语言切换已移至顶部导航栏
+              主题和语言切换已移至顶部导航栏
             </p>
           </div>
         </CardContent>

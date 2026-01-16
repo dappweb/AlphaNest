@@ -231,6 +231,111 @@ app.get('/:address', async (c) => {
 });
 
 /**
+ * GET /:address/score
+ * 代币安全评分
+ */
+app.get('/:address/score', async (c) => {
+  const address = c.req.param('address');
+  const chain = c.req.query('chain') || 'solana';
+
+  // 检查缓存
+  const cacheKey = `token_score:${chain}:${address}`;
+  const cached = await c.env.CACHE.get(cacheKey, { type: 'json' });
+
+  if (cached) {
+    return c.json({ success: true, data: cached, source: 'cache' });
+  }
+
+  try {
+    // 获取代币数据
+    const tokenResponse = await fetch(
+      `https://api.dexscreener.com/latest/dex/tokens/${address}`
+    );
+
+    let tokenData: any = null;
+    if (tokenResponse.ok) {
+      const data = await tokenResponse.json();
+      tokenData = data.pairs?.[0];
+    }
+
+    // 计算安全评分
+    const scores = {
+      contract: 80,      // 合约安全性（简化实现）
+      liquidity: 70,     // 流动性评分
+      dev: 65,           // Dev 信誉评分
+      holders: 85,       // 持有者分布
+    };
+
+    // 基于实际数据调整评分
+    if (tokenData) {
+      const liquidity = parseFloat(tokenData.liquidity?.usd || '0');
+      if (liquidity < 10000) scores.liquidity = 40;
+      else if (liquidity < 50000) scores.liquidity = 60;
+      else if (liquidity < 100000) scores.liquidity = 70;
+      else scores.liquidity = 85;
+
+      // 价格变化影响
+      const priceChange24h = parseFloat(tokenData.priceChange?.h24 || '0');
+      if (priceChange24h < -50) scores.contract = 30; // 大幅下跌可能是rug
+    }
+
+    // 计算总体评分
+    const overall = Math.round(
+      (scores.contract * 0.3 + 
+       scores.liquidity * 0.25 + 
+       scores.dev * 0.25 + 
+       scores.holders * 0.2)
+    );
+
+    // 风险检测
+    const risks: string[] = [];
+    const recommendations: string[] = [];
+
+    if (scores.liquidity < 50) {
+      risks.push('Low liquidity pool');
+      recommendations.push('Wait for more liquidity before trading');
+    }
+
+    if (scores.dev < 50) {
+      risks.push('Low dev reputation');
+      recommendations.push('Check dev reputation history');
+    }
+
+    if (scores.holders < 60) {
+      risks.push('Concentrated holder distribution');
+      recommendations.push('Monitor holder distribution');
+    }
+
+    if (overall < 60) {
+      risks.push('Overall low safety score');
+      recommendations.push('Exercise caution when trading');
+    }
+
+    const result = {
+      overall,
+      contract: scores.contract,
+      liquidity: scores.liquidity,
+      dev: scores.dev,
+      holders: scores.holders,
+      risks,
+      recommendations,
+      timestamp: Date.now(),
+    };
+
+    // 缓存 5 分钟
+    await c.env.CACHE.put(cacheKey, JSON.stringify(result), { expirationTtl: 300 });
+
+    return c.json({ success: true, data: result });
+  } catch (error) {
+    console.error('Security score error:', error);
+    return c.json({
+      success: false,
+      error: { code: 'SCORE_ERROR', message: 'Failed to calculate security score' },
+    }, 500);
+  }
+});
+
+/**
  * GET /:address/chart
  * K线数据 (使用 DexScreener API 或返回占位符)
  */

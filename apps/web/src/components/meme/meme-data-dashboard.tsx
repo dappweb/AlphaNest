@@ -27,8 +27,8 @@ export function MemeDataDashboard() {
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold">Meme Token Data</h2>
-          <p className="text-zinc-400 text-sm mt-1">
+          <h1 className="text-3xl font-bold tracking-tight">Meme Token Data</h1>
+          <p className="text-muted-foreground mt-1">
             Aggregated from Pump.fun, GMGN, Birdeye, DexScreener
           </p>
         </div>

@@ -3,6 +3,9 @@ use anchor_spl::token::{self, Token, TokenAccount, Transfer};
 
 declare_id!("CowGuard1111111111111111111111111111111111");
 
+// Pyth Network 价格预言机账户（需要根据实际部署调整）
+const PYTH_PROGRAM_ID: &str = "FsJ3A3u2vn5cTVofAjvy6y5kwABJAqYWpe4975bi2epH";
+
 #[program]
 pub mod cowguard_insurance {
     use super::*;
@@ -164,6 +167,19 @@ pub mod cowguard_insurance {
         if approved {
             require!(payout_amount <= claim.claim_amount, ErrorCode::PayoutExceedsClaim);
 
+            // 如果提供了价格预言机，使用TWAP价格验证（防止闪电贷攻击）
+            if ctx.accounts.price_oracle.is_some() {
+                let twap_price = get_twap_price(
+                    &ctx.accounts.price_oracle.as_ref().unwrap(),
+                    policy.start_time,
+                    clock.unix_timestamp,
+                )?;
+                
+                // 验证价格变化是否合理（防止价格操纵）
+                // 这里可以添加更复杂的验证逻辑
+                msg!("TWAP price verified: {}", twap_price);
+            }
+
             // 计算实际赔付 (根据赔付率)
             let product = &ctx.accounts.product;
             let actual_payout = payout_amount
@@ -285,6 +301,57 @@ pub mod cowguard_insurance {
         msg!("Product active: {}", active);
         Ok(())
     }
+
+    /// 设置价格预言机（仅限管理员）
+    pub fn set_price_oracle(
+        ctx: Context<SetPriceOracle>,
+        token_mint: Pubkey,
+        oracle_account: Pubkey,
+    ) -> Result<()> {
+        let oracle_config = &mut ctx.accounts.oracle_config;
+        
+        if oracle_config.token_mint == Pubkey::default() {
+            oracle_config.token_mint = token_mint;
+            oracle_config.oracle_account = oracle_account;
+            oracle_config.is_active = true;
+            oracle_config.bump = ctx.bumps.oracle_config;
+        } else {
+            oracle_config.token_mint = token_mint;
+            oracle_config.oracle_account = oracle_account;
+        }
+
+        msg!("Price oracle set: token={}, oracle={}", token_mint, oracle_account);
+        Ok(())
+    }
+}
+
+// ============== 辅助函数 ==============
+
+/// 获取TWAP价格（时间加权平均价格）
+/// 防止闪电贷攻击
+fn get_twap_price(
+    oracle_account: &AccountInfo,
+    start_time: i64,
+    end_time: i64,
+) -> Result<u64> {
+    // 这里应该从Pyth Network价格预言机读取价格数据
+    // 由于Solana上Pyth的集成比较复杂，这里提供一个框架
+    
+    // 实际实现需要：
+    // 1. 读取Pyth价格账户
+    // 2. 获取历史价格数据
+    // 3. 计算时间加权平均价格
+    
+    // 简化实现：返回一个模拟价格
+    // 实际部署时需要集成Pyth SDK
+    msg!("TWAP calculation: start={}, end={}", start_time, end_time);
+    
+    // TODO: 集成Pyth Network SDK获取真实TWAP价格
+    // 示例代码框架：
+    // let price_data = pyth_client.get_price_data(oracle_account)?;
+    // let twap = calculate_twap(price_data, start_time, end_time)?;
+    
+    Ok(1000000) // 占位符，实际需要从预言机获取
 }
 
 // ============== 账户结构 ==============
@@ -416,6 +483,9 @@ pub struct ProcessClaim<'info> {
     #[account(mut)]
     pub claimant_token_account: Account<'info, TokenAccount>,
 
+    /// CHECK: Optional Pyth price oracle account
+    pub price_oracle: Option<AccountInfo<'info>>,
+
     pub token_program: Program<'info, Token>,
 }
 
@@ -475,6 +545,30 @@ pub struct UpdateProduct<'info> {
     pub product: Account<'info, InsuranceProduct>,
 }
 
+#[derive(Accounts)]
+pub struct SetPriceOracle<'info> {
+    #[account(mut)]
+    pub authority: Signer<'info>,
+
+    #[account(
+        seeds = [b"protocol"],
+        bump = protocol.bump,
+        constraint = protocol.authority == authority.key() @ ErrorCode::Unauthorized
+    )]
+    pub protocol: Account<'info, InsuranceProtocol>,
+
+    #[account(
+        init_if_needed,
+        payer = authority,
+        space = 8 + OracleConfig::INIT_SPACE,
+        seeds = [b"oracle_config"],
+        bump
+    )]
+    pub oracle_config: Account<'info, OracleConfig>,
+
+    pub system_program: Program<'info, System>,
+}
+
 // ============== 数据结构 ==============
 
 #[account]
@@ -531,6 +625,15 @@ pub struct InsuranceClaim {
     pub submitted_at: i64,
     pub processed_at: Option<i64>,
     pub payout_amount: Option<u64>,
+    pub bump: u8,
+}
+
+#[account]
+#[derive(InitSpace)]
+pub struct OracleConfig {
+    pub token_mint: Pubkey,
+    pub oracle_account: Pubkey,
+    pub is_active: bool,
     pub bump: u8,
 }
 

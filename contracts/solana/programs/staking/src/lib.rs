@@ -8,6 +8,9 @@ pub mod popcow_staking {
     use super::*;
 
     /// 初始化质押池
+    /// 
+    /// 兑换比例: 1 POPCOW = 2 PopCowDefi
+    /// 即质押 1 POPCOW，每秒获得 2 PopCowDefi 的奖励率
     pub fn initialize_pool(
         ctx: Context<InitializePool>,
         reward_rate_per_second: u64,  // 每秒奖励率 (基点)
@@ -20,12 +23,14 @@ pub mod popcow_staking {
         pool.reward_vault = ctx.accounts.reward_vault.key();
         pool.total_staked = 0;
         pool.reward_rate_per_second = reward_rate_per_second;
+        // 兑换比例: 1 POPCOW = 2 PopCowDefi (固定比例)
+        pool.conversion_rate = 2;  // 1:2 比例
         pool.last_update_time = Clock::get()?.unix_timestamp;
         pool.reward_per_token_stored = 0;
         pool.is_paused = false;
         pool.bump = ctx.bumps.pool;
 
-        msg!("Staking pool initialized");
+        msg!("Staking pool initialized with 1:2 conversion rate (1 POPCOW = 2 PopCowDefi)");
         Ok(())
     }
 
@@ -293,8 +298,14 @@ fn update_rewards(
             // 根据锁定期计算奖励倍数
             let multiplier = get_reward_multiplier(stake_account.lock_period);
             
+            // 应用 1:2 兑换比例
+            // 1 POPCOW 质押 = 2 PopCowDefi 奖励率
+            let base_reward_rate = pool.reward_rate_per_second
+                .checked_mul(pool.conversion_rate as u64)
+                .unwrap();
+            
             let reward = (time_elapsed as u128)
-                .checked_mul(pool.reward_rate_per_second as u128)
+                .checked_mul(base_reward_rate as u128)
                 .unwrap()
                 .checked_mul(1e18 as u128)
                 .unwrap()
@@ -311,19 +322,25 @@ fn update_rewards(
     // 更新用户奖励
     if stake_account.staked_amount > 0 {
         let multiplier = get_reward_multiplier(stake_account.lock_period);
-        let earned = (stake_account.staked_amount as u128)
+        
+        // 计算基础奖励（已包含 1:2 比例）
+        let base_earned = (stake_account.staked_amount as u128)
             .checked_mul(
                 pool.reward_per_token_stored
                     .checked_sub(stake_account.reward_per_token_paid)
                     .unwrap(),
             )
-            .unwrap()
+            .unwrap();
+        
+        // 应用锁定期倍数
+        let earned = base_earned
             .checked_mul(multiplier as u128)
             .unwrap()
             .checked_div(100)
             .unwrap()
             .checked_div(1e18 as u128)
             .unwrap();
+            
         stake_account.pending_rewards = stake_account
             .pending_rewards
             .checked_add(earned as u64)
@@ -534,12 +551,13 @@ pub struct UpdatePool<'info> {
 #[derive(InitSpace)]
 pub struct StakingPool {
     pub authority: Pubkey,
-    pub stake_mint: Pubkey,
-    pub reward_mint: Pubkey,
+    pub stake_mint: Pubkey,           // POPCOW token mint
+    pub reward_mint: Pubkey,          // PopCowDefi token mint
     pub stake_vault: Pubkey,
     pub reward_vault: Pubkey,
     pub total_staked: u64,
-    pub reward_rate_per_second: u64,
+    pub reward_rate_per_second: u64,  // 每秒奖励率（基础）
+    pub conversion_rate: u8,          // 兑换比例: 1 POPCOW = 2 PopCowDefi
     pub last_update_time: i64,
     pub reward_per_token_stored: u128,
     pub is_paused: bool,

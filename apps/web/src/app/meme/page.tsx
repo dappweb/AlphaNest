@@ -4,7 +4,7 @@ import { MemeDataDashboard } from '@/components/meme/meme-data-dashboard';
 
 export default function MemePage() {
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="space-y-6">
       <MemeDataDashboard />
     </div>
   );

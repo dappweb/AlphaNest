@@ -12,12 +12,25 @@ const nextConfig = {
         hostname: '**',
       },
     ],
+    formats: ['image/avif', 'image/webp'],
+    minimumCacheTTL: 60,
   },
   trailingSlash: false,
   
   // 性能优化
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production',
+  },
+  
+  // 压缩优化
+  compress: true,
+  
+  // 生产环境优化
+  productionBrowserSourceMaps: false,
+  
+  // 静态页面生成优化
+  generateBuildId: async () => {
+    return 'build-' + Date.now();
   },
   
   // 实验性优化

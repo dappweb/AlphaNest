@@ -8,6 +8,9 @@ import { Footer } from '@/components/layout/footer';
 import { MobileNav } from '@/components/layout/mobile-nav';
 import { PageTransition } from '@/components/layout/page-transition';
 import { PWAComponents } from '@/components/pwa/pwa-wrapper';
+import { LoadingBoundary } from '@/components/layout/loading-boundary';
+import { RoutePrefetch } from '@/components/layout/route-prefetch';
+import { PerformanceMonitor } from '@/components/layout/performance-monitor';
 
 const inter = Inter({ 
   subsets: ['latin'], 
@@ -116,29 +119,43 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="https://api.dexscreener.com" />
         <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
         <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
+        <link rel="dns-prefetch" href="https://api.jup.ag" />
+        <link rel="dns-prefetch" href="https://api.0x.org" />
         
         {/* 预连接关键资源 */}
         <link rel="preconnect" href="https://alphanest-api.dappweb.workers.dev" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://api.dexscreener.com" crossOrigin="anonymous" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         
+        {/* 预加载关键页面 */}
+        <link rel="prefetch" href="/staking" />
+        <link rel="prefetch" href="/trade" />
+        <link rel="prefetch" href="/meme" />
+        
+        {/* 性能优化 */}
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta httpEquiv="x-dns-prefetch-control" content="on" />
       </head>
       <body className={`${inter.variable} font-sans antialiased`}>
         <Providers>
-          <div className="flex min-h-screen">
-            <Sidebar />
-            <div className="flex flex-1 flex-col">
-              <Header />
-              <main className="flex-1 overflow-auto p-4 md:p-6 pb-20 md:pb-6">
-                <PageTransition>{children}</PageTransition>
-              </main>
-              <Footer className="hidden md:block" />
+          <PerformanceMonitor />
+          <LoadingBoundary>
+            <RoutePrefetch />
+            <div className="flex min-h-screen">
+              <Sidebar />
+              <div className="flex flex-1 flex-col">
+                <Header />
+                <main className="flex-1 overflow-auto p-4 md:p-6 pb-20 md:pb-6">
+                  <PageTransition>{children}</PageTransition>
+                </main>
+                <Footer className="hidden md:block" />
+              </div>
             </div>
-          </div>
-          <MobileNav />
-          <PWAComponents />
+            <MobileNav />
+            <PWAComponents />
+          </LoadingBoundary>
         </Providers>
       </body>
     </html>
