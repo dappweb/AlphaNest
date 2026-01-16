@@ -1,19 +1,19 @@
-name: Deploy to Cloudflare
+name: Deploy to Cloudflare (Dev)
 
 on:
   push:
     branches:
-      - main
-  workflow_dispatch: # 允许手动触发
+      - develop
+      - dev
+  workflow_dispatch:
 
 env:
   NODE_VERSION: '20'
   PNPM_VERSION: '8'
 
 jobs:
-  # 部署 API 到 Cloudflare Workers
-  deploy-api:
-    name: Deploy API to Cloudflare Workers
+  deploy-api-dev:
+    name: Deploy API to Cloudflare Workers (Dev)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -41,25 +41,16 @@ jobs:
       - name: Build API
         run: pnpm build
 
-      - name: Run database migrations
+      - name: Deploy to Cloudflare Workers (Dev)
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: apps/api
-          command: d1 migrations apply alphanest-production
+          command: deploy --env dev
 
-      - name: Deploy to Cloudflare Workers
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          workingDirectory: apps/api
-          command: deploy
-
-  # 部署 Web 到 Cloudflare Pages
-  deploy-web:
-    name: Deploy Web to Cloudflare Pages
+  deploy-web-dev:
+    name: Deploy Web to Cloudflare Pages (Dev)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -87,14 +78,13 @@ jobs:
       - name: Build Web App
         run: pnpm run pages:build
         env:
-          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL || 'https://alphanest-api.dappweb.workers.dev' }}
-          NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID: ${{ secrets.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID || '' }}
-          NEXT_PUBLIC_ENVIRONMENT: production
+          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL_DEV || 'https://alphanest-api-dev.dappweb.workers.dev' }}
+          NEXT_PUBLIC_ENVIRONMENT: development
 
-      - name: Deploy to Cloudflare Pages
+      - name: Deploy to Cloudflare Pages (Dev)
         uses: cloudflare/pages-action@v1
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          projectName: alphanest
+          projectName: alphanest-dev
           directory: apps/web/.vercel/output/static
