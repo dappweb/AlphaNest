@@ -1,6 +1,6 @@
 /**
  * MultiAssetStaking Contract Hooks
- * 对齐 contracts/src/MultiAssetStaking.sol
+ * BSC (Four.meme) 多资产质押 - 支持 BNB 和 Four.meme 代币
  */
 
 import { useCallback, useMemo } from 'react';
@@ -9,14 +9,16 @@ import {
   useReadContract,
   useWriteContract,
   useWaitForTransactionReceipt,
+  useChainId,
 } from 'wagmi';
 import { parseEther, formatEther, parseUnits, formatUnits } from 'viem';
+import { bsc, bscTestnet } from 'wagmi/chains';
 
-// Contract ABI - 对齐 MultiAssetStaking.sol
+// Contract ABI - 对齐 MultiAssetStaking.sol (BSC)
 const MULTI_ASSET_STAKING_ABI = [
-  // 质押 ETH
+  // 质押 BNB (原生代币)
   {
-    name: 'stakeETH',
+    name: 'stakeBNB',
     type: 'function',
     stateMutability: 'payable',
     inputs: [{ name: 'lockPeriod', type: 'uint8' }],
@@ -141,11 +143,32 @@ const MULTI_ASSET_STAKING_ABI = [
   },
 ] as const;
 
-// Contract address
+// Contract addresses - BSC
 const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_MULTI_ASSET_STAKING_ADDRESS as `0x${string}` || '0x0000000000000000000000000000000000000000';
+const FOUR_MEME_ADDRESS = process.env.NEXT_PUBLIC_FOUR_MEME_TOKEN_ADDRESS as `0x${string}` || '0x0000000000000000000000000000000000000000';
 
-// ETH 地址标识
-const ETH_ADDRESS = '0x0000000000000000000000000000000000000000' as `0x${string}`;
+// BNB 地址标识 (原生代币)
+const BNB_ADDRESS = '0x0000000000000000000000000000000000000000' as `0x${string}`;
+
+// 支持的代币列表
+export const SUPPORTED_TOKENS = {
+  BNB: {
+    address: BNB_ADDRESS,
+    symbol: 'BNB',
+    name: 'BNB',
+    decimals: 18,
+    logo: '/tokens/bnb.svg',
+    isNative: true,
+  },
+  FOUR: {
+    address: FOUR_MEME_ADDRESS,
+    symbol: 'FOUR',
+    name: 'Four.meme',
+    decimals: 18,
+    logo: '/tokens/four-meme.svg',
+    isNative: false,
+  },
+} as const;
 
 // 锁定期枚举
 export enum LockPeriod {
@@ -205,8 +228,12 @@ export interface GlobalStats {
 /**
  * 获取用户质押信息
  */
-export function useStakeInfo(tokenAddress: `0x${string}` = ETH_ADDRESS) {
+export function useStakeInfo(tokenAddress: `0x${string}` = BNB_ADDRESS) {
   const { address } = useAccount();
+  const chainId = useChainId();
+
+  // 确保在 BSC 链上
+  const isBscChain = chainId === bsc.id || chainId === bscTestnet.id;
 
   const { data, isLoading, error, refetch } = useReadContract({
     address: CONTRACT_ADDRESS,
@@ -214,7 +241,7 @@ export function useStakeInfo(tokenAddress: `0x${string}` = ETH_ADDRESS) {
     functionName: 'getStakeInfo',
     args: address ? [address, tokenAddress] : undefined,
     query: {
-      enabled: !!address && !!CONTRACT_ADDRESS,
+      enabled: !!address && !!CONTRACT_ADDRESS && isBscChain,
     },
   });
 
@@ -245,7 +272,7 @@ export function useStakeInfo(tokenAddress: `0x${string}` = ETH_ADDRESS) {
 /**
  * 获取代币配置
  */
-export function useTokenConfig(tokenAddress: `0x${string}` = ETH_ADDRESS) {
+export function useTokenConfig(tokenAddress: `0x${string}` = BNB_ADDRESS) {
   const { data, isLoading, error, refetch } = useReadContract({
     address: CONTRACT_ADDRESS,
     abi: MULTI_ASSET_STAKING_ABI,
@@ -347,34 +374,38 @@ export function useEarlyBirdBonus() {
 }
 
 /**
- * 质押 ETH
+ * 质押 BNB (原生代币)
  */
-export function useStakeETH() {
+export function useStakeBNB() {
   const { writeContract, data: hash, isPending, error } = useWriteContract();
+  const chainId = useChainId();
 
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
     hash,
   });
 
-  const stakeETH = useCallback(
+  const stakeBNB = useCallback(
     async (amount: string, lockPeriod: LockPeriod) => {
       if (!CONTRACT_ADDRESS) throw new Error('Contract not configured');
+      
+      const isBscChain = chainId === bsc.id || chainId === bscTestnet.id;
+      if (!isBscChain) throw new Error('Please switch to BSC network');
 
       const amountWei = parseEther(amount);
 
       writeContract({
         address: CONTRACT_ADDRESS,
         abi: MULTI_ASSET_STAKING_ABI,
-        functionName: 'stakeETH',
+        functionName: 'stakeBNB',
         args: [lockPeriod],
         value: amountWei,
       });
     },
-    [writeContract]
+    [writeContract, chainId]
   );
 
   return {
-    stakeETH,
+    stakeBNB,
     hash,
     isPending,
     isConfirming,
@@ -384,10 +415,11 @@ export function useStakeETH() {
 }
 
 /**
- * 质押 ERC20
+ * 质押 BEP20 代币 (如 Four.meme)
  */
 export function useStakeToken() {
   const { writeContract, data: hash, isPending, error } = useWriteContract();
+  const chainId = useChainId();
 
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
     hash,
@@ -396,6 +428,9 @@ export function useStakeToken() {
   const stakeToken = useCallback(
     async (tokenAddress: `0x${string}`, amount: string, decimals: number, lockPeriod: LockPeriod) => {
       if (!CONTRACT_ADDRESS) throw new Error('Contract not configured');
+      
+      const isBscChain = chainId === bsc.id || chainId === bscTestnet.id;
+      if (!isBscChain) throw new Error('Please switch to BSC network');
 
       const amountWei = parseUnits(amount, decimals);
 
@@ -406,7 +441,7 @@ export function useStakeToken() {
         args: [tokenAddress, amountWei, lockPeriod],
       });
     },
-    [writeContract]
+    [writeContract, chainId]
   );
 
   return {
@@ -416,6 +451,28 @@ export function useStakeToken() {
     isConfirming,
     isSuccess,
     error,
+  };
+}
+
+/**
+ * 质押 Four.meme 代币
+ */
+export function useStakeFourMeme() {
+  const { stakeToken, ...rest } = useStakeToken();
+
+  const stakeFourMeme = useCallback(
+    async (amount: string, lockPeriod: LockPeriod) => {
+      if (!FOUR_MEME_ADDRESS || FOUR_MEME_ADDRESS === '0x0000000000000000000000000000000000000000') {
+        throw new Error('Four.meme token address not configured');
+      }
+      await stakeToken(FOUR_MEME_ADDRESS, amount, 18, lockPeriod);
+    },
+    [stakeToken]
+  );
+
+  return {
+    stakeFourMeme,
+    ...rest,
   };
 }
 
@@ -488,18 +545,20 @@ export function useClaimRewards() {
 }
 
 /**
- * 组合 Hook - 完整多资产质押管理
+ * 组合 Hook - BSC (Four.meme) 完整多资产质押管理
  */
-export function useMultiAssetStaking(tokenAddress: `0x${string}` = ETH_ADDRESS) {
+export function useMultiAssetStaking(tokenAddress: `0x${string}` = BNB_ADDRESS) {
   const { address } = useAccount();
+  const chainId = useChainId();
   const { stakeInfo, isLoading: loadingStake, refetch: refetchStake } = useStakeInfo(tokenAddress);
   const { tokenConfig, isLoading: loadingConfig, refetch: refetchConfig } = useTokenConfig(tokenAddress);
   const { stats: globalStats, isLoading: loadingGlobal, refetch: refetchGlobal } = useGlobalStats();
   const { tokens: supportedTokens, isLoading: loadingTokens } = useSupportedTokens();
   const { bonus: earlyBirdBonus, isLoading: loadingBonus } = useEarlyBirdBonus();
 
-  const stakeETHAction = useStakeETH();
+  const stakeBNBAction = useStakeBNB();
   const stakeTokenAction = useStakeToken();
+  const stakeFourMemeAction = useStakeFourMeme();
   const unstakeAction = useUnstake();
   const claimAction = useClaimRewards();
 
@@ -509,9 +568,13 @@ export function useMultiAssetStaking(tokenAddress: `0x${string}` = ETH_ADDRESS) 
     refetchGlobal();
   }, [refetchStake, refetchConfig, refetchGlobal]);
 
+  // 检查是否在 BSC 网络
+  const isBscNetwork = chainId === bsc.id || chainId === bscTestnet.id;
+
   return {
     // User state
     isConnected: !!address,
+    isBscNetwork,
     stakeInfo,
     tokenConfig,
 
@@ -520,12 +583,16 @@ export function useMultiAssetStaking(tokenAddress: `0x${string}` = ETH_ADDRESS) 
     supportedTokens,
     earlyBirdBonus,
 
+    // Token addresses
+    fourMemeAddress: FOUR_MEME_ADDRESS,
+    
     // Loading states
     isLoading: loadingStake || loadingConfig || loadingGlobal || loadingTokens || loadingBonus,
 
     // Actions
-    stakeETH: stakeETHAction,
+    stakeBNB: stakeBNBAction,
     stakeToken: stakeTokenAction,
+    stakeFourMeme: stakeFourMemeAction,
     unstake: unstakeAction,
     claimRewards: claimAction,
 
@@ -534,5 +601,5 @@ export function useMultiAssetStaking(tokenAddress: `0x${string}` = ETH_ADDRESS) 
   };
 }
 
-// Export ETH address constant
-export { ETH_ADDRESS };
+// Export addresses
+export { BNB_ADDRESS, FOUR_MEME_ADDRESS };

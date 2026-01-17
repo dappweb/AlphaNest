@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { useAccount } from 'wagmi';
+import { useAccount, useSwitchChain } from 'wagmi';
+import { bsc, bscTestnet } from 'wagmi/chains';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -13,7 +14,6 @@ import {
   Coins, 
   ExternalLink,
   Shield,
-  Clock,
   TrendingUp,
   AlertCircle,
   Loader2,
@@ -21,44 +21,66 @@ import {
   Sparkles,
   Lock,
   ArrowRight,
+  Zap,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useTranslation } from '@/hooks/use-translation';
 import {
   useMultiAssetStaking,
-  useStakeETH,
+  useStakeBNB,
+  useStakeFourMeme,
   useUnstake,
   useClaimRewards,
   LockPeriod,
   LOCK_PERIOD_LABELS,
-  ETH_ADDRESS,
+  BNB_ADDRESS,
+  FOUR_MEME_ADDRESS,
+  SUPPORTED_TOKENS,
 } from '@/hooks/use-multi-asset-staking';
 
 export default function StakingPage() {
   const { isConnected } = useAccount();
+  const { switchChain } = useSwitchChain();
   const { t } = useTranslation();
+  
+  // 选择的代币类型: 'BNB' | 'FOUR'
+  const [selectedToken, setSelectedToken] = useState<'BNB' | 'FOUR'>('BNB');
+  const tokenAddress = selectedToken === 'BNB' ? BNB_ADDRESS : FOUR_MEME_ADDRESS;
   
   const {
     stakeInfo,
     tokenConfig,
     globalStats,
     earlyBirdBonus,
+    isBscNetwork,
     isLoading,
     refetch,
-  } = useMultiAssetStaking(ETH_ADDRESS);
+  } = useMultiAssetStaking(tokenAddress);
 
-  const { stakeETH, isPending: isStaking, isSuccess: stakeSuccess } = useStakeETH();
+  const { stakeBNB, isPending: isStakingBNB, isSuccess: stakeBNBSuccess } = useStakeBNB();
+  const { stakeFourMeme, isPending: isStakingFour, isSuccess: stakeFourSuccess } = useStakeFourMeme();
   const { unstake, isPending: isUnstaking, isSuccess: unstakeSuccess } = useUnstake();
   const { claimRewards, isPending: isClaiming, isSuccess: claimSuccess } = useClaimRewards();
+
+  const isStaking = isStakingBNB || isStakingFour;
+  const stakeSuccess = stakeBNBSuccess || stakeFourSuccess;
 
   const [stakeAmount, setStakeAmount] = useState('');
   const [lockPeriod, setLockPeriod] = useState<LockPeriod>(LockPeriod.Flexible);
   const [activeTab, setActiveTab] = useState('stake');
 
+  const handleSwitchToBsc = () => {
+    switchChain({ chainId: bsc.id });
+  };
+
   const handleStake = async () => {
     if (!stakeAmount || Number(stakeAmount) <= 0) return;
     try {
-      await stakeETH(stakeAmount, lockPeriod);
+      if (selectedToken === 'BNB') {
+        await stakeBNB(stakeAmount, lockPeriod);
+      } else {
+        await stakeFourMeme(stakeAmount, lockPeriod);
+      }
       setStakeAmount('');
       setTimeout(() => refetch(), 2000);
     } catch (error) {
@@ -68,7 +90,7 @@ export default function StakingPage() {
 
   const handleUnstake = async () => {
     try {
-      await unstake(ETH_ADDRESS);
+      await unstake(tokenAddress);
       setTimeout(() => refetch(), 2000);
     } catch (error) {
       console.error('Unstake failed:', error);
@@ -77,7 +99,7 @@ export default function StakingPage() {
 
   const handleClaim = async () => {
     try {
-      await claimRewards(ETH_ADDRESS);
+      await claimRewards(tokenAddress);
       setTimeout(() => refetch(), 2000);
     } catch (error) {
       console.error('Claim failed:', error);
@@ -86,19 +108,37 @@ export default function StakingPage() {
 
   return (
     <div className="space-y-4 md:space-y-6">
+      {/* 网络切换提示 */}
+      {isConnected && !isBscNetwork && (
+        <Alert className="bg-yellow-500/10 border-yellow-500/30">
+          <AlertCircle className="h-4 w-4 text-yellow-500" />
+          <AlertDescription className="flex items-center justify-between flex-wrap gap-2">
+            <span className="text-sm">Please switch to BSC network to use staking</span>
+            <Button size="sm" onClick={handleSwitchToBsc} className="bg-yellow-500 hover:bg-yellow-600">
+              <Zap className="h-3 w-3 mr-1" />
+              Switch to BSC
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* 页面标题 - 响应式 */}
       <div className="flex flex-col gap-3">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold tracking-tight flex items-center gap-2">
-              <Coins className="h-6 w-6 md:h-7 md:w-7 text-orange-500" />
+              <Coins className="h-6 w-6 md:h-7 md:w-7 text-yellow-500" />
               {t.staking.title}
             </h1>
             <p className="text-sm md:text-base text-muted-foreground mt-1">
-              Multi-Asset Staking - Stake and earn rewards
+              BSC (Four.meme) Multi-Asset Staking
             </p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
+            <Badge className="bg-yellow-500/20 text-yellow-500 border-yellow-500/30 text-[10px] md:text-xs">
+              <Zap className="h-3 w-3 mr-1" />
+              BSC Network
+            </Badge>
             {earlyBirdBonus > 0 && (
               <Badge className="bg-gradient-to-r from-orange-500 to-pink-500 text-white border-0 text-[10px] md:text-xs">
                 <Sparkles className="h-3 w-3 mr-1" />
@@ -155,21 +195,44 @@ export default function StakingPage() {
         <div className="lg:col-span-2">
           <Card>
             <CardHeader className="pb-3 md:pb-4">
-              <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
-                <Coins className="h-5 w-5 text-orange-500" />
-                Stake ETH
-              </CardTitle>
-              <CardDescription className="text-xs md:text-sm">
-                Stake with flexible lock periods for higher rewards
-              </CardDescription>
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div>
+                  <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
+                    <Coins className="h-5 w-5 text-yellow-500" />
+                    Stake {selectedToken === 'BNB' ? 'BNB' : 'FOUR'}
+                  </CardTitle>
+                  <CardDescription className="text-xs md:text-sm">
+                    Stake with flexible lock periods for higher rewards
+                  </CardDescription>
+                </div>
+                {/* 代币选择器 */}
+                <div className="flex gap-1">
+                  <Button
+                    size="sm"
+                    variant={selectedToken === 'BNB' ? 'default' : 'outline'}
+                    onClick={() => setSelectedToken('BNB')}
+                    className={selectedToken === 'BNB' ? 'bg-yellow-500 hover:bg-yellow-600' : ''}
+                  >
+                    BNB
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={selectedToken === 'FOUR' ? 'default' : 'outline'}
+                    onClick={() => setSelectedToken('FOUR')}
+                    className={selectedToken === 'FOUR' ? 'bg-purple-500 hover:bg-purple-600' : ''}
+                  >
+                    FOUR
+                  </Button>
+                </div>
+              </div>
             </CardHeader>
             <CardContent className="space-y-4 md:space-y-6">
               {/* 用户质押信息 - 响应式网格 */}
-              {isConnected && stakeInfo && Number(stakeInfo.stakedAmountFormatted) > 0 && (
+              {isConnected && isBscNetwork && stakeInfo && Number(stakeInfo.stakedAmountFormatted) > 0 && (
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
                   <div className="rounded-lg bg-secondary/50 p-2.5 md:p-3">
                     <p className="text-[10px] md:text-xs text-muted-foreground">Staked</p>
-                    <p className="text-sm md:text-lg font-bold truncate">{stakeInfo.stakedAmountFormatted} ETH</p>
+                    <p className="text-sm md:text-lg font-bold truncate">{stakeInfo.stakedAmountFormatted} {selectedToken}</p>
                   </div>
                   <div className="rounded-lg bg-secondary/50 p-2.5 md:p-3">
                     <p className="text-[10px] md:text-xs text-muted-foreground">Value</p>
@@ -177,7 +240,7 @@ export default function StakingPage() {
                   </div>
                   <div className="rounded-lg bg-secondary/50 p-2.5 md:p-3">
                     <p className="text-[10px] md:text-xs text-muted-foreground">Multiplier</p>
-                    <p className="text-sm md:text-lg font-bold text-orange-500">{Number(stakeInfo.rewardMultiplier) / 100}x</p>
+                    <p className="text-sm md:text-lg font-bold text-yellow-500">{Number(stakeInfo.rewardMultiplier) / 100}x</p>
                   </div>
                   <div className="rounded-lg bg-secondary/50 p-2.5 md:p-3">
                     <p className="text-[10px] md:text-xs text-muted-foreground">Rewards</p>
@@ -227,7 +290,7 @@ export default function StakingPage() {
 
                     {/* 金额输入 */}
                     <div className="space-y-1.5">
-                      <label className="text-xs md:text-sm font-medium">Amount (ETH)</label>
+                      <label className="text-xs md:text-sm font-medium">Amount ({selectedToken})</label>
                       <div className="flex gap-2">
                         <Input
                           type="number"
@@ -235,11 +298,12 @@ export default function StakingPage() {
                           value={stakeAmount}
                           onChange={(e) => setStakeAmount(e.target.value)}
                           className="flex-1 h-10 md:h-11 text-sm"
+                          disabled={!isBscNetwork}
                         />
                         <Button
                           onClick={handleStake}
-                          disabled={!isConnected || isStaking || !stakeAmount || Number(stakeAmount) <= 0}
-                          className="bg-orange-500 hover:bg-orange-600 h-10 md:h-11 px-4 md:px-6"
+                          disabled={!isConnected || !isBscNetwork || isStaking || !stakeAmount || Number(stakeAmount) <= 0}
+                          className="bg-yellow-500 hover:bg-yellow-600 h-10 md:h-11 px-4 md:px-6"
                         >
                           {isStaking ? (
                             <Loader2 className="h-4 w-4 animate-spin" />
@@ -254,17 +318,32 @@ export default function StakingPage() {
                       
                       {/* 快捷金额 */}
                       <div className="flex gap-1.5 mt-2">
-                        {['0.1', '0.5', '1', '5'].map((val) => (
-                          <Button
-                            key={val}
-                            variant="outline"
-                            size="sm"
-                            className="flex-1 h-8 text-xs"
-                            onClick={() => setStakeAmount(val)}
-                          >
-                            {val} ETH
-                          </Button>
-                        ))}
+                        {selectedToken === 'BNB' 
+                          ? ['0.1', '0.5', '1', '5'].map((val) => (
+                              <Button
+                                key={val}
+                                variant="outline"
+                                size="sm"
+                                className="flex-1 h-8 text-xs"
+                                onClick={() => setStakeAmount(val)}
+                                disabled={!isBscNetwork}
+                              >
+                                {val} BNB
+                              </Button>
+                            ))
+                          : ['100', '500', '1000', '5000'].map((val) => (
+                              <Button
+                                key={val}
+                                variant="outline"
+                                size="sm"
+                                className="flex-1 h-8 text-xs"
+                                onClick={() => setStakeAmount(val)}
+                                disabled={!isBscNetwork}
+                              >
+                                {val}
+                              </Button>
+                            ))
+                        }
                       </div>
                     </div>
 
@@ -278,16 +357,16 @@ export default function StakingPage() {
                 </TabsContent>
 
                 <TabsContent value="unstake" className="space-y-3 md:space-y-4 mt-3 md:mt-4">
-                  {stakeInfo && Number(stakeInfo.stakedAmountFormatted) > 0 ? (
+                  {isBscNetwork && stakeInfo && Number(stakeInfo.stakedAmountFormatted) > 0 ? (
                     <div className="space-y-3 md:space-y-4">
                       <div className="rounded-lg bg-secondary/50 p-3 md:p-4">
                         <p className="text-xs md:text-sm text-muted-foreground">Available to Unstake</p>
-                        <p className="text-xl md:text-2xl font-bold mt-1">{stakeInfo.stakedAmountFormatted} ETH</p>
+                        <p className="text-xl md:text-2xl font-bold mt-1">{stakeInfo.stakedAmountFormatted} {selectedToken}</p>
                       </div>
 
                       <Button
                         onClick={handleUnstake}
-                        disabled={!isConnected || isUnstaking || stakeInfo.isLocked}
+                        disabled={!isConnected || !isBscNetwork || isUnstaking || stakeInfo.isLocked}
                         variant="outline"
                         className="w-full h-10 md:h-11"
                       >
@@ -412,17 +491,20 @@ export default function StakingPage() {
           <Card>
             <CardHeader className="pb-2 md:pb-3">
               <CardTitle className="text-sm md:text-base flex items-center gap-2">
-                <Coins className="h-4 w-4 text-orange-500" />
+                <Coins className="h-4 w-4 text-yellow-500" />
                 Supported Assets
               </CardTitle>
             </CardHeader>
             <CardContent className="pb-3 md:pb-4">
               <div className="flex flex-wrap gap-1.5">
-                <Badge variant="secondary" className="text-[10px] md:text-xs">ETH</Badge>
-                <Badge variant="secondary" className="text-[10px] md:text-xs">USDC</Badge>
+                <Badge className="bg-yellow-500/20 text-yellow-500 border-yellow-500/30 text-[10px] md:text-xs">BNB</Badge>
+                <Badge className="bg-purple-500/20 text-purple-500 border-purple-500/30 text-[10px] md:text-xs">FOUR</Badge>
                 <Badge variant="secondary" className="text-[10px] md:text-xs">USDT</Badge>
-                <Badge variant="secondary" className="text-[10px] md:text-xs">Custom</Badge>
+                <Badge variant="secondary" className="text-[10px] md:text-xs">Custom BEP20</Badge>
               </div>
+              <p className="text-[10px] text-muted-foreground mt-2">
+                Powered by Four.meme on BSC
+              </p>
             </CardContent>
           </Card>
 
@@ -434,12 +516,31 @@ export default function StakingPage() {
                 <p className="text-xs md:text-sm font-medium">Contract Verified</p>
               </div>
               <p className="text-[10px] md:text-xs text-muted-foreground mb-3">
-                MultiAssetStaking
+                MultiAssetStaking (BSC)
               </p>
-              <Link href="https://etherscan.io" target="_blank">
+              <Link href="https://bscscan.com" target="_blank">
                 <Button size="sm" variant="outline" className="w-full h-8 text-xs">
                   <ExternalLink className="h-3 w-3 mr-1.5" />
-                  Etherscan
+                  BscScan
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+          
+          {/* Four.meme 信息 */}
+          <Card className="border-purple-500/30 bg-gradient-to-br from-purple-500/5 to-pink-500/5">
+            <CardContent className="p-3 md:p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Sparkles className="h-4 w-4 text-purple-500" />
+                <span className="text-sm font-medium">Four.meme</span>
+              </div>
+              <p className="text-[10px] md:text-xs text-muted-foreground mb-3">
+                BSC Meme Token Platform
+              </p>
+              <Link href="https://four.meme" target="_blank">
+                <Button size="sm" variant="outline" className="w-full h-8 text-xs border-purple-500/30 text-purple-400 hover:bg-purple-500/10">
+                  <ExternalLink className="h-3 w-3 mr-1.5" />
+                  Visit Four.meme
                 </Button>
               </Link>
             </CardContent>
