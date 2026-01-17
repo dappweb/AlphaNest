@@ -213,7 +213,7 @@ export const translations = {
       },
       step2: {
         title: 'Additional Information',
-        description: 'Optional information about your project',
+        subtitle: 'Optional information about your project',
         description: 'Description',
         descriptionPlaceholder: 'Describe your token and project...',
         website: 'Website',
@@ -463,7 +463,7 @@ export const translations = {
       },
       step2: {
         title: '附加信息',
-        description: '项目的可选信息',
+        subtitle: '项目的可选信息',
         description: '项目描述',
         descriptionPlaceholder: '描述您的代币和项目...',
         website: '网站',

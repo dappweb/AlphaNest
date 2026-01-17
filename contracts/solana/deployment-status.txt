@@ -1,0 +1,18 @@
+部署状态报告
+============
+
+钱包: 584ewGPTG6gvEVStLboR8et9E8wD1y13BPpJW98XShxZ
+余额: 3.80423128 SOL
+网络: devnet
+
+程序状态:
+cowguard_insurance: Error: Unable to find the account 212XVhDqD21uFt1DfCuJ7WkVjcZZQCZRHDi3qeXTCqCH
+governance: Error: Unable to find the account APb3zhyvFhwEYjcwmK4QpJsoraNq1qsaoH2yj6SmiqcG
+multi_asset_staking: Error: Unable to find the account 7qpcKQQuDYhN51PTXebV8dpWY8MxqUKeFMwwVQ1eFQ75
+points_system: Error: Unable to find the account 46iXDwHRE9FZcoeMUPQD8Bc8B55Bz3Gb9mTPrVJhZP9v
+popcow_staking: Error: Unable to find the account FMo6ENLsDNzowrzjDJgow7AR7kGci8J2GazuCK9z3SUC
+popcow_token: Error: Unable to find the account 29hmqEfSQA6SP2a7Pw4wXTcviPQb4sfVPtXRw866or2J
+referral_system: Error: Unable to find the account Li9H8txAtQSbxnnpHMSwkdyMANh6Yge5ZHuh3H7NZ9j
+reputation_registry: Error: Unable to find the account TYKKXnQUGs6Gqv7cwR7gATd6odzYhANjBw72xC53tsv
+token_vesting: Error: Unable to find the account DUJkUcXYqJuusLRqhun4gCMt7PvuytCGfVsqKB6DU6uM
+yield_vault: Error: Unable to find the account C2BKMCCdAhC4678ewEdkhTMazYjnYeB9YmgA9ecAZBEv

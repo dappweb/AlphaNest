@@ -107,8 +107,6 @@ export default function LaunchPage() {
     } catch (error: any) {
       console.error('Create token failed:', error);
       alert(error.message || t.launch.errors.createFailed);
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -304,10 +302,10 @@ export default function LaunchPage() {
               </Button>
               <Button
                 onClick={handleCreateToken}
-                disabled={isLoading || !isConnected}
+                disabled={isCreatingToken || !isConnected}
                 className="bg-orange-500 hover:bg-orange-600"
               >
-                {isLoading ? (
+                {isCreatingToken ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                     {t.launch.creating}

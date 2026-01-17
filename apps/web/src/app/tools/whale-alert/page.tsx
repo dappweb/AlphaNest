@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Loader2, Whale, Bell, BellOff, ExternalLink } from 'lucide-react';
+import { Loader2, Fish, Bell, BellOff, ExternalLink } from 'lucide-react';
 import { useAccount } from 'wagmi';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
@@ -92,7 +92,7 @@ export default function WhaleAlertPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-          <Whale className="h-8 w-8 text-primary" />
+          <Fish className="h-8 w-8 text-primary" />
           Whale Alert
         </h1>
         <p className="text-muted-foreground mt-2">

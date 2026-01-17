@@ -16,14 +16,14 @@ export function PerformanceMonitor() {
     }
 
     // 监控 Web Vitals
-    if (typeof window !== 'undefined' && 'web-vitals' in window) {
+    if (typeof window !== 'undefined') {
       // 动态导入 web-vitals（如果可用）
-      import('web-vitals').then(({ onCLS, onFID, onFCP, onLCP, onTTFB }) => {
-        onCLS(console.log);
-        onFID(console.log);
-        onFCP(console.log);
-        onLCP(console.log);
-        onTTFB(console.log);
+      import('web-vitals').then(({ getCLS, getFID, getFCP, getLCP, getTTFB }) => {
+        getCLS(console.log);
+        getFID(console.log);
+        getFCP(console.log);
+        getLCP(console.log);
+        getTTFB(console.log);
       }).catch(() => {
         // web-vitals 不可用，忽略
       });

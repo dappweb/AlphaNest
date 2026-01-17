@@ -46,8 +46,10 @@ export const SOLANA_TOKENS = {
   USDT: 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB',
   BONK: 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263',
   WIF: 'EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm',
-  // PopCow 代币地址 (需要根据实际部署更新)
+  // PopCow 代币地址
   POPCOW: '8mrMRf8QwGh5bSrgzKsMmHPTTGqDcENU91SWuXEypump',
+  // PopCow DeFi 代币地址 (已上线 pump.fun)
+  POPCOW_DEFI: '4sCGHM2NL1nV6fYfWSoCTMwmJDCjfHub9pSpz128pump',
 };
 
 // 代币小数位
@@ -58,4 +60,5 @@ export const SOLANA_TOKEN_DECIMALS: Record<string, number> = {
   [SOLANA_TOKENS.BONK]: 5,
   [SOLANA_TOKENS.WIF]: 6,
   [SOLANA_TOKENS.POPCOW]: 9,
+  [SOLANA_TOKENS.POPCOW_DEFI]: 6,
 };
