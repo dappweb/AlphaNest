@@ -6,40 +6,16 @@ seeds = false
 skip-lint = false
 
 [programs.localnet]
-popcow_token = "GB13aFFGs6G76dSWWNwHfH596npdwFcxkR5x4Ur4uBjS"
-cowguard_insurance = "3vq7cmrWBVQZF11mHCKnDhppSyyBy9xstbz6tzZqDYcg"
-popcow_staking = "4pMUmKCTvxCiM6ccGyc851yhyKnaKfJ3q2umLhyZ9Y2d"
-token_vesting = "FKmtGh85bPYWRCyiJc8rHN6kohJWYgrkWvc8CtXAyz8n"
-yield_vault = "ECAnyfJmCxVxUSgv4MW7uvAkMophVnG5VTvEAgQt2vrP"
-multi_asset_staking = "EUN7ptUWascGEbBgFVQTxmFWzMSoN95YG5JGvabNtKYF"
-reputation_registry = "6RpDY1sJJyQcTkYqr3myYbLuCA5H9SLeGonyRUBhBbWt"
-governance = "5QCNr7vD639eE1R3rbts78qYZQEyc3L8XJriHNcLNyLW"
-points_system = "2zv8gpnD7DYogiDb591uceav7Rkxfqz5aCK18hMqPCxH"
-referral_system = "Cd2NZkSS5K4kqyWQcdaGv8deE8k75JrWjwU3byQRqEju"
+cowguard_insurance = "212XVhDqD21uFt1DfCuJ7WkVjcZZQCZRHDi3qeXTCqCH"
+multi_asset_staking = "7qpcKQQuDYhN51PTXebV8dpWY8MxqUKeFMwwVQ1eFQ75"
 
 [programs.devnet]
-popcow_token = "29hmqEfSQA6SP2a7Pw4wXTcviPQb4sfVPtXRw866or2J"
 cowguard_insurance = "212XVhDqD21uFt1DfCuJ7WkVjcZZQCZRHDi3qeXTCqCH"
-popcow_staking = "FMo6ENLsDNzowrzjDJgow7AR7kGci8J2GazuCK9z3SUC"
-token_vesting = "DUJkUcXYqJuusLRqhun4gCMt7PvuytCGfVsqKB6DU6uM"
-yield_vault = "C2BKMCCdAhC4678ewEdkhTMazYjnYeB9YmgA9ecAZBEv"
 multi_asset_staking = "7qpcKQQuDYhN51PTXebV8dpWY8MxqUKeFMwwVQ1eFQ75"
-reputation_registry = "TYKKXnQUGs6Gqv7cwR7gATd6odzYhANjBw72xC53tsv"
-governance = "APb3zhyvFhwEYjcwmK4QpJsoraNq1qsaoH2yj6SmiqcG"
-points_system = "46iXDwHRE9FZcoeMUPQD8Bc8B55Bz3Gb9mTPrVJhZP9v"
-referral_system = "Li9H8txAtQSbxnnpHMSwkdyMANh6Yge5ZHuh3H7NZ9j"
 
 [programs.mainnet]
-popcow_token = "GB13aFFGs6G76dSWWNwHfH596npdwFcxkR5x4Ur4uBjS"
-cowguard_insurance = "3vq7cmrWBVQZF11mHCKnDhppSyyBy9xstbz6tzZqDYcg"
-popcow_staking = "4pMUmKCTvxCiM6ccGyc851yhyKnaKfJ3q2umLhyZ9Y2d"
-token_vesting = "FKmtGh85bPYWRCyiJc8rHN6kohJWYgrkWvc8CtXAyz8n"
-yield_vault = "ECAnyfJmCxVxUSgv4MW7uvAkMophVnG5VTvEAgQt2vrP"
-multi_asset_staking = "EUN7ptUWascGEbBgFVQTxmFWzMSoN95YG5JGvabNtKYF"
-reputation_registry = "6RpDY1sJJyQcTkYqr3myYbLuCA5H9SLeGonyRUBhBbWt"
-governance = "5QCNr7vD639eE1R3rbts78qYZQEyc3L8XJriHNcLNyLW"
-points_system = "2zv8gpnD7DYogiDb591uceav7Rkxfqz5aCK18hMqPCxH"
-referral_system = "Cd2NZkSS5K4kqyWQcdaGv8deE8k75JrWjwU3byQRqEju"
+cowguard_insurance = "212XVhDqD21uFt1DfCuJ7WkVjcZZQCZRHDi3qeXTCqCH"
+multi_asset_staking = "7qpcKQQuDYhN51PTXebV8dpWY8MxqUKeFMwwVQ1eFQ75"
 
 [registry]
 url = "https://api.apr.dev"
