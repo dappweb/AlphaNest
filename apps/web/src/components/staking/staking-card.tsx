@@ -15,6 +15,7 @@ import {
   AlertCircle,
   FlaskConical,
 } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
 import { STAKING_POOLS, STAKEABLE_TOKENS, estimateRewards } from '@/lib/solana';
 import { TokenSelector } from './token-selector';
@@ -30,6 +31,7 @@ interface StakingCardProps {
   onClaim: (poolId: number) => Promise<void>;
   isLoading?: boolean;
   isConnected?: boolean;
+  error?: string | null;
 }
 
 export function StakingCard({
@@ -42,6 +44,7 @@ export function StakingCard({
   onClaim,
   isLoading = false,
   isConnected = false,
+  error = null,
 }: StakingCardProps) {
   const { t } = useTranslation();
   const [stakeAmount, setStakeAmount] = useState('');
@@ -89,6 +92,14 @@ export function StakingCard({
 
   return (
     <Card variant="elevated" className="w-full">
+      {error && (
+        <div className="p-4">
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        </div>
+      )}
       <CardHeader className="pb-4">
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">

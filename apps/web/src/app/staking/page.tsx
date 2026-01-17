@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
+import { useWallet } from '@solana/wallet-adapter-react';
 import { StakingCard, StakingStats } from '@/components/staking';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -19,25 +20,36 @@ import {
 import Image from 'next/image';
 import Link from 'next/link';
 import { useTranslation } from '@/hooks/use-translation';
+import { useSolanaStaking } from '@/hooks/use-solana-staking';
 
 export default function StakingPage() {
-  const { isConnected } = useAccount();
+  const { isConnected: evmConnected } = useAccount();
+  const { connected: solanaConnected } = useWallet();
   const { t } = useTranslation();
-  const [isLoading, setIsLoading] = useState(false);
   
-  // 模拟数据 - 待接入实际合约
-  const [tokenBalances, setTokenBalances] = useState<Record<string, number>>({
-    POPCOW: 1000000,
-    SOL: 10.5,
-    USDC: 5000,
-    USDT: 3000,
-    BONK: 50000000,
-    JUP: 500,
-    RAY: 100,
-  });
-  const [popCowDefiBalance, setPopCowDefiBalance] = useState(0);
-  const [stakedAmounts, setStakedAmounts] = useState<Record<string, number>>({});
-  const [pendingRewards, setPendingRewards] = useState(0);
+  // 使用 Solana 质押 hook
+  const {
+    stake,
+    unstake,
+    claimRewards,
+    tokenBalances,
+    positions,
+    isLoading,
+    error,
+    refetch,
+  } = useSolanaStaking();
+
+  const isConnected = evmConnected || solanaConnected;
+  
+  // 计算质押总额和待领取奖励
+  const stakedAmounts = positions.reduce((acc, pos) => {
+    const symbol = pos.tokenMint.equals(require('@/lib/solana/constants').POPCOW_TOKEN_MINT) ? 'POPCOW' : 'OTHER';
+    acc[symbol] = (acc[symbol] || 0) + pos.stakedAmount;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const pendingRewards = positions.reduce((sum, pos) => sum + pos.pendingRewards, 0);
+  const popCowDefiBalance = tokenBalances.PopCowDefi || 0;
 
   // 全局统计
   const [globalStats, setGlobalStats] = useState({
@@ -48,76 +60,48 @@ export default function StakingPage() {
   });
 
   const handleStake = async (amount: number, poolId: number, tokenSymbol: string) => {
-    setIsLoading(true);
     try {
-      console.log('Staking', amount, tokenSymbol, 'to pool', poolId);
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      setTokenBalances(prev => ({
-        ...prev,
-        [tokenSymbol]: (prev[tokenSymbol] || 0) - amount,
-      }));
-      setStakedAmounts(prev => ({
-        ...prev,
-        [tokenSymbol]: (prev[tokenSymbol] || 0) + amount,
-      }));
+      // 根据代币符号选择 mint 地址
+      const { POPCOW_TOKEN_MINT } = require('@/lib/solana/constants');
+      const tokenMint = POPCOW_TOKEN_MINT; // 可以根据 tokenSymbol 选择不同的 mint
+      
+      await stake(amount, poolId, tokenMint);
+      await refetch();
     } catch (error) {
       console.error('Stake failed:', error);
-    } finally {
-      setIsLoading(false);
+      throw error;
     }
   };
 
   const handleUnstake = async (amount: number, poolId: number, tokenSymbol: string) => {
-    setIsLoading(true);
     try {
-      console.log('Unstaking', amount, tokenSymbol, 'from pool', poolId);
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      setStakedAmounts(prev => ({
-        ...prev,
-        [tokenSymbol]: (prev[tokenSymbol] || 0) - amount,
-      }));
-      setTokenBalances(prev => ({
-        ...prev,
-        [tokenSymbol]: (prev[tokenSymbol] || 0) + amount,
-      }));
+      const { POPCOW_TOKEN_MINT } = require('@/lib/solana/constants');
+      const tokenMint = POPCOW_TOKEN_MINT;
+      
+      await unstake(amount, poolId, tokenMint);
+      await refetch();
     } catch (error) {
       console.error('Unstake failed:', error);
-    } finally {
-      setIsLoading(false);
+      throw error;
     }
   };
 
   const handleClaim = async (poolId: number) => {
-    setIsLoading(true);
     try {
-      console.log('Claiming rewards from pool', poolId);
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      setPopCowDefiBalance(prev => prev + pendingRewards);
-      setPendingRewards(0);
+      await claimRewards(poolId);
+      await refetch();
     } catch (error) {
       console.error('Claim failed:', error);
-    } finally {
-      setIsLoading(false);
+      throw error;
     }
   };
-
-  // 模拟奖励累积
-  const totalStaked = Object.values(stakedAmounts).reduce((a, b) => a + b, 0);
-  useEffect(() => {
-    if (totalStaked > 0) {
-      const interval = setInterval(() => {
-        setPendingRewards(prev => prev + totalStaked * 0.0001);
-      }, 5000);
-      return () => clearInterval(interval);
-    }
-  }, [totalStaked]);
 
   return (
     <div className="space-y-6">
       {/* 页面标题 */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
+          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
             <Coins className="h-6 w-6 text-orange-500" />
             {t.staking.title}
           </h1>
@@ -159,6 +143,7 @@ export default function StakingPage() {
             onClaim={handleClaim}
             isLoading={isLoading}
             isConnected={isConnected}
+            error={error}
           />
         </div>
 

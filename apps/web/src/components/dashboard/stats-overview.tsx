@@ -74,28 +74,28 @@ export function StatsOverview() {
         setPlatformStats([
           {
             name: '24h Volume',
-            value: stats.totalVolume24h,
-            change: stats.volumeChange24h,
+            value: stats.totalVolume24h || 0,
+            change: stats.volumeChange24h || 0,
             icon: TrendingUp,
             format: 'usd',
           },
           {
             name: 'Total Users',
-            value: stats.totalUsers,
-            change: stats.usersChange24h,
+            value: stats.totalUsers || 0,
+            change: stats.usersChange24h || 0,
             icon: Users,
             format: 'number',
           },
           {
             name: 'Transactions',
-            value: stats.totalTransactions,
-            change: stats.transactionsChange24h,
+            value: stats.totalTransactions || 0,
+            change: stats.transactionsChange24h || 0,
             icon: Shield,
             format: 'number',
           },
           {
             name: 'Active Tokens',
-            value: stats.activeTokens,
+            value: stats.activeTokens || 0,
             change: 0,
             icon: Coins,
             format: 'number',
@@ -164,15 +164,17 @@ export function StatsOverview() {
   const formatValue = (value: number, format: string, hide: boolean) => {
     if (hide) return '****';
 
+    if (value === undefined || value === null) return '0';
+
     switch (format) {
       case 'usd':
         return formatUSD(value);
       case 'number':
         return formatNumber(value);
       case 'percent':
-        return `${value.toFixed(1)}%`;
+        return `${(value || 0).toFixed(1)}%`;
       default:
-        return value.toString();
+        return (value || '').toString();
     }
   };
 
@@ -220,12 +222,12 @@ export function StatsOverview() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Total Trades</p>
-                  <p className="text-2xl font-bold">{userStats.totalTrades}</p>
-                  <p className="text-sm text-muted-foreground mt-1">Win Rate: {userStats.winRate}%</p>
+                  <p className="text-sm font-medium text-muted-foreground">Alpha Signals</p>
+                  <p className="text-2xl font-bold">12</p>
+                  <p className="text-sm text-green-500 mt-1">Found in last 24h</p>
                 </div>
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-500/10">
-                  <Wallet className="h-5 w-5 text-blue-500" />
+                  <TrendingUp className="h-5 w-5 text-blue-500" />
                 </div>
               </div>
             </CardContent>
@@ -235,12 +237,12 @@ export function StatsOverview() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Insurance</p>
-                  <p className="text-2xl font-bold">{userStats.activePolicies}</p>
-                  <p className="text-sm text-muted-foreground mt-1">Active Policies</p>
+                  <p className="text-sm font-medium text-muted-foreground">Staking APY</p>
+                  <p className="text-2xl font-bold">28.5%</p>
+                  <p className="text-sm text-muted-foreground mt-1">PopCow Rewards</p>
                 </div>
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-500/10">
-                  <Shield className="h-5 w-5 text-purple-500" />
+                  <Coins className="h-5 w-5 text-purple-500" />
                 </div>
               </div>
             </CardContent>

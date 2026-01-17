@@ -201,6 +201,74 @@ Position: ${data.position === 'rug' ? 'Betting Rug 🔴' : 'Betting Safe 🟢'}`
     });
   }
 
+  // 鲸鱼警报通知
+  async sendWhaleAlert(
+    chatId: string | number,
+    data: {
+      wallet: string;
+      token: string;
+      tokenSymbol: string;
+      type: 'buy' | 'sell' | 'transfer';
+      amount: number;
+      amountUsd: number;
+      txHash: string;
+    }
+  ): Promise<boolean> {
+    const emoji = data.type === 'buy' ? '🐋💚' : data.type === 'sell' ? '🐋🔴' : '🐋';
+    const action = data.type.toUpperCase();
+
+    const text = `${emoji} <b>WHALE ALERT</b>
+
+🪙 Token: <b>${data.tokenSymbol}</b>
+💰 Amount: $${data.amountUsd.toLocaleString()}
+🔄 Action: ${action}
+👛 Wallet: <code>${data.wallet.slice(0, 8)}...${data.wallet.slice(-6)}</code>
+
+🔗 <a href="https://solscan.io/tx/${data.txHash}">View Transaction</a>`;
+
+    return this.sendMessage({
+      chat_id: chatId,
+      text,
+      parse_mode: 'HTML',
+      reply_markup: {
+        inline_keyboard: [
+          [
+            { text: '📊 View Token', url: `https://alphanest-web-9w8.pages.dev/trade?token=${data.token}` },
+          ],
+        ],
+      },
+    });
+  }
+
+  // 狙击 Bot 通知
+  async sendSniperNotification(
+    chatId: string | number,
+    data: {
+      sniperId: string;
+      targetToken: string;
+      txHash: string;
+      status: 'executed' | 'failed';
+      message?: string;
+    }
+  ): Promise<boolean> {
+    const emoji = data.status === 'executed' ? '🎯✅' : '🎯❌';
+    const title = data.status === 'executed' ? 'Sniper Executed!' : 'Sniper Failed';
+
+    const text = `${emoji} <b>${title}</b>
+
+🎯 Sniper ID: <code>${data.sniperId}</code>
+🪙 Target: <code>${data.targetToken.slice(0, 8)}...</code>
+${data.message || ''}
+
+🔗 <a href="https://solscan.io/tx/${data.txHash}">View Transaction</a>`;
+
+    return this.sendMessage({
+      chat_id: chatId,
+      text,
+      parse_mode: 'HTML',
+    });
+  }
+
   // 设置 Webhook (用于接收用户命令)
   async setWebhook(webhookUrl: string): Promise<boolean> {
     try {

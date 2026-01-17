@@ -27,6 +27,9 @@ import { referralRoutes } from './routes/referral';
 import { notificationRoutes } from './routes/notifications';
 import { botRoutes } from './routes/bots';
 import { memeRoutes } from './routes/meme';
+import { sniperRoutes } from './routes/sniper';
+import { whaleAlertRoutes } from './routes/whale-alert';
+import { adminRoutes } from './routes/admin';
 
 // 中间件
 import { authMiddleware } from './middleware/auth';
@@ -77,6 +80,15 @@ export interface Env {
   CONTRACT_ALPHANEST_CORE: string;
   CONTRACT_REPUTATION_REGISTRY: string;
   CONTRACT_ALPHAGUARD: string;
+  
+  // Solana 合约地址（用于管理员验证）
+  CONTRACT_STAKING_POOL?: string;
+  CONTRACT_INSURANCE_PROTOCOL?: string;
+  CONTRACT_YIELD_VAULT?: string;
+  CONTRACT_STAKING_PROGRAM_ID?: string;
+  CONTRACT_INSURANCE_PROGRAM_ID?: string;
+  CONTRACT_REPUTATION_PROGRAM_ID?: string;
+  CONTRACT_VAULT_PROGRAM_ID?: string;
 
   // Sentry
   SENTRY_DSN: string;
@@ -185,6 +197,7 @@ api.route('/platform', analyticsRoutes); // Alias for platform/stats
 api.route('/meme', memeRoutes);
 api.route('/insurance', insuranceRoutes);
 api.route('/activity', analyticsRoutes); // Alias for activity/recent
+api.route('/admin', adminRoutes);
 
 // 需要认证的路由
 api.use('/trade/*', authMiddleware());
@@ -195,8 +208,12 @@ api.use('/copy-trades/*', authMiddleware());
 api.use('/referral/*', authMiddleware());
 api.use('/notifications/*', authMiddleware());
 api.use('/bots/*', authMiddleware());
+api.use('/sniper/*', authMiddleware());
+api.use('/whale-alert/*', authMiddleware());
 
 api.route('/trade', tradeRoutes);
+api.route('/sniper', sniperRoutes);
+api.route('/whale-alert', whaleAlertRoutes);
 api.route('/referral', referralRoutes);
 api.route('/notifications', notificationRoutes);
 api.route('/bots', botRoutes);
@@ -330,6 +347,36 @@ export default {
             await checkRugStatus(payload, env);
             break;
 
+          case 'START_SNIPER':
+            // 启动狙击 Bot
+            await startSniperMonitor(payload, env);
+            break;
+
+          case 'STOP_SNIPER':
+            // 停止狙击 Bot
+            await stopSniperMonitor(payload, env);
+            break;
+
+          case 'START_WHALE_MONITOR':
+            // 启动鲸鱼监控
+            await startWhaleMonitor(payload, env);
+            break;
+
+          case 'STOP_WHALE_MONITOR':
+            // 停止鲸鱼监控
+            await stopWhaleMonitor(payload, env);
+            break;
+
+          case 'SEND_WHALE_ALERT':
+            // 发送鲸鱼警报
+            await sendWhaleAlert(payload, env);
+            break;
+
+          case 'SEND_SNIPER_NOTIFICATION':
+            // 发送狙击通知
+            await sendSniperNotification(payload, env);
+            break;
+
           default:
             console.warn(`Unknown task type: ${type}`);
         }
@@ -435,6 +482,60 @@ export class WebSocketServer {
       }
     }
   }
+
+  // 广播价格更新
+  broadcastPriceUpdate(token: string, chain: string, price: number, change24h: number) {
+    this.broadcast('price_update', {
+      type: 'price_update',
+      data: {
+        token,
+        chain,
+        price,
+        change24h,
+        timestamp: Date.now(),
+      },
+    });
+  }
+
+  // 广播交易更新
+  broadcastTransactionUpdate(txHash: string, status: string, data: any) {
+    this.broadcast('transaction_update', {
+      type: 'transaction_update',
+      data: {
+        txHash,
+        status,
+        ...data,
+        timestamp: Date.now(),
+      },
+    });
+  }
+
+  // 广播鲸鱼警报
+  broadcastWhaleAlert(alert: any) {
+    this.broadcast('whale_alert', {
+      type: 'whale_alert',
+      data: {
+        ...alert,
+        timestamp: Date.now(),
+      },
+    });
+  }
+
+  // 广播通知
+  broadcastNotification(userId: string, notification: any) {
+    // 只发送给特定用户
+    for (const [ws, session] of this.sessions) {
+      if (session.userId === userId && session.channels.has('notifications')) {
+        ws.send(JSON.stringify({
+          type: 'notification',
+          data: {
+            ...notification,
+            timestamp: Date.now(),
+          },
+        }));
+      }
+    }
+  }
 }
 
 // ============================================
@@ -451,3 +552,5 @@ import {
 } from './services/blockchain';
 
 import { sendNotification } from './services/notifications';
+import { startSniperMonitor, stopSniperMonitor, sendSniperNotification } from './services/sniper-tasks';
+import { startWhaleMonitor, stopWhaleMonitor, sendWhaleAlert } from './services/whale-tasks';

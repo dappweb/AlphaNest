@@ -146,27 +146,50 @@ export async function getKOLHoldings(walletAddress: string): Promise<KOLHolding[
             },
         });
 
-        // 过滤出 fungible tokens
+        const holdings: KOLHolding[] = [];
+
+        // 1. 处理原生 SOL
+        if (result.nativeBalance && result.nativeBalance.lamports > 0) {
+            const solBalance = result.nativeBalance.lamports / 1e9;
+            holdings.push({
+                mint: 'So11111111111111111111111111111111111111112',
+                symbol: 'SOL',
+                name: 'Solana',
+                balance: solBalance,
+                decimals: 9,
+                priceUsd: result.nativeBalance.price_per_sol,
+                valueUsd: result.nativeBalance.total_price,
+                logo: 'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png',
+            });
+        }
+
+        // 2. 处理 fungible tokens
         const fungibleAssets = result.items.filter(
-            (asset) => asset.interface === 'FungibleToken' || asset.interface === 'FungibleAsset'
+            (asset) => (asset.interface === 'FungibleToken' || asset.interface === 'FungibleAsset') &&
+                (asset.token_info?.balance || 0) > 0
         );
 
-        // 获取价格
-        const mintAddresses = fungibleAssets
-            .map((asset) => asset.id)
-            .filter((id) => id);
+        // 尝试获取价格 (如果 Helius 没有提供内置价格，则使用 Jupiter 作为补充)
+        const mintsMissingPrice = fungibleAssets
+            .filter(asset => !asset.token_info?.price_info?.price_per_token)
+            .map(asset => asset.id);
 
-        const prices = await getTokenPrices(mintAddresses);
+        let extraPrices: Record<string, number> = {};
+        if (mintsMissingPrice.length > 0) {
+            extraPrices = await getTokenPrices(mintsMissingPrice);
+        }
 
         // 转换为 KOLHolding 格式
-        const holdings: KOLHolding[] = fungibleAssets.map((asset) => {
+        fungibleAssets.forEach((asset) => {
             const balance = asset.token_info?.balance || 0;
             const decimals = asset.token_info?.decimals || 0;
             const actualBalance = balance / Math.pow(10, decimals);
-            const priceUsd = prices[asset.id] || asset.token_info?.price_info?.price_per_token || null;
+
+            // 优先使用 Helius 内置价格，如果没有则使用 Jupiter 补充
+            const priceUsd = asset.token_info?.price_info?.price_per_token || extraPrices[asset.id] || null;
             const valueUsd = priceUsd ? actualBalance * priceUsd : null;
 
-            return {
+            holdings.push({
                 mint: asset.id,
                 symbol: asset.content?.metadata?.symbol || asset.token_info?.symbol || 'Unknown',
                 name: asset.content?.metadata?.name || 'Unknown Token',
@@ -175,7 +198,7 @@ export async function getKOLHoldings(walletAddress: string): Promise<KOLHolding[
                 priceUsd,
                 valueUsd,
                 logo: asset.content?.links?.image || asset.content?.files?.[0]?.uri,
-            };
+            });
         });
 
         // 按价值排序
@@ -199,40 +222,44 @@ export async function getKOLTrades(
         const trades: KOLTrade[] = [];
 
         for (const tx of transactions) {
-            // 解析 token transfers
-            if (tx.tokenTransfers && tx.tokenTransfers.length > 0) {
-                for (const transfer of tx.tokenTransfers) {
-                    const isBuy = transfer.toUserAccount === walletAddress;
-                    const isSell = transfer.fromUserAccount === walletAddress;
+            // Helius 提供的 description 通常非常可读
+            const description = tx.description || '';
 
-                    if (isBuy || isSell) {
-                        trades.push({
-                            signature: tx.signature,
-                            timestamp: tx.timestamp,
-                            type: isBuy ? 'buy' : 'sell',
-                            tokenMint: transfer.mint,
-                            tokenSymbol: '', // 需要额外查询
-                            tokenAmount: transfer.tokenAmount,
-                            description: tx.description || `${isBuy ? 'Bought' : 'Sold'} tokens`,
-                            counterparty: isBuy ? transfer.fromUserAccount : transfer.toUserAccount,
-                        });
-                    }
+            // 尝试从交易中提取代币信息
+            let type: KOLTrade['type'] = 'unknown';
+            let tokenMint = '';
+            let tokenSymbol = '';
+            let tokenAmount = 0;
+
+            if (tx.type === 'SWAP') {
+                type = 'swap';
+                if (tx.events?.swap) {
+                    tokenMint = tx.events.swap.tokenOutputMint || '';
+                    tokenAmount = tx.events.swap.tokenOutputAmount || 0;
+                }
+            } else if (tx.tokenTransfers && tx.tokenTransfers.length > 0) {
+                // 查找涉及该钱包的 transfer
+                const relevantTransfer = tx.tokenTransfers.find(
+                    t => t.fromUserAccount === walletAddress || t.toUserAccount === walletAddress
+                );
+
+                if (relevantTransfer) {
+                    const isBuy = relevantTransfer.toUserAccount === walletAddress;
+                    type = isBuy ? 'buy' : 'sell';
+                    tokenMint = relevantTransfer.mint;
+                    tokenAmount = relevantTransfer.tokenAmount;
                 }
             }
 
-            // 解析 swap 事件
-            if (tx.events?.swap) {
-                const swap = tx.events.swap;
-                trades.push({
-                    signature: tx.signature,
-                    timestamp: tx.timestamp,
-                    type: 'swap',
-                    tokenMint: swap.tokenOutputMint || '',
-                    tokenSymbol: '',
-                    tokenAmount: swap.tokenOutputAmount || 0,
-                    description: tx.description || 'Token swap',
-                });
-            }
+            trades.push({
+                signature: tx.signature,
+                timestamp: tx.timestamp,
+                type: (tx.type?.toLowerCase() as any) || type,
+                tokenMint,
+                tokenSymbol: tokenSymbol || (tokenMint === 'So11111111111111111111111111111111111111112' ? 'SOL' : ''),
+                tokenAmount,
+                description: description || tx.type || 'Unknown transaction',
+            });
         }
 
         return trades;

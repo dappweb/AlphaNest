@@ -115,14 +115,24 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="https://api.dexscreener.com" />
         <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
         <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
+        <link rel="dns-prefetch" href="https://api.jup.ag" />
+        <link rel="dns-prefetch" href="https://api.0x.org" />
         
         {/* 预连接关键资源 */}
         <link rel="preconnect" href="https://alphanest-api.dappweb.workers.dev" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://api.dexscreener.com" crossOrigin="anonymous" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         
+        {/* 预加载关键页面 */}
+        <link rel="prefetch" href="/staking" />
+        <link rel="prefetch" href="/trade" />
+        <link rel="prefetch" href="/meme" />
+        
+        {/* 性能优化 */}
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta httpEquiv="x-dns-prefetch-control" content="on" />
       </head>
       <body className={`${inter.variable} font-sans antialiased`}>
         <Providers>

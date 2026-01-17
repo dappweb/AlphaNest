@@ -9,17 +9,21 @@ export function formatAddress(address: string, chars = 4): string {
   return `${address.slice(0, chars + 2)}...${address.slice(-chars)}`;
 }
 
-export function formatNumber(num: number, decimals = 2): string {
-  if (num >= 1_000_000_000) {
-    return `${(num / 1_000_000_000).toFixed(decimals)}B`;
+export function formatNumber(num: number | undefined | null, decimals = 2): string {
+  if (num === undefined || num === null || isNaN(num as number)) {
+    return '0';
   }
-  if (num >= 1_000_000) {
-    return `${(num / 1_000_000).toFixed(decimals)}M`;
+  const n = num as number;
+  if (n >= 1_000_000_000) {
+    return `${(n / 1_000_000_000).toFixed(decimals)}B`;
   }
-  if (num >= 1_000) {
-    return `${(num / 1_000).toFixed(decimals)}K`;
+  if (n >= 1_000_000) {
+    return `${(n / 1_000_000).toFixed(decimals)}M`;
   }
-  return num.toFixed(decimals);
+  if (n >= 1_000) {
+    return `${(n / 1_000).toFixed(decimals)}K`;
+  }
+  return n.toFixed(decimals);
 }
 
 export function formatUSD(amount: number): string {
@@ -34,4 +38,43 @@ export function formatUSD(amount: number): string {
 export function formatPercent(value: number): string {
   const sign = value >= 0 ? '+' : '';
   return `${sign}${value.toFixed(2)}%`;
+}
+
+export function formatTimeAgo(timestamp: number): string {
+  const now = Date.now();
+  const diff = now - timestamp;
+  const seconds = Math.floor(diff / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+
+  if (days > 0) return `${days} day${days > 1 ? 's' : ''} ago`;
+  if (hours > 0) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+  if (minutes > 0) return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
+  return 'Just now';
+}
+
+export async function copyToClipboard(text: string): Promise<boolean> {
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } else {
+      // Fallback for non-secure contexts or older browsers
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-9999px';
+      textArea.style.top = '0';
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      const success = document.execCommand('copy');
+      document.body.removeChild(textArea);
+      return success;
+    }
+  } catch (err) {
+    console.error('Failed to copy text: ', err);
+    return false;
+  }
 }

@@ -6,8 +6,15 @@ export const POPCOW_TOKEN_MINT = new PublicKey('8mrMRf8QwGh5bSrgzKsMmHPTTGqDcENU
 // PopCowDefi 平台代币地址 (部署后更新)
 export const POPCOWDEFI_TOKEN_MINT = new PublicKey('11111111111111111111111111111111'); // TODO: 部署后替换
 
-// 质押合约程序 ID (部署后更新)
-export const STAKING_PROGRAM_ID = new PublicKey('11111111111111111111111111111111'); // TODO: 部署后替换
+// 质押合约程序 ID (devnet 网络 - 2026-01-17 部署)
+export const STAKING_PROGRAM_ID = new PublicKey('9tyVCiEHi97uMbzHHt1MUwprn1d7HEwCzDwUVpxdbYuj'); // PopCow Staking Program ✅
+
+// 多资产质押程序 ID (待部署)
+export const MULTI_ASSET_STAKING_PROGRAM_ID = new PublicKey('7qpcKQQuDYhN51PTXebV8dpWY8MxqUKeFMwwVQ1eFQ75'); // ⏳ 待部署
+
+// 股票代币化产品支持
+// 导入股票代币配置（可选，需要时启用）
+// import { ALL_STOCK_TOKENS } from './stock-tokens';
 
 // 主流代币地址 (Solana Mainnet)
 export const MAINSTREAM_TOKENS = {

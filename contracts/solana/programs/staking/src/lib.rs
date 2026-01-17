@@ -1,13 +1,16 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Token, TokenAccount, Transfer, Mint};
 
-declare_id!("PopStake1111111111111111111111111111111111");
+declare_id!("FMo6ENLsDNzowrzjDJgow7AR7kGci8J2GazuCK9z3SUC");
 
 #[program]
 pub mod popcow_staking {
     use super::*;
 
     /// 初始化质押池
+    /// 
+    /// 兑换比例: 1 POPCOW = 2 PopCowDefi
+    /// 即质押 1 POPCOW，每秒获得 2 PopCowDefi 的奖励率
     pub fn initialize_pool(
         ctx: Context<InitializePool>,
         reward_rate_per_second: u64,  // 每秒奖励率 (基点)
@@ -20,12 +23,14 @@ pub mod popcow_staking {
         pool.reward_vault = ctx.accounts.reward_vault.key();
         pool.total_staked = 0;
         pool.reward_rate_per_second = reward_rate_per_second;
+        // 兑换比例: 1 POPCOW = 2 PopCowDefi (固定比例)
+        pool.conversion_rate = 2;  // 1:2 比例
         pool.last_update_time = Clock::get()?.unix_timestamp;
         pool.reward_per_token_stored = 0;
         pool.is_paused = false;
         pool.bump = ctx.bumps.pool;
 
-        msg!("Staking pool initialized");
+        msg!("Staking pool initialized with 1:2 conversion rate (1 POPCOW = 2 PopCowDefi)");
         Ok(())
     }
 
@@ -68,13 +73,14 @@ pub mod popcow_staking {
         };
 
         // 更新质押账户
+        let pool_key = pool.key();
         if stake_account.staked_amount == 0 {
             stake_account.owner = ctx.accounts.user.key();
-            stake_account.pool = ctx.accounts.pool.key();
+            stake_account.pool = pool_key;
             stake_account.lock_period = lock_period;
             stake_account.stake_time = clock.unix_timestamp;
             stake_account.unlock_time = clock.unix_timestamp + lock_duration;
-            stake_account.bump = ctx.bumps.stake_account;
+            // bump 已经在账户约束中设置
         } else {
             // 追加质押时，重新计算解锁时间
             stake_account.unlock_time = clock.unix_timestamp + lock_duration;
@@ -110,10 +116,17 @@ pub mod popcow_staking {
         // 更新奖励
         update_rewards(pool, stake_account, clock.unix_timestamp)?;
 
+        // 保存用于 seeds 的值
+        let pool_bump = pool.bump;
+
+        // 先更新状态，避免借用冲突
+        stake_account.staked_amount = stake_account.staked_amount.checked_sub(amount).unwrap();
+        pool.total_staked = pool.total_staked.checked_sub(amount).unwrap();
+
         // 转移代币回用户
         let seeds = &[
             b"pool".as_ref(),
-            &[pool.bump],
+            &[pool_bump],
         ];
         let signer = &[&seeds[..]];
 
@@ -129,9 +142,6 @@ pub mod popcow_staking {
             ),
             amount,
         )?;
-
-        stake_account.staked_amount = stake_account.staked_amount.checked_sub(amount).unwrap();
-        pool.total_staked = pool.total_staked.checked_sub(amount).unwrap();
 
         msg!("Unstaked {} tokens", amount);
         Ok(())
@@ -149,10 +159,13 @@ pub mod popcow_staking {
         let rewards = stake_account.pending_rewards;
         require!(rewards > 0, ErrorCode::NoRewards);
 
+        // 保存用于 seeds 的值
+        let pool_bump = pool.bump;
+
         // 转移奖励
         let seeds = &[
             b"pool".as_ref(),
-            &[pool.bump],
+            &[pool_bump],
         ];
         let signer = &[&seeds[..]];
 
@@ -187,13 +200,22 @@ pub mod popcow_staking {
         let amount = stake_account.staked_amount;
         require!(amount > 0, ErrorCode::NoStake);
 
+        // 保存用于 seeds 的值
+        let pool_bump = pool.bump;
+
         // 转移代币回用户 (无奖励)
         let seeds = &[
             b"pool".as_ref(),
-            &[pool.bump],
+            &[pool_bump],
         ];
         let signer = &[&seeds[..]];
 
+        // 先更新状态，避免借用冲突
+        stake_account.staked_amount = 0;
+        stake_account.pending_rewards = 0;
+        pool.total_staked = pool.total_staked.checked_sub(amount).unwrap();
+
+        // 转移代币回用户 (无奖励)
         token::transfer(
             CpiContext::new_with_signer(
                 ctx.accounts.token_program.to_account_info(),
@@ -206,10 +228,6 @@ pub mod popcow_staking {
             ),
             amount,
         )?;
-
-        stake_account.staked_amount = 0;
-        stake_account.pending_rewards = 0;
-        pool.total_staked = pool.total_staked.checked_sub(amount).unwrap();
 
         msg!("Emergency unstake: {} tokens (rewards forfeited)", amount);
         Ok(())
@@ -293,8 +311,14 @@ fn update_rewards(
             // 根据锁定期计算奖励倍数
             let multiplier = get_reward_multiplier(stake_account.lock_period);
             
+            // 应用 1:2 兑换比例
+            // 1 POPCOW 质押 = 2 PopCowDefi 奖励率
+            let base_reward_rate = pool.reward_rate_per_second
+                .checked_mul(pool.conversion_rate as u64)
+                .unwrap();
+            
             let reward = (time_elapsed as u128)
-                .checked_mul(pool.reward_rate_per_second as u128)
+                .checked_mul(base_reward_rate as u128)
                 .unwrap()
                 .checked_mul(1e18 as u128)
                 .unwrap()
@@ -311,19 +335,25 @@ fn update_rewards(
     // 更新用户奖励
     if stake_account.staked_amount > 0 {
         let multiplier = get_reward_multiplier(stake_account.lock_period);
-        let earned = (stake_account.staked_amount as u128)
+        
+        // 计算基础奖励（已包含 1:2 比例）
+        let base_earned = (stake_account.staked_amount as u128)
             .checked_mul(
                 pool.reward_per_token_stored
                     .checked_sub(stake_account.reward_per_token_paid)
                     .unwrap(),
             )
-            .unwrap()
+            .unwrap();
+        
+        // 应用锁定期倍数
+        let earned = base_earned
             .checked_mul(multiplier as u128)
             .unwrap()
             .checked_div(100)
             .unwrap()
             .checked_div(1e18 as u128)
             .unwrap();
+            
         stake_account.pending_rewards = stake_account
             .pending_rewards
             .checked_add(earned as u64)
@@ -401,7 +431,7 @@ pub struct Stake<'info> {
     pub pool: Account<'info, StakingPool>,
 
     #[account(
-        init_if_needed,
+        init,
         payer = user,
         space = 8 + StakeAccount::INIT_SPACE,
         seeds = [b"stake", user.key().as_ref()],
@@ -534,12 +564,13 @@ pub struct UpdatePool<'info> {
 #[derive(InitSpace)]
 pub struct StakingPool {
     pub authority: Pubkey,
-    pub stake_mint: Pubkey,
-    pub reward_mint: Pubkey,
+    pub stake_mint: Pubkey,           // POPCOW token mint
+    pub reward_mint: Pubkey,          // PopCowDefi token mint
     pub stake_vault: Pubkey,
     pub reward_vault: Pubkey,
     pub total_staked: u64,
-    pub reward_rate_per_second: u64,
+    pub reward_rate_per_second: u64,  // 每秒奖励率（基础）
+    pub conversion_rate: u8,          // 兑换比例: 1 POPCOW = 2 PopCowDefi
     pub last_update_time: i64,
     pub reward_per_token_stored: u128,
     pub is_paused: bool,

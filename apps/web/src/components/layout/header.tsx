@@ -2,11 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
-import { Bell, Search, X, Menu, Globe } from 'lucide-react';
+import { Bell, Search, X, Menu, Globe, Sun, Moon, Monitor } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { NotificationCenter } from '@/components/notifications';
 import Image from 'next/image';
 import { useSidebarStore } from '@/stores/sidebar-store';
+import { useTheme } from '@/stores/theme-store';
 import { cn } from '@/lib/utils';
 import { useTranslation } from '@/hooks/use-translation';
 
@@ -16,6 +17,10 @@ export function Header() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const { isCollapsed, toggleMobileOpen } = useSidebarStore();
   const { t, language, toggleLanguage } = useTranslation();
+  const { theme, cycleTheme } = useTheme();
+
+  // Theme icon based on current theme
+  const ThemeIcon = theme === 'dark' ? Moon : theme === 'light' ? Sun : Monitor;
 
   // Mock unread count - in production, get from API/state
   const unreadCount = 3;
@@ -170,6 +175,17 @@ export function Header() {
                 {unreadCount > 9 ? '9+' : unreadCount}
               </span>
             )}
+          </Button>
+
+          {/* Theme Switcher */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={cycleTheme}
+            className="h-9 w-9"
+            title={`当前主题: ${theme === 'dark' ? '深色' : theme === 'light' ? '浅色' : '跟随系统'}`}
+          >
+            <ThemeIcon className="h-4 w-4" />
           </Button>
 
           {/* Language Switcher */}

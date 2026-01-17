@@ -291,9 +291,4 @@ export const DEFAULT_MONITORING_CONFIG: MonitoringConfig = {
 // 导出
 // ============================================
 
-export {
-    processWebhookEvent,
-    sendTradeAlert,
-    PLATFORM_TRIGGERS,
-    DEFAULT_MONITORING_CONFIG,
-};
+// Additional exports - functions already exported inline are not re-exported here

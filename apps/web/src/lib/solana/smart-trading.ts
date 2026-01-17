@@ -459,14 +459,4 @@ export function calculateUserDividend(
     return dividendPool * userShare;
 }
 
-// ============================================
-// 导出
-// ============================================
-
-export {
-    generateAlphaSignals,
-    executeSmartTrade,
-    calculateDynamicApy,
-    getFinalApy,
-    calculateUserDividend,
-};
+// Functions are already exported inline above
