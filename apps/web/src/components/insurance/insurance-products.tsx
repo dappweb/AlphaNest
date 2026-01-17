@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { formatUSD, formatAddress } from '@/lib/utils';
-import { usePurchasePolicy, useUsdcBalance, Position } from '@/hooks/use-alphaguard';
+import { usePurchaseInsurance, useUsdcBalance, InsuranceType, INSURANCE_TYPE_LABELS } from '@/hooks/use-cowguard-insurance';
 import { getInsuranceProducts, type InsuranceProduct as ApiInsuranceProduct } from '@/lib/api';
 
 interface InsuranceProduct {

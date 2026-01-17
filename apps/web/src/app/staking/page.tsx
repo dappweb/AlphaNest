@@ -8,9 +8,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   Coins, 
-  ArrowRight, 
   ExternalLink,
   Shield,
   Clock,
@@ -18,43 +18,47 @@ import {
   AlertCircle,
   Loader2,
   CheckCircle,
+  Sparkles,
+  Lock,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useTranslation } from '@/hooks/use-translation';
 import {
-  useAlphaNestStaking,
-  useStake,
-  useRequestUnstake,
-  useCompleteUnstake,
+  useMultiAssetStaking,
+  useStakeETH,
+  useUnstake,
   useClaimRewards,
-} from '@/hooks/use-alphanest-core';
+  LockPeriod,
+  LOCK_PERIOD_LABELS,
+  ETH_ADDRESS,
+} from '@/hooks/use-multi-asset-staking';
 
 export default function StakingPage() {
-  const { isConnected, address } = useAccount();
+  const { isConnected } = useAccount();
   const { t } = useTranslation();
   
-  // 使用 EVM 质押 hooks
+  // 使用多资产质押 hooks
   const {
     stakeInfo,
-    pointsInfo,
+    tokenConfig,
     globalStats,
+    earlyBirdBonus,
     isLoading,
     refetch,
-  } = useAlphaNestStaking();
+  } = useMultiAssetStaking(ETH_ADDRESS);
 
-  const { stake, isPending: isStaking, isSuccess: stakeSuccess } = useStake();
-  const { requestUnstake, isPending: isUnstaking, isSuccess: unstakeSuccess } = useRequestUnstake();
-  const { completeUnstake, isPending: isCompleting, isSuccess: completeSuccess } = useCompleteUnstake();
+  const { stakeETH, isPending: isStaking, isSuccess: stakeSuccess } = useStakeETH();
+  const { unstake, isPending: isUnstaking, isSuccess: unstakeSuccess } = useUnstake();
   const { claimRewards, isPending: isClaiming, isSuccess: claimSuccess } = useClaimRewards();
 
   const [stakeAmount, setStakeAmount] = useState('');
-  const [unstakeAmount, setUnstakeAmount] = useState('');
+  const [lockPeriod, setLockPeriod] = useState<LockPeriod>(LockPeriod.Flexible);
   const [activeTab, setActiveTab] = useState('stake');
 
   const handleStake = async () => {
     if (!stakeAmount || Number(stakeAmount) <= 0) return;
     try {
-      await stake(stakeAmount);
+      await stakeETH(stakeAmount, lockPeriod);
       setStakeAmount('');
       setTimeout(() => refetch(), 2000);
     } catch (error) {
@@ -62,29 +66,18 @@ export default function StakingPage() {
     }
   };
 
-  const handleRequestUnstake = async () => {
-    if (!unstakeAmount || Number(unstakeAmount) <= 0) return;
+  const handleUnstake = async () => {
     try {
-      await requestUnstake(unstakeAmount);
-      setUnstakeAmount('');
+      await unstake(ETH_ADDRESS);
       setTimeout(() => refetch(), 2000);
     } catch (error) {
-      console.error('Unstake request failed:', error);
-    }
-  };
-
-  const handleCompleteUnstake = async () => {
-    try {
-      await completeUnstake();
-      setTimeout(() => refetch(), 2000);
-    } catch (error) {
-      console.error('Complete unstake failed:', error);
+      console.error('Unstake failed:', error);
     }
   };
 
   const handleClaim = async () => {
     try {
-      await claimRewards();
+      await claimRewards(ETH_ADDRESS);
       setTimeout(() => refetch(), 2000);
     } catch (error) {
       console.error('Claim failed:', error);
@@ -101,13 +94,19 @@ export default function StakingPage() {
             {t.staking.title}
           </h1>
           <p className="text-muted-foreground mt-1">
-            {t.staking.subtitle}
+            Multi-Asset Staking - Stake ETH and earn rewards
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {earlyBirdBonus > 0 && (
+            <Badge className="bg-gradient-to-r from-orange-500 to-pink-500 text-white border-0">
+              <Sparkles className="h-3 w-3 mr-1" />
+              Early Bird +{earlyBirdBonus}%
+            </Badge>
+          )}
           <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/30">
             <Shield className="h-3 w-3 mr-1" />
-            {t.staking.contractAudited}
+            Audited
           </Badge>
         </div>
       </div>
@@ -117,48 +116,48 @@ export default function StakingPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Staked
+              Total Staked (USD)
             </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold">
-              {globalStats.totalStakedFormatted} ALPHA
+              ${globalStats?.totalStakedUSDFormatted || '0'}
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Min Stake
+              Total Stakers
             </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold">
-              {globalStats.minStakeFormatted} ALPHA
+              {globalStats?.totalStakers?.toString() || '0'}
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Cooldown Period
+              Supported Tokens
             </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold">
-              {globalStats.unstakeCooldownDays} Days
+              {globalStats?.supportedTokenCount?.toString() || '0'}
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Fee Distribution
+              Base APY
             </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold text-green-500">
-              30% to Stakers
+              {tokenConfig?.baseAPY || 10}%
             </p>
           </CardContent>
         </Card>
@@ -172,45 +171,41 @@ export default function StakingPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Coins className="h-5 w-5 text-orange-500" />
-                Stake ALPHA Tokens
+                Stake ETH
               </CardTitle>
               <CardDescription>
-                Stake your ALPHA tokens to earn protocol fee rewards
+                Stake ETH with flexible lock periods for higher rewards
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               {/* 用户质押信息 */}
-              {isConnected && stakeInfo && (
-                <div className="grid grid-cols-2 gap-4">
+              {isConnected && stakeInfo && Number(stakeInfo.stakedAmountFormatted) > 0 && (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="rounded-lg bg-secondary/50 p-4">
-                    <p className="text-xs text-muted-foreground mb-1">Your Staked</p>
-                    <p className="text-lg font-bold">{stakeInfo.stakedAmountFormatted} ALPHA</p>
+                    <p className="text-xs text-muted-foreground mb-1">Staked</p>
+                    <p className="text-lg font-bold">{stakeInfo.stakedAmountFormatted} ETH</p>
+                  </div>
+                  <div className="rounded-lg bg-secondary/50 p-4">
+                    <p className="text-xs text-muted-foreground mb-1">Value (USD)</p>
+                    <p className="text-lg font-bold">${stakeInfo.valueUSDFormatted}</p>
+                  </div>
+                  <div className="rounded-lg bg-secondary/50 p-4">
+                    <p className="text-xs text-muted-foreground mb-1">Multiplier</p>
+                    <p className="text-lg font-bold text-orange-500">{Number(stakeInfo.rewardMultiplier) / 100}x</p>
                   </div>
                   <div className="rounded-lg bg-secondary/50 p-4">
                     <p className="text-xs text-muted-foreground mb-1">Pending Rewards</p>
-                    <p className="text-lg font-bold text-green-500">{stakeInfo.pendingRewardsFormatted} ALPHA</p>
+                    <p className="text-lg font-bold text-green-500">{stakeInfo.pendingRewardsFormatted}</p>
                   </div>
                 </div>
               )}
 
-              {/* Pending Unstake Info */}
-              {isConnected && stakeInfo && Number(stakeInfo.pendingUnstakeFormatted) > 0 && (
+              {/* 锁定状态提示 */}
+              {isConnected && stakeInfo && stakeInfo.isLocked && (
                 <Alert>
-                  <Clock className="h-4 w-4" />
-                  <AlertDescription className="flex items-center justify-between">
-                    <span>
-                      Pending unstake: {stakeInfo.pendingUnstakeFormatted} ALPHA
-                      {stakeInfo.canCompleteUnstake ? ' (Ready to withdraw)' : ' (In cooldown)'}
-                    </span>
-                    {stakeInfo.canCompleteUnstake && (
-                      <Button
-                        size="sm"
-                        onClick={handleCompleteUnstake}
-                        disabled={isCompleting}
-                      >
-                        {isCompleting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Withdraw'}
-                      </Button>
-                    )}
+                  <Lock className="h-4 w-4" />
+                  <AlertDescription>
+                    Your stake is locked until {new Date(Number(stakeInfo.unlockTime) * 1000).toLocaleDateString()}
                   </AlertDescription>
                 </Alert>
               )}
@@ -223,27 +218,49 @@ export default function StakingPage() {
                 </TabsList>
 
                 <TabsContent value="stake" className="space-y-4 mt-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Amount to Stake</label>
-                    <div className="flex gap-2">
-                      <Input
-                        type="number"
-                        placeholder="Enter amount"
-                        value={stakeAmount}
-                        onChange={(e) => setStakeAmount(e.target.value)}
-                        className="flex-1"
-                      />
-                      <Button
-                        onClick={handleStake}
-                        disabled={!isConnected || isStaking || !stakeAmount || Number(stakeAmount) <= 0}
-                        className="bg-orange-500 hover:bg-orange-600"
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Lock Period</label>
+                      <Select
+                        value={lockPeriod.toString()}
+                        onValueChange={(v) => setLockPeriod(Number(v) as LockPeriod)}
                       >
-                        {isStaking ? (
-                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                        ) : null}
-                        Stake
-                      </Button>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Object.entries(LOCK_PERIOD_LABELS).map(([value, label]) => (
+                            <SelectItem key={value} value={value}>
+                              {label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
+
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Amount (ETH)</label>
+                      <div className="flex gap-2">
+                        <Input
+                          type="number"
+                          placeholder="0.0"
+                          value={stakeAmount}
+                          onChange={(e) => setStakeAmount(e.target.value)}
+                          className="flex-1"
+                        />
+                        <Button
+                          onClick={handleStake}
+                          disabled={!isConnected || isStaking || !stakeAmount || Number(stakeAmount) <= 0}
+                          className="bg-orange-500 hover:bg-orange-600"
+                        >
+                          {isStaking ? (
+                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          ) : null}
+                          Stake
+                        </Button>
+                      </div>
+                    </div>
+
                     {stakeSuccess && (
                       <p className="text-sm text-green-500 flex items-center gap-1">
                         <CheckCircle className="h-4 w-4" />
@@ -251,46 +268,49 @@ export default function StakingPage() {
                       </p>
                     )}
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    Minimum stake: {globalStats.minStakeFormatted} ALPHA
-                  </p>
                 </TabsContent>
 
                 <TabsContent value="unstake" className="space-y-4 mt-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Amount to Unstake</label>
-                    <div className="flex gap-2">
-                      <Input
-                        type="number"
-                        placeholder="Enter amount"
-                        value={unstakeAmount}
-                        onChange={(e) => setUnstakeAmount(e.target.value)}
-                        className="flex-1"
-                      />
+                  {stakeInfo && Number(stakeInfo.stakedAmountFormatted) > 0 ? (
+                    <div className="space-y-4">
+                      <div className="rounded-lg bg-secondary/50 p-4">
+                        <p className="text-sm text-muted-foreground mb-2">Available to Unstake</p>
+                        <p className="text-2xl font-bold">{stakeInfo.stakedAmountFormatted} ETH</p>
+                      </div>
+
                       <Button
-                        onClick={handleRequestUnstake}
-                        disabled={!isConnected || isUnstaking || !unstakeAmount || Number(unstakeAmount) <= 0}
+                        onClick={handleUnstake}
+                        disabled={!isConnected || isUnstaking || stakeInfo.isLocked}
                         variant="outline"
+                        className="w-full"
                       >
                         {isUnstaking ? (
                           <Loader2 className="h-4 w-4 animate-spin mr-2" />
                         ) : null}
-                        Request Unstake
+                        {stakeInfo.isLocked ? 'Locked' : 'Unstake All'}
                       </Button>
+
+                      {unstakeSuccess && (
+                        <p className="text-sm text-green-500 flex items-center gap-1">
+                          <CheckCircle className="h-4 w-4" />
+                          Unstake successful!
+                        </p>
+                      )}
+
+                      {stakeInfo.isLocked && (
+                        <Alert variant="destructive">
+                          <AlertCircle className="h-4 w-4" />
+                          <AlertDescription>
+                            Your stake is locked. You can unstake after {new Date(Number(stakeInfo.unlockTime) * 1000).toLocaleDateString()}.
+                          </AlertDescription>
+                        </Alert>
+                      )}
                     </div>
-                    {unstakeSuccess && (
-                      <p className="text-sm text-green-500 flex items-center gap-1">
-                        <CheckCircle className="h-4 w-4" />
-                        Unstake request submitted!
-                      </p>
-                    )}
-                  </div>
-                  <Alert variant="destructive">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>
-                      Unstaking requires a {globalStats.unstakeCooldownDays}-day cooldown period before you can withdraw.
-                    </AlertDescription>
-                  </Alert>
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      No stake to unstake
+                    </div>
+                  )}
                 </TabsContent>
               </Tabs>
 
@@ -301,7 +321,7 @@ export default function StakingPage() {
                     <div>
                       <p className="text-sm text-muted-foreground">Pending Rewards</p>
                       <p className="text-2xl font-bold text-green-500">
-                        {stakeInfo.pendingRewardsFormatted} ALPHA
+                        {stakeInfo.pendingRewardsFormatted} Tokens
                       </p>
                     </div>
                     <Button
@@ -314,13 +334,13 @@ export default function StakingPage() {
                       ) : (
                         <TrendingUp className="h-4 w-4 mr-2" />
                       )}
-                      Claim Rewards
+                      Claim
                     </Button>
                   </div>
                   {claimSuccess && (
                     <p className="text-sm text-green-500 flex items-center gap-1 mt-2">
                       <CheckCircle className="h-4 w-4" />
-                      Rewards claimed successfully!
+                      Rewards claimed!
                     </p>
                   )}
                 </div>
@@ -338,6 +358,58 @@ export default function StakingPage() {
 
         {/* 侧边信息 */}
         <div className="space-y-4">
+          {/* 锁定期说明 */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Lock className="h-4 w-4 text-orange-500" />
+                Lock Period Multipliers
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-2 text-sm">
+                <li className="flex justify-between">
+                  <span>Flexible</span>
+                  <span className="font-bold">1x</span>
+                </li>
+                <li className="flex justify-between">
+                  <span>30 Days</span>
+                  <span className="font-bold text-orange-500">1.5x</span>
+                </li>
+                <li className="flex justify-between">
+                  <span>90 Days</span>
+                  <span className="font-bold text-orange-500">2x</span>
+                </li>
+                <li className="flex justify-between">
+                  <span>180 Days</span>
+                  <span className="font-bold text-orange-500">3x</span>
+                </li>
+                <li className="flex justify-between">
+                  <span>365 Days</span>
+                  <span className="font-bold text-green-500">5x</span>
+                </li>
+              </ul>
+            </CardContent>
+          </Card>
+
+          {/* 早鸟奖励 */}
+          {earlyBirdBonus > 0 && (
+            <Card className="border-orange-500/30 bg-gradient-to-br from-orange-500/5 to-pink-500/5">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-orange-500" />
+                  Early Bird Bonus
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-3xl font-bold text-orange-500 mb-2">+{earlyBirdBonus}%</p>
+                <p className="text-sm text-muted-foreground">
+                  Extra rewards for early stakers! This bonus decreases over time.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
           {/* 质押说明 */}
           <Card>
             <CardHeader className="pb-3">
@@ -350,42 +422,23 @@ export default function StakingPage() {
               <ul className="space-y-3 text-sm">
                 <li className="flex items-start gap-2">
                   <Coins className="h-4 w-4 text-orange-500 mt-0.5" />
-                  <span>30% of protocol fees distributed to stakers</span>
+                  <span>Multi-asset staking (ETH, USDC, USDT)</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <Shield className="h-4 w-4 text-blue-500 mt-0.5" />
-                  <span>Mining weight increases over time (up to 2x)</span>
+                  <Lock className="h-4 w-4 text-blue-500 mt-0.5" />
+                  <span>Higher rewards for longer lock periods</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <Sparkles className="h-4 w-4 text-pink-500 mt-0.5" />
+                  <span>Early bird bonus for first 30 days</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <Clock className="h-4 w-4 text-purple-500 mt-0.5" />
-                  <span>{globalStats.unstakeCooldownDays}-day cooldown for unstaking</span>
+                  <span>Flexible unstaking available</span>
                 </li>
               </ul>
             </CardContent>
           </Card>
-
-          {/* 积分信息 */}
-          {isConnected && pointsInfo && (
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">Your Points</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">Balance</span>
-                  <span className="font-bold">{pointsInfo.balanceFormatted}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">Total Earned</span>
-                  <span className="text-green-500">{pointsInfo.totalEarned.toString()}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">Total Spent</span>
-                  <span className="text-red-500">{pointsInfo.totalSpent.toString()}</span>
-                </div>
-              </CardContent>
-            </Card>
-          )}
 
           {/* 合约链接 */}
           <Card className="bg-secondary/30">
@@ -395,10 +448,10 @@ export default function StakingPage() {
                 <p className="text-sm font-medium">Contract Verified</p>
               </div>
               <p className="text-xs text-muted-foreground mb-3">
-                AlphaNestCore contract deployed on Sepolia testnet
+                MultiAssetStaking contract
               </p>
               <Link
-                href="https://sepolia.etherscan.io/address/0x0DE761C3A2e72BFa04B660395856ADc0A1252879"
+                href="https://sepolia.etherscan.io/address/0x0000000000000000000000000000000000000000"
                 target="_blank"
               >
                 <Button size="sm" variant="outline" className="w-full">
