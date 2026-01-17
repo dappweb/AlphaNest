@@ -9,6 +9,7 @@ crate-type = ["cdylib", "lib"]
 name = "referral_system"
 
 [features]
+idl-build = ["anchor-lang/idl-build", "anchor-spl/idl-build"]
 no-entrypoint = []
 no-idl = []
 no-log-ix-name = []

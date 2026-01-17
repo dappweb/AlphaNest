@@ -63,9 +63,10 @@ pub mod points_system {
         let points_amount = system.points_per_verify;
         
         // 从系统金库转移 PopCowDefi 到用户
+        let bump = system.bump;
         let seeds = &[
-            b"system",
-            &[system.bump],
+            b"points_system".as_ref(),
+            &[bump],
         ];
         let signer = &[&seeds[..]];
 
@@ -117,9 +118,10 @@ pub mod points_system {
         // 发放积分
         let points_amount = system.points_per_task;
 
+        let bump = system.bump;
         let seeds = &[
-            b"system",
-            &[system.bump],
+            b"points_system".as_ref(),
+            &[bump],
         ];
         let signer = &[&seeds[..]];
 
@@ -173,9 +175,10 @@ pub mod points_system {
 
         let points_amount = base_points * trade_multiplier;
 
+        let bump = system.bump;
         let seeds = &[
-            b"system",
-            &[system.bump],
+            b"points_system".as_ref(),
+            &[bump],
         ];
         let signer = &[&seeds[..]];
 
@@ -226,9 +229,10 @@ pub mod points_system {
         // 发放推荐积分
         let points_amount = system.points_per_referral;
 
+        let bump = system.bump;
         let seeds = &[
-            b"system",
-            &[system.bump],
+            b"points_system".as_ref(),
+            &[bump],
         ];
         let signer = &[&seeds[..]];
 
@@ -285,9 +289,10 @@ pub mod points_system {
 
         let points_amount = base_points + value_based_points as u64;
 
+        let bump = system.bump;
         let seeds = &[
-            b"system",
-            &[system.bump],
+            b"points_system".as_ref(),
+            &[bump],
         ];
         let signer = &[&seeds[..]];
 
@@ -543,7 +548,7 @@ pub struct VerifyHolding<'info> {
     pub system: Account<'info, PointsSystem>,
 
     #[account(
-        init_if_needed,
+        init,
         payer = user,
         space = 8 + PointsAccount::INIT_SPACE,
         seeds = [b"points", user.key().as_ref()],
@@ -578,7 +583,7 @@ pub struct CompleteTask<'info> {
     pub system: Account<'info, PointsSystem>,
 
     #[account(
-        init_if_needed,
+        init,
         payer = user,
         space = 8 + PointsAccount::INIT_SPACE,
         seeds = [b"points", user.key().as_ref()],
@@ -613,7 +618,7 @@ pub struct TradeAndEarn<'info> {
     pub system: Account<'info, PointsSystem>,
 
     #[account(
-        init_if_needed,
+        init,
         payer = user,
         space = 8 + PointsAccount::INIT_SPACE,
         seeds = [b"points", user.key().as_ref()],
@@ -648,7 +653,7 @@ pub struct ReferralAndEarn<'info> {
     pub system: Account<'info, PointsSystem>,
 
     #[account(
-        init_if_needed,
+        init,
         payer = user,
         space = 8 + PointsAccount::INIT_SPACE,
         seeds = [b"points", user.key().as_ref()],
@@ -683,7 +688,7 @@ pub struct BurnDeadCoin<'info> {
     pub system: Account<'info, PointsSystem>,
 
     #[account(
-        init_if_needed,
+        init,
         payer = user,
         space = 8 + PointsAccount::INIT_SPACE,
         seeds = [b"points", user.key().as_ref()],
@@ -828,7 +833,9 @@ pub struct PointsAccount {
     pub total_burned_value: u64,      // 总销毁价值（USD）
     
     // 已完成的任务和推荐用户
+    #[max_len(100)]
     pub completed_tasks: Vec<u32>,
+    #[max_len(100)]
     pub referred_users: Vec<Pubkey>,
     
     pub bump: u8,

@@ -72,8 +72,9 @@ pub mod multi_asset_staking {
         
         // 创建或更新质押账户
         if stake_account.staked_value_usd == 0 {
+            let pool_key = pool.key();
             stake_account.owner = ctx.accounts.user.key();
-            stake_account.pool = ctx.accounts.pool.key();
+            stake_account.pool = pool_key;
             stake_account.asset_type = AssetType::SOL;
             stake_account.lock_period = lock_period;
             stake_account.stake_time = clock.unix_timestamp;
@@ -133,7 +134,8 @@ pub mod multi_asset_staking {
         // 创建或更新质押账户
         if stake_account.staked_value_usd == 0 {
             stake_account.owner = ctx.accounts.user.key();
-            stake_account.pool = ctx.accounts.pool.key();
+            let pool_key = pool.key();
+            stake_account.pool = pool_key;
             stake_account.asset_type = AssetType::USDC;
             stake_account.lock_period = lock_period;
             stake_account.stake_time = clock.unix_timestamp;
@@ -193,7 +195,8 @@ pub mod multi_asset_staking {
         // 创建或更新质押账户
         if stake_account.staked_value_usd == 0 {
             stake_account.owner = ctx.accounts.user.key();
-            stake_account.pool = ctx.accounts.pool.key();
+            let pool_key = pool.key();
+            stake_account.pool = pool_key;
             stake_account.asset_type = AssetType::USDT;
             stake_account.lock_period = lock_period;
             stake_account.stake_time = clock.unix_timestamp;
@@ -262,7 +265,8 @@ pub mod multi_asset_staking {
         // 创建或更新质押账户
         if stake_account.staked_value_usd == 0 {
             stake_account.owner = ctx.accounts.user.key();
-            stake_account.pool = ctx.accounts.pool.key();
+            let pool_key = pool.key();
+            stake_account.pool = pool_key;
             stake_account.asset_type = AssetType::POPCOW;
             stake_account.lock_period = lock_period;
             stake_account.stake_time = clock.unix_timestamp;
@@ -304,6 +308,9 @@ pub mod multi_asset_staking {
         // 更新奖励
         update_rewards(pool, stake_account, clock.unix_timestamp)?;
 
+        // 保存用于计算的值
+        let pool_bump = pool.bump;
+
         // 根据资产类型提取
         match stake_account.asset_type {
             AssetType::SOL => {
@@ -320,10 +327,10 @@ pub mod multi_asset_staking {
                 **ctx.accounts.user.to_account_info().try_borrow_mut_lamports()? += sol_amount as u64;
             }
             AssetType::USDC => {
-                let usdc_amount = amount_usd * 1_000_000;
+                let usdc_amount = amount_usd.checked_mul(1_000_000).unwrap();
                 let seeds = &[
-                    b"usdc_vault",
-                    &[ctx.accounts.pool.bump],
+                    b"usdc_vault".as_ref(),
+                    &[pool_bump],
                 ];
                 let signer = &[&seeds[..]];
                 
@@ -341,10 +348,10 @@ pub mod multi_asset_staking {
                 )?;
             }
             AssetType::USDT => {
-                let usdt_amount = amount_usd * 1_000_000;
+                let usdt_amount = amount_usd.checked_mul(1_000_000).unwrap();
                 let seeds = &[
-                    b"usdt_vault",
-                    &[ctx.accounts.pool.bump],
+                    b"usdt_vault".as_ref(),
+                    &[pool_bump],
                 ];
                 let signer = &[&seeds[..]];
                 
@@ -372,8 +379,8 @@ pub mod multi_asset_staking {
                     .unwrap();
                 
                 let seeds = &[
-                    b"popcow_vault",
-                    &[ctx.accounts.pool.bump],
+                    b"popcow_vault".as_ref(),
+                    &[pool_bump],
                 ];
                 let signer = &[&seeds[..]];
                 
@@ -399,6 +406,7 @@ pub mod multi_asset_staking {
             }
         }
 
+        // 先更新状态，避免借用冲突
         stake_account.staked_value_usd -= amount_usd;
         pool.total_staked_value_usd -= amount_usd as u64;
 
@@ -419,9 +427,10 @@ pub mod multi_asset_staking {
         require!(rewards > 0, ErrorCode::NoRewards);
 
         // 转移奖励
+        let pool_bump = pool.bump;
         let seeds = &[
-            b"pool",
-            &[pool.bump],
+            b"multi_asset_pool".as_ref(),
+            &[pool_bump],
         ];
         let signer = &[&seeds[..]];
 
@@ -471,10 +480,10 @@ pub mod multi_asset_staking {
         let total_value_usd = sol_value_usd as u64 + total_usdc + total_usdt;
         
         // 按比例分配
-        let dev_fund = total_value_usd * pool.dev_fund_ratio / 10000;
-        let liquidity_fund = total_value_usd * pool.liquidity_ratio / 10000;
-        let reward_fund = total_value_usd * pool.reward_ratio / 10000;
-        let reserve_fund = total_value_usd * pool.reserve_ratio / 10000;
+        let dev_fund = total_value_usd.checked_mul(pool.dev_fund_ratio as u64).unwrap() / 10000;
+        let liquidity_fund = total_value_usd.checked_mul(pool.liquidity_ratio as u64).unwrap() / 10000;
+        let reward_fund = total_value_usd.checked_mul(pool.reward_ratio as u64).unwrap() / 10000;
+        let reserve_fund = total_value_usd.checked_mul(pool.reserve_ratio as u64).unwrap() / 10000;
         
         msg!("Daily allocation: Dev=${}, Liquidity=${}, Reward=${}, Reserve=${}", 
              dev_fund, liquidity_fund, reward_fund, reserve_fund);
@@ -615,12 +624,16 @@ pub mod multi_asset_staking {
         require!(!ctx.accounts.pool.is_paused, ErrorCode::PoolPaused);
         require!(amount > 0, ErrorCode::InvalidAmount);
 
-        let token_config = &ctx.accounts.token_config;
+        let token_config = &mut ctx.accounts.token_config;
         require!(token_config.is_active, ErrorCode::TokenNotActive);
         require!(
             amount >= token_config.min_stake_amount,
             ErrorCode::InsufficientStake
         );
+
+        // 保存用于计算的值
+        let token_mint = token_config.token_mint;
+        let token_decimals = token_config.token_decimals;
 
         let pool = &mut ctx.accounts.pool;
         let stake_account = &mut ctx.accounts.stake_account;
@@ -632,13 +645,13 @@ pub mod multi_asset_staking {
         // 获取代币价格（USD）
         let token_price = get_token_price_usd(
             &ctx.accounts.price_oracle,
-            &token_config.token_mint,
+            &token_mint,
         )?;
         
         // 计算质押价值（USD）
         let stake_value_usd = calculate_stake_value_usd(
             amount,
-            token_config.token_decimals,
+            token_decimals,
             token_price,
         )?;
 
@@ -661,8 +674,9 @@ pub mod multi_asset_staking {
         // 创建或更新质押账户
         if stake_account.staked_value_usd == 0 {
             stake_account.owner = ctx.accounts.user.key();
-            stake_account.pool = ctx.accounts.pool.key();
-            stake_account.asset_type = AssetType::Custom(token_config.token_mint);
+            let pool_key = pool.key();
+            stake_account.pool = pool_key;
+            stake_account.asset_type = AssetType::Custom(token_mint);
             stake_account.lock_period = lock_period;
             stake_account.stake_time = clock.unix_timestamp;
             stake_account.bump = ctx.bumps.stake_account;
@@ -943,7 +957,7 @@ pub struct StakeSol<'info> {
     pub pool: Account<'info, MultiAssetStakingPool>,
 
     #[account(
-        init_if_needed,
+        init,
         payer = user,
         space = 8 + StakeAccount::INIT_SPACE,
         seeds = [b"stake", user.key().as_ref()],
@@ -974,7 +988,7 @@ pub struct StakeUSDC<'info> {
     pub pool: Account<'info, MultiAssetStakingPool>,
 
     #[account(
-        init_if_needed,
+        init,
         payer = user,
         space = 8 + StakeAccount::INIT_SPACE,
         seeds = [b"stake", user.key().as_ref()],
@@ -1012,7 +1026,7 @@ pub struct StakeUSDT<'info> {
     pub pool: Account<'info, MultiAssetStakingPool>,
 
     #[account(
-        init_if_needed,
+        init,
         payer = user,
         space = 8 + StakeAccount::INIT_SPACE,
         seeds = [b"stake", user.key().as_ref()],
@@ -1050,7 +1064,7 @@ pub struct StakePOPCOW<'info> {
     pub pool: Account<'info, MultiAssetStakingPool>,
 
     #[account(
-        init_if_needed,
+        init,
         payer = user,
         space = 8 + StakeAccount::INIT_SPACE,
         seeds = [b"stake", user.key().as_ref()],
@@ -1295,7 +1309,7 @@ pub struct StakeCustomToken<'info> {
     pub pool: Account<'info, MultiAssetStakingPool>,
 
     #[account(
-        init_if_needed,
+        init,
         payer = user,
         space = 8 + StakeAccount::INIT_SPACE,
         seeds = [b"stake", user.key().as_ref()],

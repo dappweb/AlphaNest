@@ -83,11 +83,11 @@ pub mod reputation_registry {
         match status {
             LaunchStatus::Graduated => {
                 dev_account.successful_launches += 1;
-                update_reputation_score(dev_account, true)?;
+                update_reputation_score_internal(dev_account, true)?;
             }
             LaunchStatus::Rugged => {
                 dev_account.rug_count += 1;
-                update_reputation_score(dev_account, false)?;
+                update_reputation_score_internal(dev_account, false)?;
             }
             _ => {}
         }
@@ -244,7 +244,8 @@ pub mod reputation_registry {
             social_identity.is_verified = false;
         }
 
-        msg!("Social identity linked: {:?}, id: {}", identity_type, identity_id);
+        let identity_id_clone = social_identity.identity_id.clone();
+        msg!("Social identity linked: {:?}, id: {}", identity_type, identity_id_clone);
         Ok(())
     }
 
@@ -289,7 +290,7 @@ pub mod reputation_registry {
 
 // ============== 辅助函数 ==============
 
-fn update_reputation_score(
+fn update_reputation_score_internal(
     dev_account: &mut Account<DevAccount>,
     is_success: bool,
 ) -> Result<()> {
@@ -356,6 +357,7 @@ pub struct RegisterDev<'info> {
 }
 
 #[derive(Accounts)]
+#[instruction(chain_id: u16)]
 pub struct RecordLaunch<'info> {
     #[account(mut)]
     pub authority: Signer<'info>,
@@ -371,7 +373,7 @@ pub struct RecordLaunch<'info> {
         init,
         payer = authority,
         space = 8 + LaunchRecord::INIT_SPACE,
-        seeds = [b"launch", token_address.key().as_ref(), &chain_id.to_le_bytes()],
+        seeds = [b"launch", token_address.key().as_ref(), chain_id.to_le_bytes().as_ref()],
         bump
     )]
     pub launch_record: Account<'info, LaunchRecord>,
@@ -457,7 +459,7 @@ pub struct SubscribeDev<'info> {
     pub dev_account: Account<'info, DevAccount>,
 
     #[account(
-        init_if_needed,
+        init,
         payer = user,
         space = 8 + Subscription::INIT_SPACE,
         seeds = [b"subscription", user.key().as_ref(), dev_account.owner.as_ref()],
@@ -517,7 +519,7 @@ pub struct LinkSocialIdentity<'info> {
     pub dev_account: Account<'info, DevAccount>,
 
     #[account(
-        init_if_needed,
+        init,
         payer = authority,
         space = 8 + SocialIdentity::INIT_SPACE,
         seeds = [b"social_identity", dev_account.owner.as_ref()],

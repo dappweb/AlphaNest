@@ -20,7 +20,7 @@ pub mod governance {
 
         // 检查最小持有量（100,000 POPCOW）
         require!(
-            voter.token_amount >= 100_000 * 1_000_000_000, // 9 decimals
+            voter.amount >= 100_000 * 1_000_000_000, // 9 decimals
             ErrorCode::InsufficientTokens
         );
 
@@ -84,7 +84,7 @@ pub mod governance {
         }
 
         // 计算投票权重（1 token = 1 vote）
-        let vote_weight = voter.token_amount;
+        let vote_weight = voter.amount;
 
         vote_record.vote_choice = vote_choice;
         vote_record.vote_weight = vote_weight;
@@ -138,27 +138,34 @@ pub mod governance {
             ErrorCode::ProposalNotPassed
         );
 
-        // 执行提案
-        match proposal.proposal_type {
-            ProposalType::ParameterChange => {
-                execute_parameter_change(&ctx, &proposal.parameters)?;
-            }
-            ProposalType::TreasurySpending => {
-                execute_treasury_spending(&ctx, &proposal.parameters)?;
-            }
-            ProposalType::FeatureLaunch => {
-                execute_feature_launch(&ctx, &proposal.parameters)?;
-            }
-            ProposalType::TokenDistribution => {
-                execute_token_distribution(&ctx, &proposal.parameters)?;
-            }
-        }
+        // 保存用于执行的值
+        let proposal_type = proposal.proposal_type;
+        let parameters = proposal.parameters.clone();
+        let proposal_title = proposal.title.clone();
 
+        // 先更新状态，避免借用冲突
         proposal.status = ProposalStatus::Executed;
         proposal.executed = true;
         proposal.executed_at = clock.unix_timestamp;
 
-        msg!("Proposal executed: {}", proposal.title);
+        // 执行提案
+        match proposal_type {
+            ProposalType::ParameterChange => {
+                execute_parameter_change(&ctx, &parameters)?;
+            }
+            ProposalType::TreasurySpending => {
+                execute_treasury_spending(&ctx, &parameters)?;
+            }
+            ProposalType::FeatureLaunch => {
+                execute_feature_launch(&ctx, &parameters)?;
+            }
+            ProposalType::TokenDistribution => {
+                execute_token_distribution(&ctx, &parameters)?;
+            }
+        }
+
+        msg!("Proposal executed: {}", proposal_title);
+
         Ok(())
     }
 
@@ -258,7 +265,7 @@ pub struct Vote<'info> {
     pub proposal: Account<'info, Proposal>,
 
     #[account(
-        init_if_needed,
+        init,
         payer = authority,
         space = 8 + VoteRecord::INIT_SPACE,
         seeds = [b"vote", proposal.key().as_ref(), authority.key().as_ref()],
@@ -356,6 +363,7 @@ pub enum VoteChoice {
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, InitSpace)]
 pub struct ProposalParameters {
+    #[max_len(1000)]
     pub data: Vec<u8>, // 序列化的参数数据
 }
 

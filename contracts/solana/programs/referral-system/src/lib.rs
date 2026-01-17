@@ -65,7 +65,7 @@ pub mod referral_system {
         referral_account.bump = ctx.bumps.referral_account;
 
         // 更新推荐人的推荐数量
-        if let Ok(referrer_account) = ctx.accounts.referrer_account.as_ref() {
+        if let Some(_referrer_account) = ctx.accounts.referrer_account.as_ref() {
             // 如果推荐人账户存在，更新其推荐数量
             // 注意：这里需要 mutable reference，但为了简化，我们通过单独的函数更新
         }
@@ -127,9 +127,10 @@ pub mod referral_system {
                 .unwrap();
 
             // 转账奖励给推荐人
+            let bump = ctx.accounts.system.bump;
             let seeds = &[
-                b"system",
-                &[ctx.accounts.system.bump],
+                b"referral_system".as_ref(),
+                &[bump],
             ];
             let signer = &[&seeds[..]];
 

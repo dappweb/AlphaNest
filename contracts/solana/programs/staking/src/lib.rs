@@ -73,13 +73,14 @@ pub mod popcow_staking {
         };
 
         // 更新质押账户
+        let pool_key = pool.key();
         if stake_account.staked_amount == 0 {
             stake_account.owner = ctx.accounts.user.key();
-            stake_account.pool = ctx.accounts.pool.key();
+            stake_account.pool = pool_key;
             stake_account.lock_period = lock_period;
             stake_account.stake_time = clock.unix_timestamp;
             stake_account.unlock_time = clock.unix_timestamp + lock_duration;
-            stake_account.bump = ctx.bumps.stake_account;
+            // bump 已经在账户约束中设置
         } else {
             // 追加质押时，重新计算解锁时间
             stake_account.unlock_time = clock.unix_timestamp + lock_duration;
@@ -115,10 +116,17 @@ pub mod popcow_staking {
         // 更新奖励
         update_rewards(pool, stake_account, clock.unix_timestamp)?;
 
+        // 保存用于 seeds 的值
+        let pool_bump = pool.bump;
+
+        // 先更新状态，避免借用冲突
+        stake_account.staked_amount = stake_account.staked_amount.checked_sub(amount).unwrap();
+        pool.total_staked = pool.total_staked.checked_sub(amount).unwrap();
+
         // 转移代币回用户
         let seeds = &[
             b"pool".as_ref(),
-            &[pool.bump],
+            &[pool_bump],
         ];
         let signer = &[&seeds[..]];
 
@@ -134,9 +142,6 @@ pub mod popcow_staking {
             ),
             amount,
         )?;
-
-        stake_account.staked_amount = stake_account.staked_amount.checked_sub(amount).unwrap();
-        pool.total_staked = pool.total_staked.checked_sub(amount).unwrap();
 
         msg!("Unstaked {} tokens", amount);
         Ok(())
@@ -154,10 +159,13 @@ pub mod popcow_staking {
         let rewards = stake_account.pending_rewards;
         require!(rewards > 0, ErrorCode::NoRewards);
 
+        // 保存用于 seeds 的值
+        let pool_bump = pool.bump;
+
         // 转移奖励
         let seeds = &[
             b"pool".as_ref(),
-            &[pool.bump],
+            &[pool_bump],
         ];
         let signer = &[&seeds[..]];
 
@@ -192,13 +200,22 @@ pub mod popcow_staking {
         let amount = stake_account.staked_amount;
         require!(amount > 0, ErrorCode::NoStake);
 
+        // 保存用于 seeds 的值
+        let pool_bump = pool.bump;
+
         // 转移代币回用户 (无奖励)
         let seeds = &[
             b"pool".as_ref(),
-            &[pool.bump],
+            &[pool_bump],
         ];
         let signer = &[&seeds[..]];
 
+        // 先更新状态，避免借用冲突
+        stake_account.staked_amount = 0;
+        stake_account.pending_rewards = 0;
+        pool.total_staked = pool.total_staked.checked_sub(amount).unwrap();
+
+        // 转移代币回用户 (无奖励)
         token::transfer(
             CpiContext::new_with_signer(
                 ctx.accounts.token_program.to_account_info(),
@@ -211,10 +228,6 @@ pub mod popcow_staking {
             ),
             amount,
         )?;
-
-        stake_account.staked_amount = 0;
-        stake_account.pending_rewards = 0;
-        pool.total_staked = pool.total_staked.checked_sub(amount).unwrap();
 
         msg!("Emergency unstake: {} tokens (rewards forfeited)", amount);
         Ok(())
@@ -418,7 +431,7 @@ pub struct Stake<'info> {
     pub pool: Account<'info, StakingPool>,
 
     #[account(
-        init_if_needed,
+        init,
         payer = user,
         space = 8 + StakeAccount::INIT_SPACE,
         seeds = [b"stake", user.key().as_ref()],

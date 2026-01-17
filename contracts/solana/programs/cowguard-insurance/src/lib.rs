@@ -75,9 +75,14 @@ pub mod cowguard_insurance {
             ErrorCode::InvalidCoverageAmount
         );
 
+        // 保存用于计算的值
+        let premium_rate = product.premium_rate;
+        let duration_days = product.duration_days;
+        let product_key = product.key();
+
         // 计算保费
         let premium = coverage_amount
-            .checked_mul(product.premium_rate as u64)
+            .checked_mul(premium_rate as u64)
             .unwrap()
             .checked_div(10000)
             .unwrap();
@@ -100,11 +105,11 @@ pub mod cowguard_insurance {
         let clock = Clock::get()?;
         
         policy.owner = ctx.accounts.user.key();
-        policy.product = ctx.accounts.product.key();
+        policy.product = product_key;
         policy.coverage_amount = coverage_amount;
         policy.premium_paid = premium;
         policy.start_time = clock.unix_timestamp;
-        policy.end_time = clock.unix_timestamp + (product.duration_days as i64 * 86400);
+        policy.end_time = clock.unix_timestamp + (duration_days as i64 * 86400);
         policy.status = PolicyStatus::Active;
         policy.bump = ctx.bumps.policy;
 
@@ -164,14 +169,18 @@ pub mod cowguard_insurance {
 
         require!(claim.status == ClaimStatus::Pending, ErrorCode::ClaimNotPending);
 
+        // 保存用于计算的值
+        let policy_start_time = policy.start_time;
+        let claim_amount = claim.claim_amount;
+
         if approved {
-            require!(payout_amount <= claim.claim_amount, ErrorCode::PayoutExceedsClaim);
+            require!(payout_amount <= claim_amount, ErrorCode::PayoutExceedsClaim);
 
             // 如果提供了价格预言机，使用TWAP价格验证（防止闪电贷攻击）
             if ctx.accounts.price_oracle.is_some() {
                 let twap_price = get_twap_price(
                     &ctx.accounts.price_oracle.as_ref().unwrap(),
-                    policy.start_time,
+                    policy_start_time,
                     clock.unix_timestamp,
                 )?;
                 
@@ -182,16 +191,28 @@ pub mod cowguard_insurance {
 
             // 计算实际赔付 (根据赔付率)
             let product = &ctx.accounts.product;
+            let coverage_rate = product.coverage_rate;
             let actual_payout = payout_amount
-                .checked_mul(product.coverage_rate as u64)
+                .checked_mul(coverage_rate as u64)
                 .unwrap()
                 .checked_div(10000)
                 .unwrap();
 
+            // 保存用于 seeds 的值
+            let protocol_bump = protocol.bump;
+
+            // 先更新所有状态，避免借用冲突
+            claim.status = ClaimStatus::Approved;
+            claim.payout_amount = Some(actual_payout);
+            claim.processed_at = Some(clock.unix_timestamp);
+            policy.status = PolicyStatus::Claimed;
+            protocol.total_payouts = protocol.total_payouts.checked_add(actual_payout).unwrap();
+            protocol.total_claims += 1;
+
             // 从保险池转账给用户
             let seeds = &[
                 b"protocol".as_ref(),
-                &[protocol.bump],
+                &[protocol_bump],
             ];
             let signer = &[&seeds[..]];
 
@@ -208,19 +229,13 @@ pub mod cowguard_insurance {
                 actual_payout,
             )?;
 
-            claim.status = ClaimStatus::Approved;
-            claim.payout_amount = Some(actual_payout);
-            policy.status = PolicyStatus::Claimed;
-            protocol.total_payouts = protocol.total_payouts.checked_add(actual_payout).unwrap();
-
             msg!("Claim approved: payout={}", actual_payout);
         } else {
             claim.status = ClaimStatus::Rejected;
+            claim.processed_at = Some(clock.unix_timestamp);
+            protocol.total_claims += 1;
             msg!("Claim rejected");
         }
-
-        claim.processed_at = Some(clock.unix_timestamp);
-        protocol.total_claims += 1;
 
         Ok(())
     }
@@ -252,10 +267,13 @@ pub mod cowguard_insurance {
             .checked_div(100)
             .unwrap();
 
+        // 保存用于 seeds 的值
+        let protocol_bump = ctx.accounts.protocol.bump;
+
         // 退款
         let seeds = &[
             b"protocol".as_ref(),
-            &[ctx.accounts.protocol.bump],
+            &[protocol_bump],
         ];
         let signer = &[&seeds[..]];
 
@@ -393,7 +411,7 @@ pub struct CreateProduct<'info> {
         init,
         payer = authority,
         space = 8 + InsuranceProduct::INIT_SPACE,
-        seeds = [b"product", &[product_type as u8]],
+        seeds = [b"product", product_type.to_bytes().as_ref()],
         bump
     )]
     pub product: Account<'info, InsuranceProduct>,
@@ -558,7 +576,7 @@ pub struct SetPriceOracle<'info> {
     pub protocol: Account<'info, InsuranceProtocol>,
 
     #[account(
-        init_if_needed,
+        init,
         payer = authority,
         space = 8 + OracleConfig::INIT_SPACE,
         seeds = [b"oracle_config"],
@@ -645,6 +663,17 @@ pub enum InsuranceType {
     PriceDrop,      // 价格下跌保险
     SmartContract,  // 智能合约漏洞保险
     Comprehensive,  // 综合保险
+}
+
+impl InsuranceType {
+    pub fn to_bytes(&self) -> [u8; 1] {
+        match self {
+            InsuranceType::RugPull => [0],
+            InsuranceType::PriceDrop => [1],
+            InsuranceType::SmartContract => [2],
+            InsuranceType::Comprehensive => [3],
+        }
+    }
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq, InitSpace, Debug)]

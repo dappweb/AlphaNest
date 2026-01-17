@@ -23,18 +23,20 @@ export const SOLANA_RPC_ENDPOINT =
 // Jupiter API 端点
 export const JUPITER_API_URL = 'https://quote-api.jup.ag/v6';
 
-// Solana 程序 ID (soldev 网络)
+// Solana 程序 ID (devnet 网络 - 2026-01-17 部署)
 export const SOLANA_PROGRAM_IDS = {
-  POPCOW_TOKEN: new PublicKey('GB13aFFGs6G76dSWWNwHfH596npdwFcxkR5x4Ur4uBjS'),
-  COWGUARD_INSURANCE: new PublicKey('3vq7cmrWBVQZF11mHCKnDhppSyyBy9xstbz6tzZqDYcg'),
-  POPCOW_STAKING: new PublicKey('4pMUmKCTvxCiM6ccGyc851yhyKnaKfJ3q2umLhyZ9Y2d'),
-  TOKEN_VESTING: new PublicKey('FKmtGh85bPYWRCyiJc8rHN6kohJWYgrkWvc8CtXAyz8n'),
-  YIELD_VAULT: new PublicKey('ECAnyfJmCxVxUSgv4MW7uvAkMophVnG5VTvEAgQt2vrP'),
-  MULTI_ASSET_STAKING: new PublicKey('EUN7ptUWascGEbBgFVQTxmFWzMSoN95YG5JGvabNtKYF'),
-  REPUTATION_REGISTRY: new PublicKey('6RpDY1sJJyQcTkYqr3myYbLuCA5H9SLeGonyRUBhBbWt'),
-  GOVERNANCE: new PublicKey('5QCNr7vD639eE1R3rbts78qYZQEyc3L8XJriHNcLNyLW'),
-  POINTS_SYSTEM: new PublicKey('2zv8gpnD7DYogiDb591uceav7Rkxfqz5aCK18hMqPCxH'),
-  REFERRAL_SYSTEM: new PublicKey('Cd2NZkSS5K4kqyWQcdaGv8deE8k75JrWjwU3byQRqEju'),
+  // ✅ 已部署
+  POPCOW_TOKEN: new PublicKey('2hq6UFiL1VhTYULiJGc49wmNb5S62BAQo3y3EcwGBDZX'),
+  COWGUARD_INSURANCE: new PublicKey('FBa18v9ZndffTY6fw2H9dUzc2nGcujZuq2tLzQjtRGxi'),
+  POPCOW_STAKING: new PublicKey('9tyVCiEHi97uMbzHHt1MUwprn1d7HEwCzDwUVpxdbYuj'),
+  TOKEN_VESTING: new PublicKey('DAGphggsL3TBYeAb9VDo7n5mqmKBKerNoTgC3ecPtDYA'),
+  YIELD_VAULT: new PublicKey('5Wy1yNUUzioxydA6h3UtT2FESQAVaKNzjnpTBZqwcFAb'),
+  REPUTATION_REGISTRY: new PublicKey('GmGeZQQE6nqcLRef7Z9pFkug6Rvm2ExV6BKLozBpvFp7'),
+  GOVERNANCE: new PublicKey('DxhG1fNRDzwVrJy8ZyUe3zdZCnUDDFUEToGRhUFCM4Qh'),
+  REFERRAL_SYSTEM: new PublicKey('Gk7RGjs6EvYkUEWod6hviDZ2NAYXrgoDBjfrFWkb9DeG'),
+  // ⏳ 待部署
+  POINTS_SYSTEM: new PublicKey('46iXDwHRE9FZcoeMUPQD8Bc8B55Bz3Gb9mTPrVJhZP9v'), // 待部署
+  MULTI_ASSET_STAKING: new PublicKey('7qpcKQQuDYhN51PTXebV8dpWY8MxqUKeFMwwVQ1eFQ75'), // 待部署
 };
 
 // 常用代币地址

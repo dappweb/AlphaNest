@@ -35,7 +35,7 @@ pub mod token_vesting {
 
     /// 释放已解锁的代币
     pub fn release(ctx: Context<Release>) -> Result<()> {
-        let vesting = &ctx.accounts.vesting;
+        let vesting = &mut ctx.accounts.vesting;
         let clock = Clock::get()?;
         let current_time = clock.unix_timestamp;
 
@@ -51,9 +51,12 @@ pub mod token_vesting {
 
         require!(releasable > 0, ErrorCode::NoTokensToRelease);
 
+        // 保存用于 seeds 的值
+        let recipient = vesting.recipient;
+        let bump = vesting.bump;
+
         // 更新已释放数量
-        let vesting_account = &mut ctx.accounts.vesting;
-        vesting_account.released_amount = vesting_account
+        vesting.released_amount = vesting
             .released_amount
             .checked_add(releasable)
             .ok_or(ErrorCode::Overflow)?;
@@ -61,8 +64,8 @@ pub mod token_vesting {
         // 转账代币
         let seeds = &[
             b"vesting".as_ref(),
-            vesting.recipient.as_ref(),
-            &[vesting.bump],
+            recipient.as_ref(),
+            &[bump],
         ];
         let signer = &[&seeds[..]];
 

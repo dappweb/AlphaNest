@@ -56,7 +56,7 @@ pub mod yield_vault {
             user_position.deposited_amount = 0;
             user_position.earned_amount = 0;
             user_position.last_update_time = clock.unix_timestamp;
-            user_position.bump = ctx.bumps.user_position;
+            // bump 已经在账户约束中设置
         }
 
         // 转移代币到金库
@@ -92,7 +92,7 @@ pub mod yield_vault {
         require!(!ctx.accounts.vault.is_paused, ErrorCode::VaultPaused);
         require!(amount > 0, ErrorCode::InvalidAmount);
 
-        let vault = &ctx.accounts.vault;
+        let vault = &mut ctx.accounts.vault;
         let user_position = &mut ctx.accounts.user_position;
         let clock = Clock::get()?;
 
@@ -125,10 +125,17 @@ pub mod yield_vault {
 
         let withdraw_amount = amount.checked_sub(fee).unwrap();
 
+        // 保存用于 seeds 的值
+        let vault_bump = vault.bump;
+
+        // 先更新状态，避免借用冲突
+        user_position.deposited_amount = user_position.deposited_amount.checked_sub(amount).unwrap();
+        vault.total_deposited = vault.total_deposited.checked_sub(amount).unwrap();
+
         // 转移代币给用户
         let seeds = &[
             b"vault".as_ref(),
-            &[vault.bump],
+            &[vault_bump],
         ];
         let signer = &[&seeds[..]];
 
@@ -145,17 +152,13 @@ pub mod yield_vault {
             withdraw_amount,
         )?;
 
-        // 更新状态
-        user_position.deposited_amount = user_position.deposited_amount.checked_sub(amount).unwrap();
-        vault.total_deposited = vault.total_deposited.checked_sub(amount).unwrap();
-
         msg!("Withdrawn {} tokens (fee: {})", withdraw_amount, fee);
         Ok(())
     }
 
     /// 领取收益
     pub fn claim_earnings(ctx: Context<ClaimEarnings>) -> Result<()> {
-        let vault = &ctx.accounts.vault;
+        let vault = &mut ctx.accounts.vault;
         let user_position = &mut ctx.accounts.user_position;
         let clock = Clock::get()?;
 
@@ -165,10 +168,17 @@ pub mod yield_vault {
         let earnings = user_position.earned_amount;
         require!(earnings > 0, ErrorCode::NoEarnings);
 
+        // 保存用于 seeds 的值
+        let vault_bump = vault.bump;
+
+        // 先更新状态，避免借用冲突
+        vault.total_earnings = vault.total_earnings.checked_sub(earnings).unwrap();
+        user_position.earned_amount = 0;
+
         // 转移收益给用户
         let seeds = &[
             b"vault".as_ref(),
-            &[vault.bump],
+            &[vault_bump],
         ];
         let signer = &[&seeds[..]];
 
@@ -184,9 +194,6 @@ pub mod yield_vault {
             ),
             earnings,
         )?;
-
-        vault.total_earnings = vault.total_earnings.checked_sub(earnings).unwrap();
-        user_position.earned_amount = 0;
         user_position.last_update_time = clock.unix_timestamp;
 
         msg!("Claimed {} earnings", earnings);
@@ -330,6 +337,7 @@ fn get_lock_duration(vault_type: VaultType) -> i64 {
 // ============== 账户结构 ==============
 
 #[derive(Accounts)]
+#[instruction(vault_type: VaultType)]
 pub struct InitializeVault<'info> {
     #[account(mut)]
     pub authority: Signer<'info>,
@@ -338,7 +346,7 @@ pub struct InitializeVault<'info> {
         init,
         payer = authority,
         space = 8 + YieldVault::INIT_SPACE,
-        seeds = [b"vault", &vault_type.to_bytes()],
+        seeds = [b"vault", vault_type.to_bytes().as_ref()],
         bump
     )]
     pub vault: Account<'info, YieldVault>,
@@ -373,11 +381,10 @@ pub struct Deposit<'info> {
     pub vault: Account<'info, YieldVault>,
 
     #[account(
-        init_if_needed,
-        payer = user,
-        space = 8 + UserPosition::INIT_SPACE,
+        mut,
         seeds = [b"position", user.key().as_ref(), vault.key().as_ref()],
-        bump
+        bump = user_position.bump,
+        constraint = user_position.owner == user.key() @ ErrorCode::Unauthorized
     )]
     pub user_position: Account<'info, UserPosition>,
 
@@ -467,7 +474,7 @@ pub struct CompoundEarnings<'info> {
 
     #[account(
         mut,
-        seeds = [b"vault", vault.vault_type.to_string().as_bytes()],
+        seeds = [b"vault", &vault.vault_type.to_bytes()],
         bump = vault.bump,
         constraint = vault.authority == authority.key() @ ErrorCode::Unauthorized
     )]
@@ -480,7 +487,7 @@ pub struct UpdateVault<'info> {
 
     #[account(
         mut,
-        seeds = [b"vault", vault.vault_type.to_string().as_bytes()],
+        seeds = [b"vault", &vault.vault_type.to_bytes()],
         bump = vault.bump,
         constraint = vault.authority == authority.key() @ ErrorCode::Unauthorized
     )]
