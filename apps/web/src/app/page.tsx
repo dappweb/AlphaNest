@@ -7,6 +7,7 @@ import { StatsOverview } from '@/components/dashboard/stats-overview';
 import { RecentActivity } from '@/components/dashboard/recent-activity';
 import { PopCowTooltip } from '@/components/popcow/popcow-tooltip';
 import { StakingBanner } from '@/components/dashboard/staking-banner';
+import { UpgradeBanner } from '@/components/dashboard/upgrade-banner';
 import { useTranslation } from '@/hooks/use-translation';
 import { StatsCardSkeleton, ListSkeleton } from '@/components/ui/skeleton';
 import dynamic from 'next/dynamic';
@@ -65,7 +66,12 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* 质押挖矿入口 - 最醒目位置 */}
+          {/* 🔥 PopCow DeFi 升级入口 - 最醒目位置 */}
+          <Suspense fallback={<div className="h-48 bg-muted rounded-lg animate-pulse" />}>
+            <UpgradeBanner />
+          </Suspense>
+
+          {/* 质押挖矿入口 */}
           <Suspense fallback={<div className="h-32 bg-muted rounded-lg animate-pulse" />}>
             <StakingBanner />
           </Suspense>
