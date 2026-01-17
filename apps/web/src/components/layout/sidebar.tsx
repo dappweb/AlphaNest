@@ -38,14 +38,14 @@ const getNavigation = (t: any) => [
     href: '/staking',
     icon: Coins,
     shortcut: 'Ctrl+S',
-    badge: { text: 'HOT', variant: 'default' as const }
+    badge: { text: 'BSC+SOL', variant: 'default' as const }
   },
   {
     name: '🛡️ Insurance',
     href: '/insurance',
     icon: Shield,
     shortcut: 'Ctrl+I',
-    badge: { text: 'NEW', variant: 'destructive' as const }
+    badge: { text: 'MEME', variant: 'secondary' as const }
   },
 ];
 
@@ -98,8 +98,8 @@ export function Sidebar() {
           className="rounded-lg flex-shrink-0"
         />
         {!collapsed && (
-          <span className="font-bold text-lg bg-gradient-to-r from-orange-500 to-orange-600 bg-clip-text text-transparent">
-            PopCowDefi
+          <span className="font-bold text-lg bg-gradient-to-r from-yellow-500 to-purple-500 bg-clip-text text-transparent">
+            AlphaNest
           </span>
         )}
       </div>

@@ -58,7 +58,7 @@ export function MobileNav() {
                   'flex flex-col items-center justify-center gap-0.5 px-2 py-1.5 min-w-[56px] rounded-xl transition-all duration-200',
                   isActive
                     ? item.highlight
-                      ? 'text-orange-500 bg-orange-500/10'
+                      ? 'text-yellow-500 bg-yellow-500/10'
                       : 'text-primary bg-primary/10'
                     : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50',
                   'active:scale-95'
@@ -70,18 +70,18 @@ export function MobileNav() {
                 )}>
                   <item.icon className={cn(
                     "h-5 w-5",
-                    item.highlight && isActive && "text-orange-500"
+                    item.highlight && isActive && "text-yellow-500"
                   )} />
                   {isActive && (
                     <span className={cn(
                       "absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full",
-                      item.highlight ? "bg-orange-500" : "bg-primary"
+                      item.highlight ? "bg-yellow-500" : "bg-primary"
                     )} />
                   )}
                 </div>
                 <span className={cn(
                   "text-[10px] font-medium transition-colors",
-                  isActive && (item.highlight ? "text-orange-500" : "text-primary")
+                  isActive && (item.highlight ? "text-yellow-500" : "text-primary")
                 )}>
                   {item.name}
                 </span>
