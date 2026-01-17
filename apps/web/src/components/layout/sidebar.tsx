@@ -8,16 +8,10 @@ import {
   LayoutDashboard,
   Coins,
   Settings,
-  Wallet,
-  Copy,
-  Gift,
+  Shield,
   ChevronLeft,
   ChevronRight,
   X,
-  Zap,
-  FileText,
-  Rocket,
-  Vote,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -40,23 +34,6 @@ const getNavigation = (t: any) => [
     badge: null
   },
   {
-    name: '🐄 POP Vault',
-    href: '/vault',
-    icon: Coins,
-    special: true,
-    featured: true,
-    shortcut: 'Ctrl+V',
-    badge: { text: '50% APY', variant: 'destructive' as const }
-  },
-  {
-    name: '🛡️ CowGuard',
-    href: '/cowguard',
-    icon: Coins,
-    special: true,
-    shortcut: 'Ctrl+I',
-    badge: { text: '保险', variant: 'default' as const }
-  },
-  {
     name: `🔥 ${t.nav.staking}`,
     href: '/staking',
     icon: Coins,
@@ -64,54 +41,15 @@ const getNavigation = (t: any) => [
     badge: { text: 'HOT', variant: 'default' as const }
   },
   {
-    name: t.nav.memeHunter,
-    href: '/meme',
-    icon: Zap,
-    shortcut: 'Ctrl+M',
-    badge: { text: 'HOT', variant: 'default' as const }
-  },
-  {
-    name: t.nav.cowPoints,
-    href: '/points',
-    icon: Coins,
-    shortcut: 'Ctrl+O',
-    badge: { text: '2.5x', variant: 'outline' as const }
-  },
-  {
-    name: t.nav.whitepaper,
-    href: '/whitepaper',
-    icon: FileText,
-    shortcut: 'Ctrl+W',
-    badge: null
-  },
-  {
-    name: t.nav.launch,
-    href: '/launch',
-    icon: Rocket,
-    shortcut: 'Ctrl+L',
-    badge: { text: 'NEW', variant: 'default' as const }
-  },
-  {
-    name: t.nav.governance || 'Governance',
-    href: '/governance',
-    icon: Vote,
-    shortcut: 'Ctrl+G',
-    badge: null
+    name: '🛡️ Insurance',
+    href: '/insurance',
+    icon: Shield,
+    shortcut: 'Ctrl+I',
+    badge: { text: 'NEW', variant: 'destructive' as const }
   },
 ];
 
 const getUserNavigation = (t: any) => [
-  {
-    name: t.nav.account,
-    href: '/account',
-    icon: Wallet,
-  },
-  {
-    name: t.nav.referral,
-    href: '/referral',
-    icon: Gift,
-    badge: { text: '10%', variant: 'default' as const }
-  },
   {
     name: t.nav.settings,
     href: '/settings',

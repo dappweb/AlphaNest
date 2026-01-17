@@ -1,98 +1,93 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useAccount } from 'wagmi';
-import { useWallet } from '@solana/wallet-adapter-react';
-import { StakingCard, StakingStats } from '@/components/staking';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { 
   Coins, 
   ArrowRight, 
   ExternalLink,
-  Info,
-  Sparkles,
   Shield,
   Clock,
   TrendingUp,
+  AlertCircle,
+  Loader2,
+  CheckCircle,
 } from 'lucide-react';
-import Image from 'next/image';
 import Link from 'next/link';
 import { useTranslation } from '@/hooks/use-translation';
-import { useSolanaStaking } from '@/hooks/use-solana-staking';
+import {
+  useAlphaNestStaking,
+  useStake,
+  useRequestUnstake,
+  useCompleteUnstake,
+  useClaimRewards,
+} from '@/hooks/use-alphanest-core';
 
 export default function StakingPage() {
-  const { isConnected: evmConnected } = useAccount();
-  const { connected: solanaConnected } = useWallet();
+  const { isConnected, address } = useAccount();
   const { t } = useTranslation();
   
-  // 使用 Solana 质押 hook
+  // 使用 EVM 质押 hooks
   const {
-    stake,
-    unstake,
-    claimRewards,
-    tokenBalances,
-    positions,
+    stakeInfo,
+    pointsInfo,
+    globalStats,
     isLoading,
-    error,
     refetch,
-  } = useSolanaStaking();
+  } = useAlphaNestStaking();
 
-  const isConnected = evmConnected || solanaConnected;
-  
-  // 计算质押总额和待领取奖励
-  const stakedAmounts = positions.reduce((acc, pos) => {
-    const symbol = pos.tokenMint.equals(require('@/lib/solana/constants').POPCOW_TOKEN_MINT) ? 'POPCOW' : 'OTHER';
-    acc[symbol] = (acc[symbol] || 0) + pos.stakedAmount;
-    return acc;
-  }, {} as Record<string, number>);
+  const { stake, isPending: isStaking, isSuccess: stakeSuccess } = useStake();
+  const { requestUnstake, isPending: isUnstaking, isSuccess: unstakeSuccess } = useRequestUnstake();
+  const { completeUnstake, isPending: isCompleting, isSuccess: completeSuccess } = useCompleteUnstake();
+  const { claimRewards, isPending: isClaiming, isSuccess: claimSuccess } = useClaimRewards();
 
-  const pendingRewards = positions.reduce((sum, pos) => sum + pos.pendingRewards, 0);
-  const popCowDefiBalance = tokenBalances.PopCowDefi || 0;
+  const [stakeAmount, setStakeAmount] = useState('');
+  const [unstakeAmount, setUnstakeAmount] = useState('');
+  const [activeTab, setActiveTab] = useState('stake');
 
-  // 全局统计
-  const [globalStats, setGlobalStats] = useState({
-    totalStaked: 125000000,
-    totalStakers: 1234,
-    totalRewardsDistributed: 5600000,
-    averageApy: 116,
-  });
-
-  const handleStake = async (amount: number, poolId: number, tokenSymbol: string) => {
+  const handleStake = async () => {
+    if (!stakeAmount || Number(stakeAmount) <= 0) return;
     try {
-      // 根据代币符号选择 mint 地址
-      const { POPCOW_TOKEN_MINT } = require('@/lib/solana/constants');
-      const tokenMint = POPCOW_TOKEN_MINT; // 可以根据 tokenSymbol 选择不同的 mint
-      
-      await stake(amount, poolId, tokenMint);
-      await refetch();
+      await stake(stakeAmount);
+      setStakeAmount('');
+      setTimeout(() => refetch(), 2000);
     } catch (error) {
       console.error('Stake failed:', error);
-      throw error;
     }
   };
 
-  const handleUnstake = async (amount: number, poolId: number, tokenSymbol: string) => {
+  const handleRequestUnstake = async () => {
+    if (!unstakeAmount || Number(unstakeAmount) <= 0) return;
     try {
-      const { POPCOW_TOKEN_MINT } = require('@/lib/solana/constants');
-      const tokenMint = POPCOW_TOKEN_MINT;
-      
-      await unstake(amount, poolId, tokenMint);
-      await refetch();
+      await requestUnstake(unstakeAmount);
+      setUnstakeAmount('');
+      setTimeout(() => refetch(), 2000);
     } catch (error) {
-      console.error('Unstake failed:', error);
-      throw error;
+      console.error('Unstake request failed:', error);
     }
   };
 
-  const handleClaim = async (poolId: number) => {
+  const handleCompleteUnstake = async () => {
     try {
-      await claimRewards(poolId);
-      await refetch();
+      await completeUnstake();
+      setTimeout(() => refetch(), 2000);
+    } catch (error) {
+      console.error('Complete unstake failed:', error);
+    }
+  };
+
+  const handleClaim = async () => {
+    try {
+      await claimRewards();
+      setTimeout(() => refetch(), 2000);
     } catch (error) {
       console.error('Claim failed:', error);
-      throw error;
     }
   };
 
@@ -114,139 +109,303 @@ export default function StakingPage() {
             <Shield className="h-3 w-3 mr-1" />
             {t.staking.contractAudited}
           </Badge>
-          <Link
-            href="https://solscan.io/token/8mrMRf8QwGh5bSrgzKsMmHPTTGqDcENU91SWuXEypump"
-            target="_blank"
-          >
-            <Button variant="outline" size="sm">
-              <ExternalLink className="h-4 w-4 mr-1" />
-              POPCOW 代币
-            </Button>
-          </Link>
         </div>
       </div>
 
       {/* 全局统计 */}
-      <StakingStats {...globalStats} />
+      <div className="grid gap-4 md:grid-cols-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Total Staked
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold">
+              {globalStats.totalStakedFormatted} ALPHA
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Min Stake
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold">
+              {globalStats.minStakeFormatted} ALPHA
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Cooldown Period
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold">
+              {globalStats.unstakeCooldownDays} Days
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Fee Distribution
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold text-green-500">
+              30% to Stakers
+            </p>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* 主要内容 */}
       <div className="grid lg:grid-cols-3 gap-6">
         {/* 质押卡片 */}
         <div className="lg:col-span-2">
-          <StakingCard
-            tokenBalances={tokenBalances}
-            popCowDefiBalance={popCowDefiBalance}
-            stakedAmounts={stakedAmounts}
-            pendingRewards={pendingRewards}
-            onStake={handleStake}
-            onUnstake={handleUnstake}
-            onClaim={handleClaim}
-            isLoading={isLoading}
-            isConnected={isConnected}
-            error={error}
-          />
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Coins className="h-5 w-5 text-orange-500" />
+                Stake ALPHA Tokens
+              </CardTitle>
+              <CardDescription>
+                Stake your ALPHA tokens to earn protocol fee rewards
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* 用户质押信息 */}
+              {isConnected && stakeInfo && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="rounded-lg bg-secondary/50 p-4">
+                    <p className="text-xs text-muted-foreground mb-1">Your Staked</p>
+                    <p className="text-lg font-bold">{stakeInfo.stakedAmountFormatted} ALPHA</p>
+                  </div>
+                  <div className="rounded-lg bg-secondary/50 p-4">
+                    <p className="text-xs text-muted-foreground mb-1">Pending Rewards</p>
+                    <p className="text-lg font-bold text-green-500">{stakeInfo.pendingRewardsFormatted} ALPHA</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Pending Unstake Info */}
+              {isConnected && stakeInfo && Number(stakeInfo.pendingUnstakeFormatted) > 0 && (
+                <Alert>
+                  <Clock className="h-4 w-4" />
+                  <AlertDescription className="flex items-center justify-between">
+                    <span>
+                      Pending unstake: {stakeInfo.pendingUnstakeFormatted} ALPHA
+                      {stakeInfo.canCompleteUnstake ? ' (Ready to withdraw)' : ' (In cooldown)'}
+                    </span>
+                    {stakeInfo.canCompleteUnstake && (
+                      <Button
+                        size="sm"
+                        onClick={handleCompleteUnstake}
+                        disabled={isCompleting}
+                      >
+                        {isCompleting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Withdraw'}
+                      </Button>
+                    )}
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {/* 质押/解押操作 */}
+              <Tabs value={activeTab} onValueChange={setActiveTab}>
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="stake">Stake</TabsTrigger>
+                  <TabsTrigger value="unstake">Unstake</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="stake" className="space-y-4 mt-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Amount to Stake</label>
+                    <div className="flex gap-2">
+                      <Input
+                        type="number"
+                        placeholder="Enter amount"
+                        value={stakeAmount}
+                        onChange={(e) => setStakeAmount(e.target.value)}
+                        className="flex-1"
+                      />
+                      <Button
+                        onClick={handleStake}
+                        disabled={!isConnected || isStaking || !stakeAmount || Number(stakeAmount) <= 0}
+                        className="bg-orange-500 hover:bg-orange-600"
+                      >
+                        {isStaking ? (
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        ) : null}
+                        Stake
+                      </Button>
+                    </div>
+                    {stakeSuccess && (
+                      <p className="text-sm text-green-500 flex items-center gap-1">
+                        <CheckCircle className="h-4 w-4" />
+                        Stake successful!
+                      </p>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Minimum stake: {globalStats.minStakeFormatted} ALPHA
+                  </p>
+                </TabsContent>
+
+                <TabsContent value="unstake" className="space-y-4 mt-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Amount to Unstake</label>
+                    <div className="flex gap-2">
+                      <Input
+                        type="number"
+                        placeholder="Enter amount"
+                        value={unstakeAmount}
+                        onChange={(e) => setUnstakeAmount(e.target.value)}
+                        className="flex-1"
+                      />
+                      <Button
+                        onClick={handleRequestUnstake}
+                        disabled={!isConnected || isUnstaking || !unstakeAmount || Number(unstakeAmount) <= 0}
+                        variant="outline"
+                      >
+                        {isUnstaking ? (
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        ) : null}
+                        Request Unstake
+                      </Button>
+                    </div>
+                    {unstakeSuccess && (
+                      <p className="text-sm text-green-500 flex items-center gap-1">
+                        <CheckCircle className="h-4 w-4" />
+                        Unstake request submitted!
+                      </p>
+                    )}
+                  </div>
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      Unstaking requires a {globalStats.unstakeCooldownDays}-day cooldown period before you can withdraw.
+                    </AlertDescription>
+                  </Alert>
+                </TabsContent>
+              </Tabs>
+
+              {/* 领取奖励 */}
+              {isConnected && stakeInfo && Number(stakeInfo.pendingRewardsFormatted) > 0 && (
+                <div className="rounded-lg border bg-gradient-to-r from-green-500/10 to-emerald-500/10 p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Pending Rewards</p>
+                      <p className="text-2xl font-bold text-green-500">
+                        {stakeInfo.pendingRewardsFormatted} ALPHA
+                      </p>
+                    </div>
+                    <Button
+                      onClick={handleClaim}
+                      disabled={isClaiming}
+                      className="bg-green-500 hover:bg-green-600"
+                    >
+                      {isClaiming ? (
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      ) : (
+                        <TrendingUp className="h-4 w-4 mr-2" />
+                      )}
+                      Claim Rewards
+                    </Button>
+                  </div>
+                  {claimSuccess && (
+                    <p className="text-sm text-green-500 flex items-center gap-1 mt-2">
+                      <CheckCircle className="h-4 w-4" />
+                      Rewards claimed successfully!
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* 未连接钱包提示 */}
+              {!isConnected && (
+                <div className="text-center py-8 border rounded-lg">
+                  <p className="text-muted-foreground mb-2">Connect your wallet to start staking</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
 
         {/* 侧边信息 */}
         <div className="space-y-4">
-          {/* 代币兑换流程 */}
+          {/* 质押说明 */}
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
-                <ArrowRight className="h-4 w-4 text-orange-500" />
-                {t.staking.tokenExchange}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-orange-500/20 flex items-center justify-center text-lg">
-                  🐄
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium">POPCOW 代币</p>
-                  <p className="text-xs text-muted-foreground">引流代币</p>
-                </div>
-              </div>
-              
-              <div className="flex justify-center">
-                <div className="flex flex-col items-center">
-                  <ArrowRight className="h-5 w-5 text-orange-500 rotate-90" />
-                  <span className="text-xs text-muted-foreground">{t.staking.stakingMining}</span>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-r from-orange-500 to-yellow-500 flex items-center justify-center text-lg">
-                  ⭐
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium">$PopCowDefi</p>
-                  <p className="text-xs text-muted-foreground">{t.staking.platformToken}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* $PopCowDefi 权益 */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-orange-500" />
-                {t.staking.benefits}
+                <TrendingUp className="h-4 w-4 text-green-500" />
+                Staking Benefits
               </CardTitle>
             </CardHeader>
             <CardContent>
               <ul className="space-y-3 text-sm">
                 <li className="flex items-start gap-2">
-                  <TrendingUp className="h-4 w-4 text-green-500 mt-0.5" />
-                  <span>{t.staking.feeShare}</span>
+                  <Coins className="h-4 w-4 text-orange-500 mt-0.5" />
+                  <span>30% of protocol fees distributed to stakers</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <Shield className="h-4 w-4 text-blue-500 mt-0.5" />
-                  <span>{t.staking.governance}</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <Coins className="h-4 w-4 text-orange-500 mt-0.5" />
-                  <span>{t.staking.feeDiscount}</span>
+                  <span>Mining weight increases over time (up to 2x)</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <Clock className="h-4 w-4 text-purple-500 mt-0.5" />
-                  <span>{t.staking.alphaPriority}</span>
+                  <span>{globalStats.unstakeCooldownDays}-day cooldown for unstaking</span>
                 </li>
               </ul>
             </CardContent>
           </Card>
 
-          {/* 购买 POPCOW 代币 */}
-          <Card className="bg-gradient-to-br from-orange-500/10 to-yellow-500/10 border-orange-500/30">
+          {/* 积分信息 */}
+          {isConnected && pointsInfo && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Your Points</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground">Balance</span>
+                  <span className="font-bold">{pointsInfo.balanceFormatted}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground">Total Earned</span>
+                  <span className="text-green-500">{pointsInfo.totalEarned.toString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground">Total Spent</span>
+                  <span className="text-red-500">{pointsInfo.totalSpent.toString()}</span>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* 合约链接 */}
+          <Card className="bg-secondary/30">
             <CardContent className="p-4">
               <div className="flex items-center gap-3 mb-3">
-                <Info className="h-5 w-5 text-orange-500" />
-                <p className="text-sm font-medium">{t.staking.noTokens}</p>
+                <Shield className="h-5 w-5 text-green-500" />
+                <p className="text-sm font-medium">Contract Verified</p>
               </div>
               <p className="text-xs text-muted-foreground mb-3">
-                {t.staking.buyTokens}
+                AlphaNestCore contract deployed on Sepolia testnet
               </p>
-              <div className="flex gap-2">
-                <Link
-                  href="https://pump.fun/coin/8mrMRf8QwGh5bSrgzKsMmHPTTGqDcENU91SWuXEypump"
-                  target="_blank"
-                  className="flex-1"
-                >
-                  <Button size="sm" className="w-full bg-orange-500 hover:bg-orange-600">
-                    Pump.fun
-                  </Button>
-                </Link>
-                <Link
-                  href="https://raydium.io/swap"
-                  target="_blank"
-                  className="flex-1"
-                >
-                  <Button size="sm" variant="outline" className="w-full">
-                    Raydium
-                  </Button>
-                </Link>
-              </div>
+              <Link
+                href="https://sepolia.etherscan.io/address/0x0DE761C3A2e72BFa04B660395856ADc0A1252879"
+                target="_blank"
+              >
+                <Button size="sm" variant="outline" className="w-full">
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  View on Etherscan
+                </Button>
+              </Link>
             </CardContent>
           </Card>
         </div>
