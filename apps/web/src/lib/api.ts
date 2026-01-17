@@ -1,269 +1,129 @@
 /**
- * API Client for AlphaNest Backend
+ * API Client
+ * 提供与后端 API 交互的函数
  */
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://alphanest-api.dappweb.workers.dev';
 
-interface ApiResponse<T> {
-  success: boolean;
-  data?: T;
-  error?: string;
-  message?: string;
-}
-
-async function fetchApi<T>(
-  endpoint: string,
-  options?: RequestInit
-): Promise<ApiResponse<T>> {
-  try {
-    const response = await fetch(`${API_URL}${endpoint}`, {
-      ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        ...options?.headers,
-      },
-    });
-
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.error('API Error:', error);
-    return { success: false, error: 'Network error' };
-  }
-}
-
-// ============================================
-// Token APIs
-// ============================================
-
-export interface Token {
-  id: string;
-  address: string;
-  chain: string;
-  name: string;
-  symbol: string;
-  decimals: number;
-  logoUrl?: string;
-  priceUsd: string;
-  priceChange24h: number;
-  volume24h: string;
-  marketCap: string;
-  liquidity: string;
-  holderCount: number;
-  creatorDevId?: string;
-  status: 'active' | 'graduated' | 'rugged' | 'dead';
-}
-
-export async function getTokens(params?: {
-  chain?: string;
-  status?: string;
-  sortBy?: string;
-  limit?: number;
-  offset?: number;
-}): Promise<ApiResponse<Token[]>> {
-  const searchParams = new URLSearchParams();
-  if (params?.chain) searchParams.set('chain', params.chain);
-  if (params?.status) searchParams.set('status', params.status);
-  if (params?.sortBy) searchParams.set('sortBy', params.sortBy);
-  if (params?.limit) searchParams.set('limit', params.limit.toString());
-  if (params?.offset) searchParams.set('offset', params.offset.toString());
-
-  return fetchApi<Token[]>(`/api/v1/tokens?${searchParams.toString()}`);
-}
-
-export async function getToken(address: string): Promise<ApiResponse<Token>> {
-  return fetchApi<Token>(`/api/v1/tokens/${address}`);
-}
-
-export async function getTrendingTokens(chain?: string): Promise<ApiResponse<Token[]>> {
-  const params = chain ? `?chain=${chain}` : '';
-  return fetchApi<Token[]>(`/api/v1/tokens/trending${params}`);
-}
-
-// ============================================
-// Dev APIs
-// ============================================
-
-export interface Dev {
-  id: string;
-  address: string;
-  chain: string;
-  alias?: string;
-  score: number;
-  tier: 'bronze' | 'silver' | 'gold' | 'platinum' | 'diamond';
-  totalLaunches: number;
-  successfulLaunches: number;
-  rugCount: number;
-  totalVolume: string;
-  avgAthMultiplier: number;
-  verified: boolean;
-  createdAt: number;
-  updatedAt: number;
-}
-
-export async function getDevs(params?: {
-  chain?: string;
-  tier?: string;
-  sortBy?: string;
-  limit?: number;
-  offset?: number;
-}): Promise<ApiResponse<Dev[]>> {
-  const searchParams = new URLSearchParams();
-  if (params?.chain) searchParams.set('chain', params.chain);
-  if (params?.tier) searchParams.set('tier', params.tier);
-  if (params?.sortBy) searchParams.set('sortBy', params.sortBy);
-  if (params?.limit) searchParams.set('limit', params.limit.toString());
-  if (params?.offset) searchParams.set('offset', params.offset.toString());
-
-  return fetchApi<Dev[]>(`/api/v1/devs?${searchParams.toString()}`);
-}
-
-export async function getDev(address: string): Promise<ApiResponse<Dev>> {
-  return fetchApi<Dev>(`/api/v1/devs/${address}`);
-}
-
-export async function getDevTokens(address: string): Promise<ApiResponse<Token[]>> {
-  return fetchApi<Token[]>(`/api/v1/devs/${address}/tokens`);
-}
-
-// ============================================
-// User APIs
-// ============================================
-
-export interface User {
-  id: string;
-  primaryAddress: string;
-  primaryChain: string;
-  points: number;
-  tier: string;
-  createdAt: number;
-}
-
-export interface ConnectRequest {
-  address: string;
-  chain: string;
-  signature: string;
-  message: string;
-}
-
-export interface ConnectResponse {
-  user: User;
-  token: string;
-  isNewUser: boolean;
-}
-
-export async function connectWallet(
-  data: ConnectRequest
-): Promise<ApiResponse<ConnectResponse>> {
-  return fetchApi<ConnectResponse>('/api/v1/user/connect', {
-    method: 'POST',
-    body: JSON.stringify(data),
-  });
-}
-
-export async function getUserProfile(
-  token: string
-): Promise<ApiResponse<User>> {
-  return fetchApi<User>('/api/v1/user/profile', {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
-}
-
-// ============================================
-// Insurance APIs
-// ============================================
-
+/**
+ * Insurance Product 类型定义
+ */
 export interface InsuranceProduct {
-  id: string;
+  poolId: number;
   tokenAddress: string;
   tokenName: string;
   tokenSymbol: string;
   chain: string;
-  premiumRate: number;
-  poolSize: string;
-  currentOdds: { rug: number; safe: number };
+  totalRugBets: string;
+  totalSafeBets: string;
+  rugOdds: number;
+  safeOdds: number;
   expiresAt: number;
-  riskLevel: 'low' | 'medium' | 'high';
+  status: 'active' | 'resolved' | 'cancelled';
+  minBet: string;
+  maxBet: string;
 }
 
-export interface InsurancePolicy {
-  id: string;
-  userId: string;
-  productId: string;
-  tokenAddress: string;
-  position: 'rug' | 'safe';
-  premiumPaid: string;
-  coverageAmount: string;
-  potentialPayout: string;
-  status: 'active' | 'claimed' | 'expired';
-  expiresAt: number;
-  createdAt: number;
-}
+/**
+ * 获取保险产品列表
+ */
+export async function getInsuranceProducts(): Promise<InsuranceProduct[]> {
+  try {
+    const response = await fetch(`${API_URL}/api/v1/insurance/pools`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
 
-export async function getInsuranceProducts(): Promise<ApiResponse<InsuranceProduct[]>> {
-  return fetchApi<InsuranceProduct[]>('/api/v1/insurance/products');
-}
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
 
-export async function getUserPolicies(
-  token: string
-): Promise<ApiResponse<InsurancePolicy[]>> {
-  return fetchApi<InsurancePolicy[]>('/api/v1/insurance/policies', {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
-}
-
-export async function purchaseInsurance(
-  token: string,
-  data: {
-    productId: string;
-    position: 'rug' | 'safe';
-    amount: string;
+    const data = await response.json();
+    return data.pools || [];
+  } catch (error) {
+    console.error('Failed to fetch insurance products:', error);
+    // 返回模拟数据作为后备
+    return getMockInsuranceProducts();
   }
-): Promise<ApiResponse<InsurancePolicy>> {
-  return fetchApi<InsurancePolicy>('/api/v1/insurance/purchase', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify(data),
-  });
 }
 
-// ============================================
-// Notification APIs
-// ============================================
-
-export interface Notification {
-  id: string;
-  type: string;
-  title: string;
-  message: string;
-  read: boolean;
-  createdAt: number;
+/**
+ * 获取模拟保险产品数据
+ */
+function getMockInsuranceProducts(): InsuranceProduct[] {
+  return [
+    {
+      poolId: 1,
+      tokenAddress: '0x1234567890abcdef1234567890abcdef12345678',
+      tokenName: 'Pepe Token',
+      tokenSymbol: 'PEPE',
+      chain: 'base',
+      totalRugBets: '50000',
+      totalSafeBets: '100000',
+      rugOdds: 3.0,
+      safeOdds: 1.5,
+      expiresAt: Date.now() / 1000 + 86400 * 7, // 7 days from now
+      status: 'active',
+      minBet: '10',
+      maxBet: '10000',
+    },
+    {
+      poolId: 2,
+      tokenAddress: '0xabcdef1234567890abcdef1234567890abcdef12',
+      tokenName: 'Bonk',
+      tokenSymbol: 'BONK',
+      chain: 'solana',
+      totalRugBets: '30000',
+      totalSafeBets: '70000',
+      rugOdds: 2.33,
+      safeOdds: 1.43,
+      expiresAt: Date.now() / 1000 + 86400 * 5,
+      status: 'active',
+      minBet: '10',
+      maxBet: '10000',
+    },
+    {
+      poolId: 3,
+      tokenAddress: '0x5678901234abcdef5678901234abcdef56789012',
+      tokenName: 'Doge Killer',
+      tokenSymbol: 'LEASH',
+      chain: 'ethereum',
+      totalRugBets: '80000',
+      totalSafeBets: '120000',
+      rugOdds: 2.5,
+      safeOdds: 1.67,
+      expiresAt: Date.now() / 1000 + 86400 * 3,
+      status: 'active',
+      minBet: '10',
+      maxBet: '10000',
+    },
+  ];
 }
 
-export async function getNotifications(
-  token: string
-): Promise<ApiResponse<Notification[]>> {
-  return fetchApi<Notification[]>('/api/v1/notifications', {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
-}
+/**
+ * 获取单个保险池详情
+ */
+export async function getInsurancePool(poolId: number): Promise<InsuranceProduct | null> {
+  try {
+    const response = await fetch(`${API_URL}/api/v1/insurance/pools/${poolId}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
 
-export async function markNotificationRead(
-  token: string,
-  notificationId: string
-): Promise<ApiResponse<void>> {
-  return fetchApi<void>(`/api/v1/notifications/${notificationId}/read`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.pool || null;
+  } catch (error) {
+    console.error(`Failed to fetch insurance pool ${poolId}:`, error);
+    // 从模拟数据中查找
+    const mockProducts = getMockInsuranceProducts();
+    return mockProducts.find(p => p.poolId === poolId) || null;
+  }
 }

@@ -16,8 +16,16 @@ export const wagmiConfig = getDefaultConfig({
 });
 
 export const supportedChains = [
-  { id: sepolia.id, name: 'Sepolia Testnet', icon: '/chains/ethereum.svg' },
-  { id: base.id, name: 'Base', icon: '/chains/base.svg' },
-  { id: mainnet.id, name: 'Ethereum', icon: '/chains/ethereum.svg' },
-  { id: bsc.id, name: 'BNB Chain', icon: '/chains/bnb.svg' },
+  { id: sepolia.id, name: 'Sepolia Testnet', icon: '/chains/ethereum.svg', tradeEnabled: false },
+  { id: base.id, name: 'Base', icon: '/chains/base.svg', tradeEnabled: false },
+  { id: mainnet.id, name: 'Ethereum', icon: '/chains/ethereum.svg', tradeEnabled: false },
+  { id: bsc.id, name: 'BNB Chain', icon: '/chains/bnb.svg', tradeEnabled: false },
 ];
+
+// Solana 作为主要交易链
+export const primaryTradeChain = {
+  name: 'Solana',
+  icon: '/chains/solana.svg',
+  tradeEnabled: true,
+  isPrimary: true,
+};

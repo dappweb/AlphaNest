@@ -1,661 +1,875 @@
 # Design Document - Frontend Completion
 
-## Overview
+## Introduction
 
-This design document outlines the technical architecture and implementation strategy for completing the AlphaNest/PopCow frontend application. The project currently has a solid foundation with Next.js 14, TypeScript, and Tailwind CSS, but requires significant enhancements to transform from a prototype with mock data into a fully functional DeFi platform.
+本设计文档基于 requirements.md 中定义的 15 个需求模块，提供详细的技术架构设计、组件设计方案、API 集成方案和数据流设计。
 
-The design focuses on integrating real blockchain data, implementing smart contract interactions, and building robust user experiences across multiple chains (Solana, Ethereum, Base, BNB Chain).
+## Architecture Overview
 
-## Architecture
+### System Architecture
 
-### High-Level Architecture
-
-```mermaid
-graph TB
-    subgraph "Frontend Layer"
-        A[Next.js App Router]
-        B[React Components]
-        C[State Management]
-        D[UI Components]
-    end
-    
-    subgraph "Integration Layer"
-        E[API Client]
-        F[Wallet Connectors]
-        G[Smart Contract Hooks]
-        H[WebSocket Manager]
-    end
-    
-    subgraph "External Services"
-        I[Blockchain RPCs]
-        J[DEX Aggregators]
-        K[Price Oracles]
-        L[Push Notifications]
-    end
-    
-    subgraph "Backend Services"
-        M[AlphaNest API]
-        N[Database]
-        O[Smart Contracts]
-        P[Notification Service]
-    end
-    
-    A --> B
-    B --> C
-    B --> D
-    B --> G
-    E --> M
-    F --> I
-    G --> O
-    H --> P
-    E --> J
-    E --> K
-    H --> L
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     Frontend (Next.js 14)                        │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │
+│  │   Pages      │  │  Components  │  │    Hooks     │          │
+│  │  (Routes)    │  │   (UI/UX)    │  │  (Logic)     │          │
+│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘          │
+│         │                 │                  │                   │
+│         └─────────────────┴──────────────────┘                   │
+│                           │                                      │
+│  ┌────────────────────────┴────────────────────────┐            │
+│  │           State Management Layer                │            │
+│  │  (React Context + Wagmi + TanStack Query)       │            │
+│  └────────────────────────┬────────────────────────┘            │
+└───────────────────────────┼─────────────────────────────────────┘
+                            │
+┌───────────────────────────┼─────────────────────────────────────┐
+│                    API & Integration Layer                       │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │
+│  │  Backend API │  │  Smart       │  │  External    │          │
+│  │  (REST/WS)   │  │  Contracts   │  │  APIs        │          │
+│  └──────────────┘  └──────────────┘  └──────────────┘          │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
-### Technology Stack Enhancement
+### Technology Stack
 
-**Current Stack:**
-- Next.js 14 with App Router
-- TypeScript
-- Tailwind CSS + shadcn/ui
-- Wagmi + Viem (Ethereum)
-- Solana Web3.js
+| Layer | Technology | Purpose |
+|-------|-----------|---------|
+| **Frontend Framework** | Next.js 14 (App Router) | SSR/SSG, Routing, Performance |
+| **UI Components** | shadcn/ui + TailwindCSS | Consistent design system |
+| **State Management** | React Context + Zustand | Global state (settings, user prefs) |
+| **Blockchain Integration** | Wagmi + Viem | EVM chain interactions |
+| **Solana Integration** | @solana/wallet-adapter | Solana wallet & transactions |
+| **Data Fetching** | TanStack Query (React Query) | Server state, caching, refetching |
+| **Real-time Data** | WebSocket + Server-Sent Events | Price updates, notifications |
+| **Charts** | TradingView Lightweight Charts | K-line charts, technical analysis |
+| **Forms** | React Hook Form + Zod | Form validation |
+| **Internationalization** | next-intl | Multi-language support |
 
-**Required Additions:**
-- TanStack Query for data fetching and caching
-- Zustand for global state management
-- Socket.io client for real-time updates
-- TradingView Charting Library
-- Web3Modal v3 for multi-wallet support
-- Framer Motion for animations
-- React Hook Form + Zod for form validation
+## Component Architecture
 
-## Components and Interfaces
+### Component Hierarchy
 
-### Core Data Models
-
-```typescript
-// User and Authentication
-interface User {
-  id: string;
-  walletAddress: string;
-  connectedWallets: ConnectedWallet[];
-  preferences: UserPreferences;
-  reputation: ReputationScore;
-  points: number;
-  level: number;
-  createdAt: Date;
-}
-
-interface ConnectedWallet {
-  address: string;
-  chain: SupportedChain;
-  type: WalletType;
-  isVerified: boolean;
-}
-
-// Trading and Tokens
-interface Token {
-  address: string;
-  symbol: string;
-  name: string;
-  decimals: number;
-  chain: SupportedChain;
-  logoUri?: string;
-  price: number;
-  priceChange24h: number;
-  volume24h: number;
-  marketCap: number;
-  devInfo?: DevInfo;
-}
-
-interface DevInfo {
-  address: string;
-  reputation: ReputationScore;
-  launchHistory: TokenLaunch[];
-  rugCount: number;
-  successRate: number;
-  totalVolume: number;
-  isVerified: boolean;
-}
-
-// Insurance and Risk Management
-interface InsuranceProduct {
-  id: string;
-  tokenAddress: string;
-  type: 'bullish' | 'bearish';
-  premium: number;
-  coverage: number;
-  duration: number;
-  poolSize: number;
-  odds: number;
-  isActive: boolean;
-}
-
-interface InsurancePolicy {
-  id: string;
-  productId: string;
-  userAddress: string;
-  amount: number;
-  premium: number;
-  startTime: Date;
-  endTime: Date;
-  status: PolicyStatus;
-  claimAmount?: number;
-}
-
-// Cross-Chain ETF
-interface ETFComponent {
-  tokenAddress: string;
-  chain: SupportedChain;
-  weight: number;
-  minHolding: number;
-  isActive: boolean;
-}
-
-interface UserETFPosition {
-  components: ETFComponentHolding[];
-  totalValue: number;
-  miningWeight: number;
-  lastUpdate: Date;
-}
-
-// Copy Trading
-interface Trader {
-  address: string;
-  nickname?: string;
-  reputation: ReputationScore;
-  totalPnL: number;
-  winRate: number;
-  followers: number;
-  avgHoldTime: number;
-  riskScore: number;
-}
-
-interface CopyTradeSettings {
-  traderId: string;
-  allocation: number;
-  maxPerTrade: number;
-  stopLoss?: number;
-  takeProfit?: number;
-  isActive: boolean;
-}
+```
+app/
+├── (dashboard)/
+│   ├── page.tsx                    # 首页仪表盘
+│   └── components/
+│       ├── stats-overview.tsx      # ✅ 已实现 - 需要增强
+│       ├── trending-tokens.tsx     # ✅ 已实现 - 需要增强
+│       ├── dev-leaderboard.tsx     # ✅ 已实现 - 需要增强
+│       ├── recent-activity.tsx     # ✅ 已实现 - 需要增强
+│       ├── staking-banner.tsx      # ✅ 已实现
+│       └── portfolio-chart.tsx     # ❌ 新增 - 投资组合图表
+│
+├── trade/
+│   ├── page.tsx                    # 交易页面
+│   └── components/
+│       ├── token-selector.tsx      # ❌ 新增 - 多链代币选择器
+│       ├── swap-interface.tsx      # ❌ 新增 - 交易界面
+│       ├── price-chart.tsx         # ❌ 新增 - K线图
+│       ├── order-book.tsx          # ❌ 新增 - 订单簿
+│       ├── trade-history.tsx       # ❌ 新增 - 交易历史
+│       └── slippage-settings.tsx   # ❌ 新增 - 滑点设置
+│
+├── devs/
+│   ├── page.tsx                    # Dev 排行榜页面
+│   ├── [address]/
+│   │   └── page.tsx                # Dev 个人主页
+│   └── components/
+│       ├── dev-card.tsx            # ❌ 新增 - Dev 卡片
+│       ├── dev-stats.tsx           # ❌ 新增 - Dev 统计
+│       ├── launch-history.tsx      # ❌ 新增 - 发币历史
+│       ├── reputation-score.tsx    # ❌ 新增 - 信誉评分
+│       └── follow-button.tsx       # ❌ 新增 - 关注按钮
+│
+├── insurance/
+│   ├── page.tsx                    # 保险市场页面
+│   ├── [poolId]/
+│   │   └── page.tsx                # 保险详情页
+│   └── components/
+│       ├── insurance-card.tsx      # ✅ 已实现 - 需要增强
+│       ├── purchase-modal.tsx      # ❌ 新增 - 购买弹窗
+│       ├── policy-list.tsx         # ❌ 新增 - 保单列表
+│       ├── claim-modal.tsx         # ❌ 新增 - 理赔弹窗
+│       └── odds-calculator.tsx     # ❌ 新增 - 赔率计算器
+│
+├── points/
+│   ├── page.tsx                    # 积分中心页面
+│   └── components/
+│       ├── points-balance.tsx      # ✅ 已实现 - 需要增强
+│       ├── task-list.tsx           # ❌ 新增 - 任务列表
+│       ├── leaderboard.tsx         # ❌ 新增 - 积分排行榜
+│       ├── rewards-shop.tsx        # ❌ 新增 - 奖励商店
+│       └── level-progress.tsx      # ❌ 新增 - 等级进度
+│
+├── etf/
+│   ├── page.tsx                    # ❌ 新增 - ETF 页面
+│   └── components/
+│       ├── etf-composer.tsx        # ❌ 新增 - ETF 合成器
+│       ├── component-selector.tsx  # ❌ 新增 - 组件选择器
+│       ├── mining-weight.tsx       # ❌ 新增 - 挖矿权重显示
+│       ├── ash-converter.tsx       # ❌ 新增 - 灰烬积分转换
+│       └── etf-portfolio.tsx       # ❌ 新增 - ETF 投资组合
+│
+├── copy-trade/
+│   ├── page.tsx                    # ❌ 新增 - 跟单交易页面
+│   └── components/
+│       ├── trader-list.tsx         # ❌ 新增 - 交易者列表
+│       ├── trader-profile.tsx      # ❌ 新增 - 交易者资料
+│       ├── copy-settings.tsx       # ❌ 新增 - 跟单设置
+│       └── copy-history.tsx        # ❌ 新增 - 跟单历史
+│
+├── verify/
+│   ├── page.tsx                    # ❌ 新增 - Verify-to-Earn 页面
+│   └── components/
+│       ├── wallet-connector.tsx    # ❌ 新增 - 多链钱包连接
+│       ├── holding-verifier.tsx    # ❌ 新增 - 持仓验证器
+│       ├── verification-history.tsx # ❌ 新增 - 验证历史
+│       └── rewards-calculator.tsx  # ❌ 新增 - 奖励计算器
+│
+└── settings/
+    ├── page.tsx                    # 设置页面
+    └── components/
+        ├── trading-settings.tsx    # ❌ 新增 - 交易设置
+        ├── notification-settings.tsx # ❌ 新增 - 通知设置
+        ├── privacy-settings.tsx    # ✅ 已实现
+        ├── wallet-management.tsx   # ❌ 新增 - 钱包管理
+        └── theme-settings.tsx      # ✅ 已实现
 ```
 
-### API Client Architecture
-
-```typescript
-// Centralized API client with type safety
-class AlphaNestAPI {
-  private client: AxiosInstance;
-  private wsManager: WebSocketManager;
-  
-  // Authentication
-  async authenticate(signature: string): Promise<AuthResponse>;
-  
-  // User Management
-  async getUserProfile(address: string): Promise<User>;
-  async updateUserPreferences(preferences: UserPreferences): Promise<void>;
-  
-  // Token Data
-  async getTokens(filters: TokenFilters): Promise<Token[]>;
-  async getTokenDetails(address: string, chain: SupportedChain): Promise<TokenDetails>;
-  async getTokenChart(address: string, timeframe: string): Promise<ChartData>;
-  
-  // Dev Reputation
-  async getDevProfile(address: string): Promise<DevInfo>;
-  async getDevTokens(address: string): Promise<Token[]>;
-  
-  // Insurance
-  async getInsuranceProducts(): Promise<InsuranceProduct[]>;
-  async purchaseInsurance(productId: string, amount: number): Promise<TransactionHash>;
-  async getUserPolicies(address: string): Promise<InsurancePolicy[]>;
-  
-  // Points and Rewards
-  async getUserPoints(address: string): Promise<PointsBalance>;
-  async claimDailyReward(): Promise<ClaimResult>;
-  async verifyHoldings(proofs: HoldingProof[]): Promise<VerificationResult>;
-  
-  // Copy Trading
-  async getTopTraders(): Promise<Trader[]>;
-  async getCopyTradeSettings(address: string): Promise<CopyTradeSettings[]>;
-  async updateCopyTradeSettings(settings: CopyTradeSettings): Promise<void>;
-  
-  // Real-time subscriptions
-  subscribeToTokenUpdates(tokens: string[]): void;
-  subscribeToUserNotifications(address: string): void;
-  subscribeToTraderUpdates(traderIds: string[]): void;
-}
-```
-
-### Smart Contract Integration
-
-```typescript
-// Smart contract hooks with proper error handling
-export function useAlphaNestCore() {
-  const { data: contract } = useContract({
-    address: ALPHANEST_CORE_ADDRESS,
-    abi: AlphaNestCoreABI,
-  });
-  
-  const claimPoints = useMutation({
-    mutationFn: async (proofs: HoldingProof[]) => {
-      return contract?.write.claimPoints([proofs]);
-    },
-    onSuccess: (hash) => {
-      toast.success('Points claimed successfully!');
-      queryClient.invalidateQueries(['user-points']);
-    },
-  });
-  
-  const stakeTokens = useMutation({
-    mutationFn: async ({ tokens, amounts }: StakeParams) => {
-      return contract?.write.stakeTokens([tokens, amounts]);
-    },
-  });
-  
-  return { claimPoints, stakeTokens };
-}
-
-export function useAlphaGuard() {
-  const purchaseInsurance = useMutation({
-    mutationFn: async ({ productId, amount, premium }: InsuranceParams) => {
-      const contract = getContract({
-        address: ALPHAGUARD_ADDRESS,
-        abi: AlphaGuardABI,
-      });
-      return contract.write.purchaseInsurance([productId, amount], {
-        value: premium,
-      });
-    },
-  });
-  
-  const claimInsurance = useMutation({
-    mutationFn: async (policyId: string) => {
-      const contract = getContract({
-        address: ALPHAGUARD_ADDRESS,
-        abi: AlphaGuardABI,
-      });
-      return contract.write.claimInsurance([policyId]);
-    },
-  });
-  
-  return { purchaseInsurance, claimInsurance };
-}
-```
-
-## Data Models
+## Data Flow Design
 
 ### State Management Strategy
 
-```typescript
-// Global state with Zustand
-interface AppState {
-  // User state
-  user: User | null;
-  connectedWallets: ConnectedWallet[];
-  
-  // UI state
-  theme: 'light' | 'dark';
-  language: 'en' | 'zh';
-  currency: 'USD' | 'CNY';
-  
-  // Trading state
-  selectedTokens: Token[];
-  tradingPairs: TradingPair[];
-  
-  // Notifications
-  notifications: Notification[];
-  unreadCount: number;
-  
-  // Actions
-  setUser: (user: User | null) => void;
-  addWallet: (wallet: ConnectedWallet) => void;
-  updatePreferences: (preferences: Partial<UserPreferences>) => void;
-  addNotification: (notification: Notification) => void;
-  markAsRead: (notificationId: string) => void;
-}
+#### 1. Server State (TanStack Query)
+用于管理从 API 获取的数据，具有缓存、重新验证和自动刷新功能。
 
-// Create store with persistence
-export const useAppStore = create<AppState>()(
-  persist(
-    (set, get) => ({
-      user: null,
-      connectedWallets: [],
-      theme: 'dark',
-      language: 'en',
-      currency: 'USD',
-      selectedTokens: [],
-      tradingPairs: [],
-      notifications: [],
-      unreadCount: 0,
-      
-      setUser: (user) => set({ user }),
-      addWallet: (wallet) => set((state) => ({
-        connectedWallets: [...state.connectedWallets, wallet]
-      })),
-      updatePreferences: (preferences) => set((state) => ({
-        user: state.user ? { ...state.user, preferences: { ...state.user.preferences, ...preferences } } : null
-      })),
-      addNotification: (notification) => set((state) => ({
-        notifications: [notification, ...state.notifications],
-        unreadCount: state.unreadCount + 1
-      })),
-      markAsRead: (notificationId) => set((state) => ({
-        notifications: state.notifications.map(n => 
-          n.id === notificationId ? { ...n, isRead: true } : n
-        ),
-        unreadCount: Math.max(0, state.unreadCount - 1)
-      })),
-    }),
-    {
-      name: 'alphanest-storage',
-      partialize: (state) => ({
-        theme: state.theme,
-        language: state.language,
-        currency: state.currency,
-        connectedWallets: state.connectedWallets,
-      }),
-    }
-  )
-);
+```typescript
+// 示例：使用 TanStack Query 管理代币数据
+const useTrendingTokens = (chains: string[]) => {
+  return useQuery({
+    queryKey: ['trending-tokens', chains],
+    queryFn: () => ApiService.getTrendingTokens(10, chains),
+    staleTime: 30000, // 30 seconds
+    refetchInterval: 60000, // 1 minute
+  });
+};
 ```
 
-### Real-time Data Management
+#### 2. Blockchain State (Wagmi)
+用于管理链上数据和交易状态。
 
 ```typescript
-// WebSocket manager for real-time updates
-class WebSocketManager {
-  private ws: WebSocket | null = null;
-  private subscriptions = new Map<string, Set<(data: any) => void>>();
-  private reconnectAttempts = 0;
-  private maxReconnectAttempts = 5;
-  
-  connect() {
-    this.ws = new WebSocket(WS_ENDPOINT);
-    
-    this.ws.onopen = () => {
-      console.log('WebSocket connected');
-      this.reconnectAttempts = 0;
-    };
-    
-    this.ws.onmessage = (event) => {
-      const { type, data } = JSON.parse(event.data);
-      const callbacks = this.subscriptions.get(type);
-      if (callbacks) {
-        callbacks.forEach(callback => callback(data));
+// 示例：使用 Wagmi 读取合约数据
+const { data: stakeInfo } = useReadContract({
+  address: CONTRACT_ADDRESS,
+  abi: ALPHANEST_CORE_ABI,
+  functionName: 'getStakeInfo',
+  args: [userAddress],
+});
+```
+
+#### 3. Client State (Zustand)
+用于管理用户偏好设置、UI 状态等客户端状态。
+
+```typescript
+// 示例：使用 Zustand 管理设置
+interface SettingsStore {
+  slippage: number;
+  deadline: number;
+  hideBalance: boolean;
+  setSlippage: (value: number) => void;
+  setDeadline: (value: number) => void;
+  toggleHideBalance: () => void;
+}
+
+const useSettingsStore = create<SettingsStore>((set) => ({
+  slippage: 0.5,
+  deadline: 20,
+  hideBalance: false,
+  setSlippage: (value) => set({ slippage: value }),
+  setDeadline: (value) => set({ deadline: value }),
+  toggleHideBalance: () => set((state) => ({ hideBalance: !state.hideBalance })),
+}));
+```
+
+### Real-time Data Flow
+
+```
+WebSocket Server
+      │
+      ├─> Price Updates ──────────> useRealtimeMarket hook
+      │                                    │
+      ├─> Whale Alerts ───────────> useWhaleAlerts hook
+      │                                    │
+      ├─> New Token Launches ─────> useNewTokens hook
+      │                                    │
+      └─> Insurance Events ───────> useInsuranceEvents hook
+                                           │
+                                           ▼
+                                    React Components
+                                    (Auto re-render)
+```
+
+## API Integration Design
+
+### Backend API Endpoints
+
+#### 1. Platform Stats API
+```typescript
+GET /api/v1/stats/platform
+Response: {
+  totalVolume24h: number;
+  volumeChange24h: number;
+  totalUsers: number;
+  usersChange24h: number;
+  totalTransactions: number;
+  transactionsChange24h: number;
+  activeTokens: number;
+}
+```
+
+#### 2. User Stats API
+```typescript
+GET /api/v1/stats/user/:address
+Response: {
+  portfolioValue: number;
+  portfolioChange: number;
+  pointsBalance: number;
+  activePolicies: number;
+  totalTrades: number;
+  winRate: number;
+}
+```
+
+#### 3. Trending Tokens API
+```typescript
+GET /api/v1/tokens/trending?chains[]=solana&chains[]=base&limit=10
+Response: {
+  success: boolean;
+  data: Array<{
+    contract_address: string;
+    chain: string;
+    name: string;
+    symbol: string;
+    logo_url?: string;
+    price_usd: string;
+    price_change_24h: number;
+    volume_24h: number;
+    market_cap: number;
+    url?: string;
+  }>;
+}
+```
+
+#### 4. Dev Reputation API
+```typescript
+GET /api/v1/devs/:address/reputation
+Response: {
+  address: string;
+  alias?: string;
+  reputationScore: number;
+  totalLaunches: number;
+  successfulLaunches: number;
+  rugCount: number;
+  winRate: number;
+  totalVolume: number;
+  verificationLevel: 'none' | 'basic' | 'verified' | 'red-v';
+  isHighRisk: boolean;
+  launchHistory: Array<{
+    tokenAddress: string;
+    chain: string;
+    launchDate: string;
+    status: 'active' | 'rugged' | 'graduated';
+    marketCap: number;
+  }>;
+}
+```
+
+#### 5. Insurance Pools API
+```typescript
+GET /api/v1/insurance/pools
+Response: {
+  pools: Array<{
+    poolId: number;
+    tokenAddress: string;
+    tokenName: string;
+    tokenSymbol: string;
+    chain: string;
+    totalRugBets: string;
+    totalSafeBets: string;
+    rugOdds: number;
+    safeOdds: number;
+    expiresAt: number;
+    status: 'active' | 'resolved' | 'cancelled';
+  }>;
+}
+```
+
+#### 6. Points & Tasks API
+```typescript
+GET /api/v1/points/tasks
+Response: {
+  tasks: Array<{
+    id: string;
+    title: string;
+    description: string;
+    points: number;
+    type: 'daily' | 'weekly' | 'one-time';
+    completed: boolean;
+    progress?: number;
+    maxProgress?: number;
+  }>;
+}
+
+POST /api/v1/points/tasks/:taskId/complete
+Response: {
+  success: boolean;
+  pointsEarned: number;
+  newBalance: number;
+}
+```
+
+#### 7. Trading API (DEX Aggregator)
+```typescript
+GET /api/v1/trade/quote
+Query: {
+  fromToken: string;
+  toToken: string;
+  amount: string;
+  chain: string;
+  slippage: number;
+}
+Response: {
+  quote: {
+    fromAmount: string;
+    toAmount: string;
+    priceImpact: number;
+    estimatedGas: string;
+    route: Array<{
+      dex: string;
+      percentage: number;
+    }>;
+  };
+}
+
+POST /api/v1/trade/execute
+Body: {
+  quoteId: string;
+  userAddress: string;
+}
+Response: {
+  txHash: string;
+  status: 'pending' | 'success' | 'failed';
+}
+```
+
+### External API Integration
+
+#### 1. Bitquery (Multi-chain Data)
+```typescript
+// GraphQL query for Dev launch history
+query GetDevLaunches($devAddress: String!) {
+  ethereum(network: ethereum) {
+    dexTrades(
+      options: {limit: 100}
+      txSender: {is: $devAddress}
+      tradeAmountUsd: {gt: 1000}
+    ) {
+      token {
+        address
+        symbol
+        name
       }
-    };
-    
-    this.ws.onclose = () => {
-      if (this.reconnectAttempts < this.maxReconnectAttempts) {
-        setTimeout(() => {
-          this.reconnectAttempts++;
-          this.connect();
-        }, 1000 * Math.pow(2, this.reconnectAttempts));
-      }
-    };
-  }
-  
-  subscribe(type: string, callback: (data: any) => void) {
-    if (!this.subscriptions.has(type)) {
-      this.subscriptions.set(type, new Set());
-    }
-    this.subscriptions.get(type)!.add(callback);
-    
-    // Send subscription message
-    if (this.ws?.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify({ action: 'subscribe', type }));
-    }
-  }
-  
-  unsubscribe(type: string, callback: (data: any) => void) {
-    const callbacks = this.subscriptions.get(type);
-    if (callbacks) {
-      callbacks.delete(callback);
-      if (callbacks.size === 0) {
-        this.subscriptions.delete(type);
-        if (this.ws?.readyState === WebSocket.OPEN) {
-          this.ws.send(JSON.stringify({ action: 'unsubscribe', type }));
+      tradeAmount(in: USD)
+      transaction {
+        hash
+        txFrom {
+          address
         }
       }
     }
   }
 }
+```
 
-// React hook for real-time data
-export function useRealTimeData<T>(
-  type: string,
-  initialData?: T
-): [T | undefined, boolean] {
-  const [data, setData] = useState<T | undefined>(initialData);
-  const [isConnected, setIsConnected] = useState(false);
-  
-  useEffect(() => {
-    const wsManager = WebSocketManager.getInstance();
-    
-    const handleData = (newData: T) => {
-      setData(newData);
+#### 2. DexScreener (Price & Chart Data)
+```typescript
+GET https://api.dexscreener.com/latest/dex/tokens/:tokenAddress
+Response: {
+  pairs: Array<{
+    chainId: string;
+    dexId: string;
+    priceUsd: string;
+    volume: {
+      h24: number;
     };
-    
-    const handleConnection = (connected: boolean) => {
-      setIsConnected(connected);
+    priceChange: {
+      h24: number;
     };
-    
-    wsManager.subscribe(type, handleData);
-    wsManager.subscribe('connection', handleConnection);
-    
-    return () => {
-      wsManager.unsubscribe(type, handleData);
-      wsManager.unsubscribe('connection', handleConnection);
-    };
-  }, [type]);
-  
-  return [data, isConnected];
+  }>;
 }
 ```
 
-Now I need to continue with the Correctness Properties section. Let me first use the prework tool to analyze the acceptance criteria.
+#### 3. Herodotus/Axiom (Storage Proofs)
+```typescript
+// Verify user holding on another chain
+POST /api/v1/verify/holding
+Body: {
+  userAddress: string;
+  tokenAddress: string;
+  chain: string;
+  blockNumber: number;
+}
+Response: {
+  verified: boolean;
+  balance: string;
+  proof: string; // Storage proof
+}
+```
 
-<function_calls>
-<invoke name="prework">
-<parameter name="featureName">frontend-completion
+## Smart Contract Integration
+
+### Contract Interaction Patterns
+
+#### 1. Read Operations (View Functions)
+使用 `useReadContract` hook 进行链上数据读取，自动缓存和刷新。
+
+```typescript
+// Pattern: Read contract data
+const { data, isLoading, refetch } = useReadContract({
+  address: CONTRACT_ADDRESS,
+  abi: CONTRACT_ABI,
+  functionName: 'getStakeInfo',
+  args: [userAddress],
+  query: {
+    enabled: !!userAddress,
+    staleTime: 10000, // 10 seconds
+  },
+});
+```
+
+#### 2. Write Operations (Transactions)
+使用 `useWriteContract` + `useWaitForTransactionReceipt` 进行交易提交和确认。
+
+```typescript
+// Pattern: Write to contract
+const { writeContract, data: hash, isPending } = useWriteContract();
+const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
+
+const handleStake = async (amount: string) => {
+  writeContract({
+    address: CONTRACT_ADDRESS,
+    abi: CONTRACT_ABI,
+    functionName: 'stake',
+    args: [parseEther(amount)],
+  });
+};
+```
+
+#### 3. Multi-step Transactions (Approve + Execute)
+处理需要授权的交易流程。
+
+```typescript
+// Pattern: Approve + Execute
+const [step, setStep] = useState<'idle' | 'approving' | 'executing'>('idle');
+
+const { writeContract: approve } = useWriteContract();
+const { writeContract: execute } = useWriteContract();
+
+const handlePurchaseInsurance = async (amount: string) => {
+  // Step 1: Check allowance
+  const allowance = await readContract({
+    address: USDC_ADDRESS,
+    abi: ERC20_ABI,
+    functionName: 'allowance',
+    args: [userAddress, INSURANCE_CONTRACT],
+  });
+
+  // Step 2: Approve if needed
+  if (allowance < parseUnits(amount, 6)) {
+    setStep('approving');
+    approve({
+      address: USDC_ADDRESS,
+      abi: ERC20_ABI,
+      functionName: 'approve',
+      args: [INSURANCE_CONTRACT, parseUnits(amount, 6)],
+    });
+    // Wait for approval confirmation...
+  }
+
+  // Step 3: Execute main transaction
+  setStep('executing');
+  execute({
+    address: INSURANCE_CONTRACT,
+    abi: INSURANCE_ABI,
+    functionName: 'purchasePolicy',
+    args: [poolId, position, parseUnits(amount, 6)],
+  });
+};
+```
+
+## UI/UX Design Patterns
+
+### Design System
+
+#### Color Palette
+```typescript
+// Primary colors
+const colors = {
+  primary: {
+    orange: '#F97316', // PopCow brand color
+    orangeLight: '#FB923C',
+    orangeDark: '#EA580C',
+  },
+  status: {
+    success: '#10B981',
+    warning: '#F59E0B',
+    error: '#EF4444',
+    info: '#3B82F6',
+  },
+  chain: {
+    base: '#0052FF',
+    solana: '#9945FF',
+    bnb: '#F3BA2F',
+    ethereum: '#627EEA',
+  },
+};
+```
+
+#### Typography
+```typescript
+// Font sizes
+const typography = {
+  h1: 'text-3xl font-bold',
+  h2: 'text-2xl font-semibold',
+  h3: 'text-xl font-semibold',
+  body: 'text-base',
+  small: 'text-sm',
+  xs: 'text-xs',
+};
+```
+
+#### Spacing
+```typescript
+// Consistent spacing
+const spacing = {
+  xs: '0.25rem', // 4px
+  sm: '0.5rem',  // 8px
+  md: '1rem',    // 16px
+  lg: '1.5rem',  // 24px
+  xl: '2rem',    // 32px
+};
+```
+
+### Component Patterns
+
+#### 1. Loading States
+```typescript
+// Pattern: Skeleton loading
+{isLoading ? (
+  <ListSkeleton count={5} />
+) : (
+  <DataList items={data} />
+)}
+```
+
+#### 2. Error Handling
+```typescript
+// Pattern: Error boundary with retry
+{error ? (
+  <ErrorState
+    message={error.message}
+    onRetry={() => refetch()}
+  />
+) : (
+  <Content />
+)}
+```
+
+#### 3. Empty States
+```typescript
+// Pattern: Empty state with CTA
+{data.length === 0 ? (
+  <EmptyState
+    icon={<Inbox />}
+    title="No data found"
+    description="Get started by..."
+    action={<Button>Create New</Button>}
+  />
+) : (
+  <DataList items={data} />
+)}
+```
+
+#### 4. Confirmation Dialogs
+```typescript
+// Pattern: Dangerous action confirmation
+<AlertDialog>
+  <AlertDialogTrigger asChild>
+    <Button variant="destructive">Delete</Button>
+  </AlertDialogTrigger>
+  <AlertDialogContent>
+    <AlertDialogHeader>
+      <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+      <AlertDialogDescription>
+        This action cannot be undone.
+      </AlertDialogDescription>
+    </AlertDialogHeader>
+    <AlertDialogFooter>
+      <AlertDialogCancel>Cancel</AlertDialogCancel>
+      <AlertDialogAction onClick={handleDelete}>
+        Continue
+      </AlertDialogAction>
+    </AlertDialogFooter>
+  </AlertDialogContent>
+</AlertDialog>
+```
+
+## Performance Optimization
+
+### Code Splitting
+```typescript
+// Lazy load heavy components
+const TradingViewChart = dynamic(
+  () => import('@/components/charts/trading-view-chart'),
+  { ssr: false, loading: () => <ChartSkeleton /> }
+);
+```
+
+### Memoization
+```typescript
+// Memoize expensive calculations
+const miningWeight = useMemo(() => {
+  return calculateMiningWeight(stakeAmount, etfComponents);
+}, [stakeAmount, etfComponents]);
+
+// Memoize components
+const TokenCard = memo(({ token }: { token: Token }) => {
+  return <Card>...</Card>;
+});
+```
+
+### Virtual Scrolling
+```typescript
+// Use virtual scrolling for long lists
+import { useVirtualizer } from '@tanstack/react-virtual';
+
+const rowVirtualizer = useVirtualizer({
+  count: tokens.length,
+  getScrollElement: () => parentRef.current,
+  estimateSize: () => 80,
+});
+```
+
+### Image Optimization
+```typescript
+// Use Next.js Image component
+import Image from 'next/image';
+
+<Image
+  src={token.logo_url}
+  alt={token.symbol}
+  width={40}
+  height={40}
+  loading="lazy"
+/>
+```
+
+## Security Considerations
+
+### Input Validation
+```typescript
+// Validate all user inputs
+const amountSchema = z.string()
+  .regex(/^\d+(\.\d+)?$/, 'Invalid amount')
+  .refine((val) => parseFloat(val) > 0, 'Amount must be positive')
+  .refine((val) => parseFloat(val) <= maxAmount, 'Amount exceeds maximum');
+```
+
+### Transaction Safety
+```typescript
+// Always show transaction preview
+<TransactionPreview
+  action="Stake"
+  amount={amount}
+  estimatedGas={gasEstimate}
+  onConfirm={handleConfirm}
+  onCancel={handleCancel}
+/>
+```
+
+### Rate Limiting
+```typescript
+// Implement client-side rate limiting
+const { mutate, isLoading } = useMutation({
+  mutationFn: submitTransaction,
+  onMutate: () => {
+    // Prevent double submission
+    if (isLoading) throw new Error('Transaction in progress');
+  },
+});
+```
 
 ## Correctness Properties
 
-*A property is a characteristic or behavior that should hold true across all valid executions of a system—essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees.*
+### Property 1: Data Consistency
+**Property:** 用户在不同页面看到的相同数据应该保持一致。
 
-### Property 1: Real Data Integration
-*For any* API endpoint that previously returned mock data, the system should now return real data from external services and never return hardcoded mock responses.
-**Validates: Requirements 1.3, 1.4, 1.5, 2.3, 3.2**
+**Implementation:**
+- 使用 TanStack Query 的全局缓存
+- 使用相同的 queryKey 确保数据共享
+- 在数据变更后使用 `invalidateQueries` 刷新相关数据
 
-### Property 2: Multi-Chain Wallet Connectivity
-*For any* supported blockchain (Solana, Ethereum, Base, BNB Chain), users should be able to connect wallets and the system should correctly identify the chain and retrieve account information.
-**Validates: Requirements 9.1, 9.2**
-
-### Property 3: Real-Time Data Updates
-*For any* data that changes frequently (prices, balances, notifications), the system should update within 2 seconds of the actual change occurring.
-**Validates: Requirements 1.6, 11.3, 11.4, 11.5**
-
-### Property 4: Trading Parameter Persistence
-*For any* user-configured trading parameters (slippage, deadline, notification preferences), these settings should persist across browser sessions and be applied to all relevant operations.
-**Validates: Requirements 2.4, 7.1, 7.2, 7.6**
-
-### Property 5: Smart Contract Integration
-*For any* smart contract interaction (insurance purchase, point claiming, staking), the system should correctly encode transaction data and handle both success and failure cases.
-**Validates: Requirements 4.1, 4.2, 5.1, 5.2**
-
-### Property 6: Cross-Chain Holdings Verification
-*For any* user attempting to verify holdings across multiple chains, the system should use cryptographic proofs to validate ownership without requiring private key access.
-**Validates: Requirements 6.2, 9.3**
-
-### Property 7: Point Calculation Accuracy
-*For any* point-earning activity (wallet connection, holdings verification, daily tasks), the system should calculate and award points according to the defined algorithms and prevent double-claiming.
-**Validates: Requirements 5.2, 5.3, 5.4, 9.4**
-
-### Property 8: Insurance Claim Processing
-*For any* valid insurance claim (rug pull detection, policy conditions met), the system should automatically process the claim and transfer funds according to the policy terms.
-**Validates: Requirements 4.5**
-
-### Property 9: Copy Trade Execution
-*For any* active copy trade configuration, when the followed trader executes a trade, the system should replicate the trade proportionally according to the follower's settings within the specified parameters.
-**Validates: Requirements 8.2, 8.3, 8.7**
-
-### Property 10: Responsive Design Consistency
-*For any* screen size between 320px and 2560px width, all UI components should remain functional and properly formatted without horizontal scrolling or overlapping elements.
-**Validates: Requirements 12.1**
-
-### Property 11: Notification Delivery
-*For any* configured notification trigger (price alerts, whale transactions, new token launches), the system should deliver notifications through all enabled channels (browser, Telegram) within 30 seconds.
-**Validates: Requirements 11.1, 11.2, 11.3, 11.4, 11.5**
-
-### Property 12: Performance Benchmarks
-*For any* page load or API request, the system should meet the specified performance targets (page load < 2s, API response < 200ms) under normal load conditions.
-**Validates: Requirements 15.1, 15.2**
-
-### Property 13: Data Persistence and Synchronization
-*For any* user setting or preference change, the data should be persisted locally and synchronized across devices when the user logs in from different locations.
-**Validates: Requirements 7.6**
-
-### Property 14: Security and Access Control
-*For any* sensitive operation (trading, insurance claims, governance voting), the system should require proper authentication and authorization before allowing the action.
-**Validates: Requirements 13.1, 13.3, 13.6**
-
-### Property 15: ETF Component Management
-*For any* ETF component addition or removal, the change should only be implemented after successful governance voting and should update all related calculations (mining weights, portfolio values) accordingly.
-**Validates: Requirements 6.7, 14.1, 14.7**
-
-## Error Handling
-
-### Error Categories and Strategies
-
-**Network and Connectivity Errors:**
-- Implement exponential backoff for failed API requests
-- Provide offline mode with cached data where possible
-- Show clear connection status indicators
-- Graceful degradation when external services are unavailable
-
-**Blockchain Transaction Errors:**
-- Parse and display user-friendly error messages
-- Provide transaction retry mechanisms with adjusted gas fees
-- Implement transaction status tracking and notifications
-- Handle insufficient balance and approval scenarios
-
-**User Input Validation:**
-- Client-side validation with immediate feedback
-- Server-side validation for security
-- Clear error messages with suggested corrections
-- Form state preservation during error correction
-
-**Smart Contract Interaction Errors:**
-- Handle contract revert reasons and display meaningful messages
-- Implement transaction simulation before execution
-- Provide gas estimation with safety margins
-- Handle contract upgrade scenarios gracefully
-
-### Error Boundary Implementation
-
+**Test Strategy:**
 ```typescript
-class ErrorBoundary extends Component<Props, State> {
-  constructor(props: Props) {
-    super(props);
-    this.state = { hasError: false, error: null };
-  }
+// Property-based test
+test('user balance should be consistent across pages', async () => {
+  const balance1 = await getBalanceFromDashboard();
+  const balance2 = await getBalanceFromTradePage();
+  expect(balance1).toBe(balance2);
+});
+```
 
-  static getDerivedStateFromError(error: Error): State {
-    return { hasError: true, error };
-  }
+### Property 2: Transaction Atomicity
+**Property:** 多步骤交易（如 Approve + Execute）应该要么全部成功，要么全部失败。
 
-  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    // Log error to monitoring service
-    logger.error('React Error Boundary caught an error', {
-      error: error.message,
-      stack: error.stack,
-      componentStack: errorInfo.componentStack,
-    });
-  }
+**Implementation:**
+- 使用状态机管理交易流程
+- 在每个步骤失败时提供回滚或重试选项
+- 记录交易状态到本地存储，页面刷新后可恢复
 
-  render() {
-    if (this.state.hasError) {
-      return (
-        <ErrorFallback 
-          error={this.state.error}
-          resetError={() => this.setState({ hasError: false, error: null })}
-        />
-      );
-    }
-
-    return this.props.children;
+**Test Strategy:**
+```typescript
+// Property-based test
+test('approve + execute should be atomic', async () => {
+  const initialState = await getContractState();
+  
+  try {
+    await approveAndExecute();
+    const finalState = await getContractState();
+    // Both should succeed
+    expect(finalState.approved).toBe(true);
+    expect(finalState.executed).toBe(true);
+  } catch (error) {
+    const finalState = await getContractState();
+    // Both should fail (rollback)
+    expect(finalState).toEqual(initialState);
   }
-}
+});
+```
+
+### Property 3: Real-time Data Freshness
+**Property:** 实时数据（价格、余额等）的延迟应该小于 2 秒。
+
+**Implementation:**
+- 使用 WebSocket 进行实时数据推送
+- 设置合理的 `staleTime` 和 `refetchInterval`
+- 在用户操作后立即刷新相关数据
+
+**Test Strategy:**
+```typescript
+// Property-based test
+test('price updates should arrive within 2 seconds', async () => {
+  const startTime = Date.now();
+  const priceUpdate = await waitForPriceUpdate();
+  const latency = Date.now() - startTime;
+  expect(latency).toBeLessThan(2000);
+});
+```
+
+### Property 4: Input Validation
+**Property:** 所有用户输入应该在客户端和服务端都进行验证。
+
+**Implementation:**
+- 使用 Zod schema 定义验证规则
+- 在表单提交前进行客户端验证
+- 在 API 端点进行服务端验证
+
+**Test Strategy:**
+```typescript
+// Property-based test
+import { fc } from 'fast-check';
+
+test('all inputs should be validated', () => {
+  fc.assert(
+    fc.property(fc.string(), (input) => {
+      const result = validateInput(input);
+      // Should either pass validation or return error
+      expect(result.success || result.error).toBeDefined();
+    })
+  );
+});
+```
+
+### Property 5: Error Recovery
+**Property:** 系统应该能够从错误状态恢复，不会永久卡住。
+
+**Implementation:**
+- 所有异步操作都有超时机制
+- 提供明确的错误信息和重试按钮
+- 使用 Error Boundary 捕获组件错误
+
+**Test Strategy:**
+```typescript
+// Property-based test
+test('system should recover from errors', async () => {
+  // Simulate various error conditions
+  const errors = [NetworkError, TimeoutError, ContractError];
+  
+  for (const ErrorType of errors) {
+    simulateError(ErrorType);
+    await waitForRecovery();
+    const state = await getSystemState();
+    expect(state.isOperational).toBe(true);
+  }
+});
 ```
 
 ## Testing Strategy
 
-### Dual Testing Approach
+### Unit Tests
+- 测试单个组件的渲染和交互
+- 测试 hooks 的逻辑
+- 测试工具函数
 
-The testing strategy employs both unit tests and property-based tests to ensure comprehensive coverage:
+### Integration Tests
+- 测试组件之间的交互
+- 测试 API 集成
+- 测试智能合约交互
 
-**Unit Tests:**
-- Test specific examples and edge cases
-- Verify component rendering and user interactions
-- Test API integration points and error scenarios
-- Validate form submissions and data transformations
-- Test wallet connection flows and transaction handling
+### E2E Tests
+- 测试完整的用户流程
+- 测试跨页面的数据一致性
+- 测试实时数据更新
 
-**Property-Based Tests:**
-- Verify universal properties across all inputs
-- Test data consistency across different screen sizes
-- Validate calculation accuracy with random inputs
-- Test real-time update mechanisms with various data patterns
-- Verify security properties across different user scenarios
+### Property-Based Tests
+- 测试系统的不变性质
+- 使用 fast-check 生成随机测试数据
+- 验证边界条件和异常情况
 
-### Property-Based Testing Configuration
+## Deployment Strategy
 
-**Testing Framework:** fast-check (JavaScript/TypeScript property-based testing library)
-**Test Configuration:** Minimum 100 iterations per property test
-**Test Tagging:** Each property test references its design document property using the format:
-`// Feature: frontend-completion, Property {number}: {property_text}`
+### Staging Environment
+- 使用测试网（Sepolia, Solana Devnet）
+- 模拟真实数据和交易
+- 进行完整的 E2E 测试
 
-### Testing Implementation Strategy
+### Production Rollout
+1. **Phase 1**: 部署核心功能（首页、交易、保险）
+2. **Phase 2**: 部署 Dev 信誉系统和积分系统
+3. **Phase 3**: 部署 ETF 和跟单功能
+4. **Phase 4**: 部署高级功能（分析工具、治理）
 
-**Component Testing:**
-- Use React Testing Library for component behavior testing
-- Test user interactions and accessibility compliance
-- Verify responsive design across viewport sizes
-- Test error states and loading conditions
+### Monitoring
+- 使用 Sentry 进行错误监控
+- 使用 Google Analytics 进行用户行为分析
+- 使用 Grafana 进行性能监控
+- 设置关键指标告警（API 响应时间、错误率等）
 
-**Integration Testing:**
-- Test wallet connection flows end-to-end
-- Verify API integration with real and mock backends
-- Test smart contract interactions with local test networks
-- Validate cross-chain functionality with testnet deployments
+## Conclusion
 
-**Performance Testing:**
-- Measure page load times and Core Web Vitals
-- Test API response times under various load conditions
-- Verify memory usage and potential memory leaks
-- Test mobile performance on various device profiles
-
-**Security Testing:**
-- Validate input sanitization and XSS prevention
-- Test authentication and authorization flows
-- Verify secure handling of private keys and sensitive data
-- Test against common web vulnerabilities (OWASP Top 10)
-
-### Test Data Management
-
-**Mock Data Strategy:**
-- Maintain realistic mock data that mirrors production API responses
-- Use factories for generating test data with proper relationships
-- Implement mock WebSocket connections for real-time testing
-- Create mock wallet providers for testing without real wallets
-
-**Test Environment Setup:**
-- Local blockchain networks (Hardhat, Solana Test Validator)
-- Mock external APIs with configurable responses
-- Test databases with seed data
-- Isolated test environments for each test suite
-
-This comprehensive testing approach ensures that both specific functionality and universal system properties are validated, providing confidence in the system's correctness and reliability.
+本设计文档提供了前端完善工作的详细技术方案。下一步将创建 tasks.md，将设计分解为可执行的开发任务。

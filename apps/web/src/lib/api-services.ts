@@ -3,12 +3,59 @@
  * 统一管理所有API调用，提供类型安全的接口
  */
 
-import { apiRequest } from './api-client';
+// API request helper (temporary implementation)
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://alphanest-api.dappweb.workers.dev';
+
+interface LocalApiResponse<T> {
+  success: boolean;
+  data?: T;
+  error?: string;
+  message?: string;
+}
+
+interface RequestOptions {
+  timeout?: number;
+  retries?: number;
+  retryDelay?: number;
+  useCache?: boolean;
+  cacheTTL?: number;
+}
+
+async function apiRequest<T>(
+  endpoint: string,
+  options?: RequestOptions
+): Promise<ApiResponse<T>> {
+  try {
+    const response = await fetch(`${API_URL}${endpoint}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      ...options,
+    });
+
+    const data = await response.json();
+    // Handle nested API response structure
+    if (data && typeof data === 'object' && 'success' in data) {
+      return data;
+    }
+    // Handle direct data response
+    return {
+      success: true,
+      data: data,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}
 
 // API 基础类型定义
 export interface ApiResponse<T> {
   success: boolean;
-  data: T;
+  data?: T;
   message?: string;
   error?: string;
 }
@@ -117,8 +164,11 @@ export class ApiService {
   }
 
   // 趋势代币
-  static async getTrendingTokens(limit: number = 10): Promise<ApiResponse<TrendingToken[]>> {
-    return apiRequest<ApiResponse<TrendingToken[]>>(`/api/v1/tokens/trending?limit=${limit}`, {
+  static async getTrendingTokens(limit: number = 10, chains?: string[]): Promise<ApiResponse<TrendingToken[]>> {
+    const chainParams = chains && chains.length > 0 
+      ? `&chains=${chains.join(',')}` 
+      : '';
+    return apiRequest<ApiResponse<TrendingToken[]>>(`/api/v1/tokens/trending?limit=${limit}${chainParams}`, {
       useCache: true,
       cacheTTL: 30000, // 30秒缓存
     });

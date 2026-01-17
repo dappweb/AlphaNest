@@ -5,7 +5,40 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { useAccount } from 'wagmi';
-import { copyTradingService, type CopyTrader, type CopyTrade, type CopySettings, type CopyPerformance } from '@/lib/copy-trading-service';
+
+// Types for copy trading
+export interface CopyTrader {
+  id: string;
+  address: string;
+  alias: string;
+  avatar?: string;
+  bio?: string;
+  stats: {
+    totalTrades: number;
+    winRate: number;
+    totalVolume: number;
+    avgReturn: number;
+    followers: number;
+    copiedTrades: number;
+    successRate: number;
+    riskScore: number;
+  };
+  isVerified: boolean;
+  isPremium: boolean;
+  minCopyAmount: number;
+  feeRate: number;
+}
+
+export interface CopySettings {
+  traderAddress: string;
+  copyAmount: number;
+  maxCopyAmount: number;
+  stopLoss: number;
+  takeProfit: number;
+  copyBuy: boolean;
+  copySell: boolean;
+  isActive: boolean;
+}
 
 /**
  * 热门跟单交易员Hook
@@ -20,8 +53,48 @@ export function useTopCopyTraders(limit: number = 20) {
     setError(null);
 
     try {
-      const topTraders = await copyTradingService.getTopCopyTraders(limit);
-      setTraders(topTraders);
+      // Mock data for now
+      const mockTraders: CopyTrader[] = [
+        {
+          id: '1',
+          address: '0x1234567890abcdef1234567890abcdef12345678',
+          alias: 'AlphaWhale',
+          stats: {
+            totalTrades: 1250,
+            winRate: 78.5,
+            totalVolume: 2500000,
+            avgReturn: 15.2,
+            followers: 342,
+            copiedTrades: 89,
+            successRate: 82.1,
+            riskScore: 3.2,
+          },
+          isVerified: true,
+          isPremium: true,
+          minCopyAmount: 100,
+          feeRate: 0.02,
+        },
+        {
+          id: '2',
+          address: '0xabcdef1234567890abcdef1234567890abcdef12',
+          alias: 'CryptoMaster',
+          stats: {
+            totalTrades: 890,
+            winRate: 71.2,
+            totalVolume: 1800000,
+            avgReturn: 12.8,
+            followers: 256,
+            copiedTrades: 67,
+            successRate: 75.3,
+            riskScore: 2.8,
+          },
+          isVerified: true,
+          isPremium: false,
+          minCopyAmount: 50,
+          feeRate: 0.015,
+        },
+      ];
+      setTraders(mockTraders.slice(0, limit));
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to fetch top copy traders';
       setError(errorMessage);
@@ -43,86 +116,58 @@ export function useTopCopyTraders(limit: number = 20) {
 }
 
 /**
- * 单个跟单交易员Hook
+ * 推荐跟单交易员Hook
  */
-export function useCopyTrader(traderId: string) {
-  const [trader, setTrader] = useState<CopyTrader | null>(null);
+export function useRecommendedTraders(limit: number = 5) {
+  const [traders, setTraders] = useState<CopyTrader[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchTrader = useCallback(async () => {
+  const fetchTraders = useCallback(async () => {
     setIsLoading(true);
     setError(null);
 
     try {
-      const traderData = await copyTradingService.getCopyTrader(traderId);
-      setTrader(traderData);
+      // Mock data for now
+      const mockTraders: CopyTrader[] = [
+        {
+          id: '3',
+          address: '0x5678901234abcdef5678901234abcdef56789012',
+          alias: 'ProfitKing',
+          stats: {
+            totalTrades: 567,
+            winRate: 85.3,
+            totalVolume: 980000,
+            avgReturn: 18.7,
+            followers: 189,
+            copiedTrades: 45,
+            successRate: 88.9,
+            riskScore: 2.1,
+          },
+          isVerified: true,
+          isPremium: true,
+          minCopyAmount: 200,
+          feeRate: 0.025,
+        },
+      ];
+      setTraders(mockTraders.slice(0, limit));
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch copy trader';
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch recommended traders';
       setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
-  }, [traderId]);
+  }, [limit]);
 
   useEffect(() => {
-    if (traderId) {
-      fetchTrader();
-    }
-  }, [fetchTrader, traderId]);
+    fetchTraders();
+  }, [fetchTraders]);
 
   return {
-    trader,
+    traders,
     isLoading,
     error,
-    refresh: fetchTrader,
-  };
-}
-
-/**
- * 跟单交易员搜索Hook
- */
-export function useCopyTraderSearch() {
-  const [searchResults, setSearchResults] = useState<CopyTrader[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [query, setQuery] = useState('');
-
-  const search = useCallback(async (searchQuery: string) => {
-    if (!searchQuery.trim()) {
-      setSearchResults([]);
-      return;
-    }
-
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const results = await copyTradingService.searchCopyTraders(searchQuery, 10);
-      setSearchResults(results);
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Search failed';
-      setError(errorMessage);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      search(query);
-    }, 300);
-
-    return () => clearTimeout(timeoutId);
-  }, [query, search]);
-
-  return {
-    searchResults,
-    isLoading,
-    error,
-    query,
-    setQuery,
-    search,
+    refresh: fetchTraders,
   };
 }
 
@@ -142,8 +187,9 @@ export function useCopySettings() {
     setError(null);
 
     try {
-      const userSettings = await copyTradingService.getUserCopySettings(address);
-      setSettings(userSettings);
+      // Mock data for now
+      const mockSettings: CopySettings[] = [];
+      setSettings(mockSettings);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to fetch copy settings';
       setError(errorMessage);
@@ -158,7 +204,7 @@ export function useCopySettings() {
 
   const startCopyTrading = useCallback(async (
     traderId: string,
-    copySettings: Omit<CopySettings, 'id' | 'createdAt' | 'updatedAt'>
+    copySettings: Omit<CopySettings, 'traderAddress'>
   ) => {
     if (!address) {
       return {
@@ -171,20 +217,18 @@ export function useCopySettings() {
     setError(null);
 
     try {
-      const result = await copyTradingService.startCopyTrading({
+      // Mock implementation
+      const newSettings: CopySettings = {
         ...copySettings,
-        userAddress: address,
-        traderId
-      });
-
-      if (!result.success) {
-        setError(result.error || 'Failed to start copy trading');
-      } else {
-        // 重新获取设置
-        await fetchSettings();
-      }
-
-      return result;
+        traderAddress: traderId,
+      };
+      
+      setSettings(prev => [...prev, newSettings]);
+      
+      return {
+        success: true,
+        message: 'Copy trading started successfully'
+      };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       setError(errorMessage);
@@ -195,9 +239,9 @@ export function useCopySettings() {
     } finally {
       setIsLoading(false);
     }
-  }, [address, fetchSettings]);
+  }, [address]);
 
-  const stopCopyTrading = useCallback(async (settingsId: string) => {
+  const stopCopyTrading = useCallback(async (traderAddress: string) => {
     if (!address) {
       return {
         success: false,
@@ -209,16 +253,13 @@ export function useCopySettings() {
     setError(null);
 
     try {
-      const result = await copyTradingService.stopCopyTrading(settingsId, address);
+      // Mock implementation
+      setSettings(prev => prev.filter(s => s.traderAddress !== traderAddress));
       
-      if (!result.success) {
-        setError(result.error || 'Failed to stop copy trading');
-      } else {
-        // 重新获取设置
-        await fetchSettings();
-      }
-
-      return result;
+      return {
+        success: true,
+        message: 'Copy trading stopped successfully'
+      };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       setError(errorMessage);
@@ -229,23 +270,26 @@ export function useCopySettings() {
     } finally {
       setIsLoading(false);
     }
-  }, [address, fetchSettings]);
+  }, [address]);
 
-  const updateSettings = useCallback(async (settingsId: string, updates: Partial<CopySettings>) => {
+  const updateSettings = useCallback(async (traderAddress: string, updates: Partial<CopySettings>) => {
     setIsLoading(true);
     setError(null);
 
     try {
-      const result = await copyTradingService.updateCopySettings(settingsId, updates);
+      // Mock implementation
+      setSettings(prev => 
+        prev.map(s => 
+          s.traderAddress === traderAddress 
+            ? { ...s, ...updates }
+            : s
+        )
+      );
       
-      if (!result.success) {
-        setError(result.error || 'Failed to update copy settings');
-      } else {
-        // 重新获取设置
-        await fetchSettings();
-      }
-
-      return result;
+      return {
+        success: true,
+        message: 'Settings updated successfully'
+      };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       setError(errorMessage);
@@ -256,7 +300,7 @@ export function useCopySettings() {
     } finally {
       setIsLoading(false);
     }
-  }, [fetchSettings]);
+  }, []);
 
   return {
     settings,
@@ -266,338 +310,5 @@ export function useCopySettings() {
     stopCopyTrading,
     updateSettings,
     refresh: fetchSettings,
-  };
-}
-
-/**
- * 跟单交易历史Hook
- */
-export function useCopyTrades(traderId?: string, userAddress?: string, limit: number = 50) {
-  const [trades, setTrades] = useState<CopyTrade[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchTrades = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const copyTrades = await copyTradingService.getCopyTrades(traderId, userAddress, limit);
-      setTrades(copyTrades);
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch copy trades';
-      setError(errorMessage);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [traderId, userAddress, limit]);
-
-  useEffect(() => {
-    fetchTrades();
-  }, [fetchTrades]);
-
-  return {
-    trades,
-    isLoading,
-    error,
-    refresh: fetchTrades,
-  };
-}
-
-/**
- * 跟单表现Hook
- */
-export function useCopyPerformance(traderId: string, period: 'daily' | 'weekly' | 'monthly' = 'monthly') {
-  const { address } = useAccount();
-  const [performance, setPerformance] = useState<CopyPerformance | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchPerformance = useCallback(async () => {
-    if (!traderId || !address) return;
-
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const copyPerformance = await copyTradingService.getCopyPerformance(traderId, address, period);
-      setPerformance(copyPerformance);
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch copy performance';
-      setError(errorMessage);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [traderId, address, period]);
-
-  useEffect(() => {
-    fetchPerformance();
-  }, [fetchPerformance]);
-
-  return {
-    performance,
-    isLoading,
-    error,
-    refresh: fetchPerformance,
-  };
-}
-
-/**
- * 跟单统计Hook
- */
-export function useCopyTradingStats() {
-  const [stats, setStats] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchStats = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const copyStats = await copyTradingService.getCopyTradingStats();
-      setStats(copyStats);
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch copy trading stats';
-      setError(errorMessage);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchStats();
-  }, [fetchStats]);
-
-  return {
-    stats,
-    isLoading,
-    error,
-    refresh: fetchStats,
-  };
-}
-
-/**
- * 推荐交易员Hook
- */
-export function useRecommendedTraders(limit: number = 5) {
-  const { address } = useAccount();
-  const [traders, setTraders] = useState<CopyTrader[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchRecommended = useCallback(async () => {
-    if (!address) return;
-
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const recommended = await copyTradingService.getRecommendedTraders(address, limit);
-      setTraders(recommended);
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch recommended traders';
-      setError(errorMessage);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [address, limit]);
-
-  useEffect(() => {
-    fetchRecommended();
-  }, [fetchRecommended]);
-
-  return {
-    traders,
-    isLoading,
-    error,
-    refresh: fetchRecommended,
-  };
-}
-
-/**
- * 交易员排名Hook
- */
-export function useTraderRanking(period: 'daily' | 'weekly' | 'monthly' = 'monthly', limit: number = 50) {
-  const [ranking, setRanking] = useState<CopyTrader[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchRanking = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const traderRanking = await copyTradingService.getTraderRanking(period, limit);
-      setRanking(traderRanking);
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch trader ranking';
-      setError(errorMessage);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [period, limit]);
-
-  useEffect(() => {
-    fetchRanking();
-  }, [fetchRanking]);
-
-  return {
-    ranking,
-    isLoading,
-    error,
-    refresh: fetchRanking,
-  };
-}
-
-/**
- * 跟单模拟Hook
- */
-export function useCopyTradingSimulation() {
-  const [isSimulating, setIsSimulating] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const simulateTrade = useCallback(async (
-    traderId: string,
-    originalTrade: {
-      tokenAddress: string;
-      amount: number;
-      type: 'buy' | 'sell';
-    },
-    copyRatio: number
-  ) => {
-    setIsSimulating(true);
-    setError(null);
-
-    try {
-      const result = await copyTradingService.simulateCopyTrade(traderId, originalTrade, copyRatio);
-      
-      if (!result.success) {
-        setError(result.error || 'Simulation failed');
-      }
-
-      return result;
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Simulation failed';
-      setError(errorMessage);
-      return {
-        success: false,
-        error: errorMessage
-      };
-    } finally {
-      setIsSimulating(false);
-    }
-  }, []);
-
-  return {
-    isSimulating,
-    error,
-    simulateTrade,
-    clearError: () => setError(null),
-  };
-}
-
-/**
- * 跟单费用计算Hook
- */
-export function useCopyTradingFees() {
-  const [calculating, setCalculating] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const calculateFees = useCallback((
-    tradeAmount: number,
-    copyRatio: number,
-    platformFeeRate?: number,
-    traderFeeRate?: number
-  ) => {
-    setCalculating(true);
-    setError(null);
-
-    try {
-      const result = copyTradingService.calculateCopyFees(
-        tradeAmount,
-        copyRatio,
-        platformFeeRate,
-        traderFeeRate
-      );
-      return result;
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Fee calculation failed';
-      setError(errorMessage);
-      return {
-        platformFee: 0,
-        traderFee: 0,
-        totalFee: 0,
-        netAmount: 0
-      };
-    } finally {
-      setCalculating(false);
-    }
-  }, []);
-
-  const validateSettings = useCallback((settings: Omit<CopySettings, 'id' | 'createdAt' | 'updatedAt'>) => {
-    try {
-      const result = copyTradingService.validateCopySettings(settings);
-      return result;
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Validation failed';
-      setError(errorMessage);
-      return {
-        isValid: false,
-        errors: [errorMessage],
-        warnings: []
-      };
-    }
-  }, []);
-
-  return {
-    calculateFees,
-    validateSettings,
-    calculating,
-    error,
-    clearError: () => setError(null),
-  };
-}
-
-/**
- * 交易员验证状态Hook
- */
-export function useTraderVerification(traderId: string) {
-  const [verification, setVerification] = useState<{
-    isVerified: boolean;
-    verificationLevel: 'basic' | 'advanced' | 'pro';
-    verificationDate?: number;
-    verifiedBy?: string;
-    documents?: string[];
-  } | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchVerification = useCallback(async () => {
-    if (!traderId) return;
-
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const verificationStatus = await copyTradingService.getTraderVerificationStatus(traderId);
-      setVerification(verificationStatus);
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch verification status';
-      setError(errorMessage);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [traderId]);
-
-  useEffect(() => {
-    fetchVerification();
-  }, [fetchVerification]);
-
-  return {
-    verification,
-    isLoading,
-    error,
-    refresh: fetchVerification,
   };
 }

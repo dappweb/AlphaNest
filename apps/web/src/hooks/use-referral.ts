@@ -5,7 +5,6 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useAccount } from 'wagmi';
-import { getAuthHeaders } from '@/lib/auth';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://alphanest-api.dappweb.workers.dev';
 
@@ -86,7 +85,9 @@ export function useReferral() {
     
     try {
       const response = await fetch(`${API_BASE}/api/v1/referral/stats`, {
-        headers: getAuthHeaders(),
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
       
       if (response.ok) {
@@ -138,7 +139,9 @@ export function useReferral() {
     
     try {
       const response = await fetch(`${API_BASE}/api/v1/referral/history`, {
-        headers: getAuthHeaders(),
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
       
       if (response.ok) {

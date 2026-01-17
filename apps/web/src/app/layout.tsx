@@ -7,7 +7,6 @@ import { Sidebar } from '@/components/layout/sidebar';
 import { Footer } from '@/components/layout/footer';
 import { MobileNav } from '@/components/layout/mobile-nav';
 import { PageTransition } from '@/components/layout/page-transition';
-import { PWAComponents } from '@/components/pwa/pwa-wrapper';
 
 const inter = Inter({ 
   subsets: ['latin'], 
@@ -138,7 +137,6 @@ export default function RootLayout({
             </div>
           </div>
           <MobileNav />
-          <PWAComponents />
         </Providers>
       </body>
     </html>

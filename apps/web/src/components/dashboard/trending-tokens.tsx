@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, memo, useCallback } from 'react';
-import { ArrowUpRight, ArrowDownRight, ExternalLink, Loader2, RefreshCw, AlertCircle } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, ExternalLink, Loader2, RefreshCw, AlertCircle, TrendingUp } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,8 @@ import { formatUSD, formatPercent } from '@/lib/utils';
 import { ApiService, type TrendingToken } from '@/lib/api-services';
 import { ListSkeleton } from '@/components/ui/skeleton';
 import { useRealtimeMarket } from '@/hooks/use-realtime-data';
+import { ChainFilter } from '@/components/ui/chain-filter';
+import { chainConfigs, isTradeEnabled } from '@/config/chains';
 
 function getChainColor(chain: string) {
   switch (chain?.toLowerCase()) {
@@ -41,6 +43,7 @@ export const TrendingTokens = memo(function TrendingTokens() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [selectedChains, setSelectedChains] = useState<string[]>(['solana']);
   
   // 实时市场数据
   const { marketData, isConnected: isRealtimeConnected } = useRealtimeMarket();
@@ -55,7 +58,7 @@ export const TrendingTokens = memo(function TrendingTokens() {
       }
       setError(null);
 
-      const response = await ApiService.getTrendingTokens(10);
+      const response = await ApiService.getTrendingTokens(10, selectedChains);
       
       if (response.success && response.data) {
         setTokens(response.data);
@@ -133,26 +136,33 @@ export const TrendingTokens = memo(function TrendingTokens() {
 
   useEffect(() => {
     fetchTrendingTokens();
-  }, [fetchTrendingTokens]);
+  }, [fetchTrendingTokens, selectedChains]);
 
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
-        <div className="flex items-center gap-2">
-          <CardTitle>Trending Tokens</CardTitle>
-          {isRealtimeConnected && (
-            <div className="flex items-center gap-1">
-              <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-              <span className="text-xs text-muted-foreground">Live</span>
-            </div>
-          )}
+        <div>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <TrendingUp className="h-5 w-5 text-orange-500" />
+            Trending Tokens
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Discover hot tokens across all chains
+          </p>
         </div>
-        <Button variant="ghost" size="sm" asChild>
-          <a href="/trade">
-            View All
-            <ExternalLink className="ml-2 h-4 w-4" />
-          </a>
-        </Button>
+        <div className="flex items-center gap-2">
+          <ChainFilter 
+            selectedChains={selectedChains}
+            onChainChange={setSelectedChains}
+            showTradeStatus={true}
+          />
+          <Button variant="ghost" size="sm" asChild>
+            <a href="/trade">
+              View All
+              <ExternalLink className="ml-2 h-4 w-4" />
+            </a>
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         {isLoading ? (
@@ -227,6 +237,13 @@ export const TrendingTokens = memo(function TrendingTokens() {
                       )}
                       {formatPercent(token.price_change_24h || 0)}
                     </p>
+                    <div className="mt-1">
+                      {isTradeEnabled(token.chain) ? (
+                        <Badge variant="default" className="text-xs">可交易</Badge>
+                      ) : (
+                        <Badge variant="secondary" className="text-xs">仅数据</Badge>
+                      )}
+                    </div>
                   </div>
                 </div>
               </a>
