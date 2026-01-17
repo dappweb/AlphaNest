@@ -1,18 +1,24 @@
 /**
- * 链配置 - BSC (Four.meme) 为主链
- * Four.meme 是 BSC 上类似 pump.fun 的 Meme 代币发射平台
+ * 链配置 - Four.meme (BSC) 和 pump.fun (Solana)
+ * 两个平台的代币都支持质押和保险
  */
 
-// Meme 发射平台配置
+// Meme 发射平台配置 - 两个平台都支持质押和保险
 export const memeLaunchPlatforms = {
-  // BSC - Four.meme (类似 pump.fun)
+  // BSC - Four.meme
   fourMeme: {
     name: 'Four.meme',
     chain: 'bsc',
+    chainId: 56,
     type: 'meme-launchpad',
-    description: 'BSC Meme Token Launchpad (Similar to pump.fun)',
+    description: 'BSC Meme Token Launchpad',
     website: 'https://four.meme',
     features: ['fair-launch', 'bonding-curve', 'auto-liquidity', 'anti-rug'],
+    // 支持的 DeFi 功能
+    defi: {
+      staking: true,    // 代币可质押
+      insurance: true,  // 代币可购买保险
+    },
   },
   // Solana - pump.fun
   pumpFun: {
@@ -22,8 +28,21 @@ export const memeLaunchPlatforms = {
     description: 'Solana Meme Token Launchpad',
     website: 'https://pump.fun',
     features: ['fair-launch', 'bonding-curve', 'auto-liquidity'],
+    // 支持的 DeFi 功能
+    defi: {
+      staking: true,    // 代币可质押
+      insurance: true,  // 代币可购买保险
+    },
   },
 };
+
+// 获取所有支持质押的平台
+export const getStakingPlatforms = () => 
+  Object.values(memeLaunchPlatforms).filter(p => p.defi.staking);
+
+// 获取所有支持保险的平台
+export const getInsurancePlatforms = () => 
+  Object.values(memeLaunchPlatforms).filter(p => p.defi.insurance);
 
 // 支持的区块链配置
 export const chainConfigs = {

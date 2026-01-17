@@ -99,10 +99,10 @@ function HeroBanner() {
               </Badge>
             </div>
             <h2 className="text-xl md:text-3xl font-bold">
-              Meme Launchpad Staking & Insurance
+              Meme Token Staking & Insurance
             </h2>
             <p className="text-white/80 text-sm md:text-base max-w-md">
-              Stake BNB/FOUR on BSC or SOL on Solana. Protect your meme investments!
+              Stake & insure your Four.meme (BSC) and pump.fun (Solana) meme tokens!
             </p>
           </div>
           
@@ -127,22 +127,22 @@ function HeroBanner() {
         <div className="mt-4 md:mt-6 pt-4 md:pt-6 border-t border-white/20 grid grid-cols-2 md:grid-cols-4 gap-4">
           <div>
             <p className="text-xl md:text-2xl font-bold flex items-center gap-1">
-              <span className="text-yellow-300">🟡</span> BSC
+              <span className="text-yellow-300">🟡</span> Four.meme
             </p>
-            <p className="text-white/70 text-[10px] md:text-xs">Four.meme Platform</p>
+            <p className="text-white/70 text-[10px] md:text-xs">BSC Meme Tokens</p>
           </div>
           <div>
             <p className="text-xl md:text-2xl font-bold flex items-center gap-1">
-              <span className="text-purple-300">🟣</span> SOL
+              <span className="text-purple-300">🟣</span> pump.fun
             </p>
-            <p className="text-white/70 text-[10px] md:text-xs">pump.fun Platform</p>
+            <p className="text-white/70 text-[10px] md:text-xs">SOL Meme Tokens</p>
           </div>
           <div>
-            <p className="text-xl md:text-2xl font-bold">50%</p>
-            <p className="text-white/70 text-[10px] md:text-xs">Max APY</p>
+            <p className="text-xl md:text-2xl font-bold">✓ Staking</p>
+            <p className="text-white/70 text-[10px] md:text-xs">Both Platforms</p>
           </div>
           <div>
-            <p className="text-xl md:text-2xl font-bold">100%</p>
+            <p className="text-xl md:text-2xl font-bold">✓ Insurance</p>
             <p className="text-white/70 text-[10px] md:text-xs">Rug Protection</p>
           </div>
         </div>
@@ -159,41 +159,41 @@ function FeatureCards() {
       <Card className="group border-2 border-yellow-500/20 hover:border-yellow-500/50 transition-all duration-300 hover:shadow-lg hover:shadow-yellow-500/5">
         <CardHeader className="pb-2 md:pb-4">
           <div className="flex items-start gap-3">
-            <div className="p-2 md:p-3 rounded-xl bg-gradient-to-br from-yellow-500 to-orange-500 text-white shadow-lg shadow-yellow-500/20">
+            <div className="p-2 md:p-3 rounded-xl bg-gradient-to-br from-yellow-500 to-purple-500 text-white shadow-lg shadow-yellow-500/20">
               <Coins className="h-5 w-5 md:h-6 md:w-6" />
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <CardTitle className="text-lg md:text-xl">Multi-Asset Staking</CardTitle>
-                <Badge className="bg-yellow-500/10 text-yellow-500 border-0 text-[10px]">BSC</Badge>
+                <CardTitle className="text-lg md:text-xl">Meme Token Staking</CardTitle>
+                <Badge className="bg-yellow-500/10 text-yellow-500 border-0 text-[10px]">Four.meme</Badge>
+                <Badge className="bg-purple-500/10 text-purple-500 border-0 text-[10px]">pump.fun</Badge>
               </div>
               <CardDescription className="text-xs md:text-sm mt-1">
-                Stake BNB, FOUR (Four.meme) and earn rewards
+                Stake meme tokens from both platforms
               </CardDescription>
             </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-3 md:space-y-4">
           <div className="grid grid-cols-2 gap-2 md:gap-3">
-            <div className="rounded-lg bg-secondary/50 p-2 md:p-3">
-              <p className="text-[10px] md:text-xs text-muted-foreground">Base APY</p>
-              <p className="text-base md:text-lg font-bold text-green-500">10-50%</p>
+            <div className="rounded-lg bg-yellow-500/10 p-2 md:p-3 border border-yellow-500/20">
+              <p className="text-[10px] md:text-xs text-muted-foreground">🟡 Four.meme (BSC)</p>
+              <p className="text-base md:text-lg font-bold text-yellow-500">BNB + Meme</p>
             </div>
-            <div className="rounded-lg bg-secondary/50 p-2 md:p-3">
-              <p className="text-[10px] md:text-xs text-muted-foreground">Platform</p>
-              <p className="text-base md:text-lg font-bold text-yellow-500">Four.meme</p>
+            <div className="rounded-lg bg-purple-500/10 p-2 md:p-3 border border-purple-500/20">
+              <p className="text-[10px] md:text-xs text-muted-foreground">🟣 pump.fun (SOL)</p>
+              <p className="text-base md:text-lg font-bold text-purple-500">SOL + Meme</p>
             </div>
           </div>
           
           <div className="flex flex-wrap gap-1.5">
-            <Badge className="bg-yellow-500/10 text-yellow-600 border-yellow-500/30 text-[10px]">BNB</Badge>
-            <Badge className="bg-purple-500/10 text-purple-600 border-purple-500/30 text-[10px]">FOUR</Badge>
-            <Badge variant="outline" className="text-[10px]">USDT</Badge>
-            <Badge variant="outline" className="text-[10px]">BEP20</Badge>
+            <Badge className="bg-yellow-500/10 text-yellow-600 border-yellow-500/30 text-[10px]">Four.meme</Badge>
+            <Badge className="bg-purple-500/10 text-purple-600 border-purple-500/30 text-[10px]">pump.fun</Badge>
+            <Badge variant="outline" className="text-[10px]">10-50% APY</Badge>
           </div>
 
           <Link href="/staking" className="block">
-            <Button className="w-full bg-yellow-500 hover:bg-yellow-600 group-hover:shadow-lg transition-all">
+            <Button className="w-full bg-gradient-to-r from-yellow-500 to-purple-500 hover:from-yellow-600 hover:to-purple-600 group-hover:shadow-lg transition-all">
               Start Staking
               <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />
             </Button>
@@ -205,41 +205,41 @@ function FeatureCards() {
       <Card className="group border-2 border-blue-500/20 hover:border-blue-500/50 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/5">
         <CardHeader className="pb-2 md:pb-4">
           <div className="flex items-start gap-3">
-            <div className="p-2 md:p-3 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/20">
+            <div className="p-2 md:p-3 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 text-white shadow-lg shadow-blue-500/20">
               <Shield className="h-5 w-5 md:h-6 md:w-6" />
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <CardTitle className="text-lg md:text-xl">CowGuard Insurance</CardTitle>
-                <Badge className="bg-blue-500/10 text-blue-500 border-0 text-[10px]">MEME</Badge>
+                <CardTitle className="text-lg md:text-xl">Meme Token Insurance</CardTitle>
+                <Badge className="bg-yellow-500/10 text-yellow-500 border-0 text-[10px]">Four.meme</Badge>
+                <Badge className="bg-purple-500/10 text-purple-500 border-0 text-[10px]">pump.fun</Badge>
               </div>
               <CardDescription className="text-xs md:text-sm mt-1">
-                Protect your Four.meme & pump.fun investments
+                Insure your meme tokens from both platforms
               </CardDescription>
             </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-3 md:space-y-4">
           <div className="grid grid-cols-2 gap-2 md:gap-3">
-            <div className="rounded-lg bg-secondary/50 p-2 md:p-3">
-              <p className="text-[10px] md:text-xs text-muted-foreground">Platforms</p>
-              <p className="text-base md:text-lg font-bold">BSC + SOL</p>
+            <div className="rounded-lg bg-yellow-500/10 p-2 md:p-3 border border-yellow-500/20">
+              <p className="text-[10px] md:text-xs text-muted-foreground">🟡 Four.meme (BSC)</p>
+              <p className="text-base md:text-lg font-bold text-yellow-500">100% Cover</p>
             </div>
-            <div className="rounded-lg bg-secondary/50 p-2 md:p-3">
-              <p className="text-[10px] md:text-xs text-muted-foreground">Coverage Rate</p>
-              <p className="text-base md:text-lg font-bold text-blue-500">Up to 100%</p>
+            <div className="rounded-lg bg-purple-500/10 p-2 md:p-3 border border-purple-500/20">
+              <p className="text-[10px] md:text-xs text-muted-foreground">🟣 pump.fun (SOL)</p>
+              <p className="text-base md:text-lg font-bold text-purple-500">100% Cover</p>
             </div>
           </div>
           
           <div className="flex flex-wrap gap-1.5">
             <Badge variant="outline" className="text-[10px]">🚨 Rug Pull</Badge>
             <Badge variant="outline" className="text-[10px]">📉 Price Drop</Badge>
-            <Badge variant="outline" className="text-[10px]">🔒 Smart Contract</Badge>
-            <Badge variant="outline" className="text-[10px]">🐸 Meme Token</Badge>
+            <Badge variant="outline" className="text-[10px]">🔒 Contract Exploit</Badge>
           </div>
 
           <Link href="/insurance" className="block">
-            <Button className="w-full bg-blue-500 hover:bg-blue-600 group-hover:shadow-lg transition-all">
+            <Button className="w-full bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 group-hover:shadow-lg transition-all">
               Get Insurance
               <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />
             </Button>
@@ -313,11 +313,11 @@ export default function HomePage() {
       {/* 页面标题 - 移动端简化 */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight bg-gradient-to-r from-yellow-500 to-orange-500 bg-clip-text text-transparent">
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight bg-gradient-to-r from-yellow-500 to-purple-500 bg-clip-text text-transparent">
             {t.dashboard.title}
           </h1>
           <p className="text-sm md:text-base text-muted-foreground">
-            BSC Four.meme & Solana pump.fun - Meme Launchpad DeFi
+            Stake & Insure Meme Tokens from Four.meme & pump.fun
           </p>
         </div>
         <div className="flex gap-2">
