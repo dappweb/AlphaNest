@@ -44,6 +44,7 @@ export function StakingCard({
   onClaim,
   isLoading = false,
   isConnected = false,
+  error = null,
 }: StakingCardProps) {
   const { t } = useTranslation();
   const [stakeAmount, setStakeAmount] = useState('');

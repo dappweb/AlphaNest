@@ -2,7 +2,11 @@
  * API Client for AlphaNest Backend
  */
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://alphanest-api.dappweb.workers.dev';
+// Use remote API by default, even if NEXT_PUBLIC_API_URL is set to localhost
+const envApiUrl = process.env.NEXT_PUBLIC_API_URL;
+const API_URL = (envApiUrl && !envApiUrl.includes('localhost')) 
+  ? envApiUrl 
+  : 'https://alphanest-api.dappweb.workers.dev';
 
 interface ApiResponse<T> {
   success: boolean;

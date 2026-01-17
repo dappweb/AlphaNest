@@ -2,7 +2,11 @@
  * 管理员认证工具函数
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787/api/v1';
+// Use remote API by default, even if NEXT_PUBLIC_API_URL is set to localhost
+const envApiUrl = process.env.NEXT_PUBLIC_API_URL;
+const API_BASE_URL = (envApiUrl && !envApiUrl.includes('localhost')) 
+  ? `${envApiUrl}/api/v1`
+  : 'https://alphanest-api.dappweb.workers.dev/api/v1';
 
 export interface AdminInfo {
   admin_id: string;
