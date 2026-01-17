@@ -8,18 +8,18 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
 
 /**
- * @title AlphaGuard
- * @notice 参数化保险协议 - Meme 代币风险保护
- * @dev 对齐 Solana cowguard-insurance 功能
+ * @title CowGuardInsurance
+ * @notice 保险协议 - 对齐 Solana cowguard-insurance
+ * @dev Meme 代币风险保护
  * 
  * 功能:
  * 1. 多种保险类型 - RugPull/价格下跌/智能合约/综合
  * 2. 产品化定价 - 保费率/赔付率
  * 3. 理赔流程 - 申请/审核/赔付
  * 4. 保单取消 - 按比例退款
- * 5. TWAP 价格验证 - 防闪电贷攻击
+ * 5. 价格预言机 - 防闪电贷攻击
  */
-contract AlphaGuard is Ownable, ReentrancyGuard, Pausable {
+contract CowGuardInsurance is Ownable, ReentrancyGuard, Pausable {
     using SafeERC20 for IERC20;
 
     // ============================================
@@ -97,27 +97,27 @@ contract AlphaGuard is Ownable, ReentrancyGuard, Pausable {
 
     IERC20 public paymentToken;     // 支付代币 (USDC)
     address public priceOracle;     // 价格预言机
-    address public treasuryAddress; // 国库地址
+    address public treasury;        // 国库地址
     
-    uint256 public protocolFeeRate; // 协议费率 (basis points)
-    uint256 public cancelFeeRate;   // 取消手续费率 (basis points, 2000 = 20%)
+    uint256 public treasuryFee;     // 国库费率 (basis points)
+    uint256 public cancelFeeRate;   // 取消手续费率 (basis points)
     
     uint256 public productCounter;
     uint256 public policyCounter;
     uint256 public claimCounter;
     
-    uint256 public totalProtocolFees;
-    uint256 public totalPayouts;
+    uint256 public totalPolicies;
     uint256 public totalClaims;
+    uint256 public totalPayouts;
     
-    bool public isProtocolPaused;
+    bool public isPaused;
     
     mapping(uint256 => InsuranceProduct) public products;
     mapping(uint256 => Policy) public policies;
     mapping(uint256 => Claim) public claims;
     
     mapping(address => uint256[]) public userPolicies;
-    mapping(uint256 => uint256) public policyClaim; // policyId => claimId
+    mapping(uint256 => uint256) public policyClaim;
     
     uint256 public constant BASIS_POINTS = 10000;
 
@@ -129,7 +129,8 @@ contract AlphaGuard is Ownable, ReentrancyGuard, Pausable {
         uint256 indexed productId,
         InsuranceType productType,
         uint256 premiumRate,
-        uint256 coverageRate
+        uint256 coverageRate,
+        uint256 durationDays
     );
     
     event ProductUpdated(uint256 indexed productId, bool isActive);
@@ -163,7 +164,7 @@ contract AlphaGuard is Ownable, ReentrancyGuard, Pausable {
         uint256 payoutAmount
     );
     
-    event ProtocolFeeWithdrawn(address indexed to, uint256 amount);
+    event ProtocolPaused(bool paused);
     event OracleUpdated(address indexed newOracle);
 
     // ============================================
@@ -172,18 +173,17 @@ contract AlphaGuard is Ownable, ReentrancyGuard, Pausable {
 
     constructor(
         address _paymentToken,
-        address _priceOracle,
         address _treasury,
-        uint256 _protocolFeeRate
+        uint256 _treasuryFee
     ) Ownable(msg.sender) {
         require(_paymentToken != address(0), "Invalid payment token");
         require(_treasury != address(0), "Invalid treasury");
+        require(_treasuryFee <= 1000, "Fee too high"); // max 10%
         
         paymentToken = IERC20(_paymentToken);
-        priceOracle = _priceOracle;
-        treasuryAddress = _treasury;
-        protocolFeeRate = _protocolFeeRate;
-        cancelFeeRate = 2000; // 20% 取消手续费
+        treasury = _treasury;
+        treasuryFee = _treasuryFee;
+        cancelFeeRate = 2000; // 20%
     }
 
     // ============================================
@@ -201,7 +201,7 @@ contract AlphaGuard is Ownable, ReentrancyGuard, Pausable {
         uint256 maxCoverage,
         uint256 durationDays
     ) external onlyOwner returns (uint256 productId) {
-        require(premiumRate > 0 && premiumRate <= 2000, "Invalid premium rate"); // max 20%
+        require(premiumRate > 0 && premiumRate <= 2000, "Invalid premium rate");
         require(coverageRate > 0 && coverageRate <= BASIS_POINTS, "Invalid coverage rate");
         require(minCoverage < maxCoverage, "Invalid coverage range");
         require(durationDays > 0, "Invalid duration");
@@ -220,7 +220,7 @@ contract AlphaGuard is Ownable, ReentrancyGuard, Pausable {
             isActive: true
         });
         
-        emit ProductCreated(productId, productType, premiumRate, coverageRate);
+        emit ProductCreated(productId, productType, premiumRate, coverageRate, durationDays);
     }
 
     /**
@@ -238,14 +238,12 @@ contract AlphaGuard is Ownable, ReentrancyGuard, Pausable {
 
     /**
      * @notice 购买保险
-     * @param productId 产品 ID
-     * @param coverageAmount 保额
      */
     function purchaseInsurance(
         uint256 productId,
         uint256 coverageAmount
     ) external nonReentrant whenNotPaused returns (uint256 policyId) {
-        require(!isProtocolPaused, "Protocol paused");
+        require(!isPaused, "Protocol paused");
         require(productId < productCounter, "Product not found");
         
         InsuranceProduct storage product = products[productId];
@@ -281,20 +279,13 @@ contract AlphaGuard is Ownable, ReentrancyGuard, Pausable {
         // 更新统计
         product.totalPolicies += 1;
         product.totalCoverage += coverageAmount;
+        totalPolicies += 1;
         
-        emit PolicyPurchased(
-            policyId,
-            productId,
-            msg.sender,
-            coverageAmount,
-            premium,
-            endTime
-        );
+        emit PolicyPurchased(policyId, productId, msg.sender, coverageAmount, premium, endTime);
     }
 
     /**
-     * @notice 取消保单 (按比例退款)
-     * @param policyId 保单 ID
+     * @notice 取消保单
      */
     function cancelPolicy(uint256 policyId) external nonReentrant {
         Policy storage policy = policies[policyId];
@@ -303,7 +294,7 @@ contract AlphaGuard is Ownable, ReentrancyGuard, Pausable {
         require(policy.status == PolicyStatus.Active, "Policy not active");
         require(block.timestamp < policy.endTime, "Policy expired");
         
-        // 计算退款 (按剩余时间比例，扣除手续费)
+        // 计算退款
         uint256 totalDuration = policy.endTime - policy.startTime;
         uint256 elapsed = block.timestamp - policy.startTime;
         uint256 remaining = totalDuration - elapsed;
@@ -315,11 +306,15 @@ contract AlphaGuard is Ownable, ReentrancyGuard, Pausable {
         
         // 更新状态
         policy.status = PolicyStatus.Cancelled;
-        totalProtocolFees += cancelFee;
         
         // 退款
         if (refund > 0) {
             paymentToken.safeTransfer(msg.sender, refund);
+        }
+        
+        // 手续费转国库
+        if (cancelFee > 0) {
+            paymentToken.safeTransfer(treasury, cancelFee);
         }
         
         emit PolicyCancelled(policyId, msg.sender, refund);
@@ -331,10 +326,6 @@ contract AlphaGuard is Ownable, ReentrancyGuard, Pausable {
 
     /**
      * @notice 提交理赔申请
-     * @param policyId 保单 ID
-     * @param claimType 理赔类型
-     * @param claimAmount 申请金额
-     * @param evidenceHash 证据哈希
      */
     function submitClaim(
         uint256 policyId,
@@ -350,7 +341,7 @@ contract AlphaGuard is Ownable, ReentrancyGuard, Pausable {
         require(claimAmount <= policy.coverageAmount, "Exceeds coverage");
         require(policyClaim[policyId] == 0, "Claim already exists");
         
-        claimId = ++claimCounter; // Start from 1
+        claimId = ++claimCounter;
         
         claims[claimId] = Claim({
             policyId: policyId,
@@ -371,9 +362,6 @@ contract AlphaGuard is Ownable, ReentrancyGuard, Pausable {
 
     /**
      * @notice 处理理赔 (仅限管理员)
-     * @param claimId 理赔 ID
-     * @param approved 是否批准
-     * @param payoutAmount 赔付金额
      */
     function processClaim(
         uint256 claimId,
@@ -393,23 +381,25 @@ contract AlphaGuard is Ownable, ReentrancyGuard, Pausable {
         if (approved) {
             require(payoutAmount <= claim.claimAmount, "Payout exceeds claim");
             
-            // 计算实际赔付 (根据赔付率)
+            // 计算实际赔付
             uint256 actualPayout = (payoutAmount * product.coverageRate) / BASIS_POINTS;
             
-            // 扣除协议费
-            uint256 protocolFee = (actualPayout * protocolFeeRate) / BASIS_POINTS;
-            uint256 netPayout = actualPayout - protocolFee;
+            // 扣除国库费
+            uint256 fee = (actualPayout * treasuryFee) / BASIS_POINTS;
+            uint256 netPayout = actualPayout - fee;
             
             claim.status = ClaimStatus.Approved;
             claim.payoutAmount = netPayout;
             policy.status = PolicyStatus.Claimed;
             
-            totalProtocolFees += protocolFee;
             totalPayouts += netPayout;
             totalClaims += 1;
             
-            // 转账赔付
+            // 转账
             paymentToken.safeTransfer(claim.claimant, netPayout);
+            if (fee > 0) {
+                paymentToken.safeTransfer(treasury, fee);
+            }
             
             emit ClaimProcessed(claimId, true, netPayout);
         } else {
@@ -425,32 +415,23 @@ contract AlphaGuard is Ownable, ReentrancyGuard, Pausable {
     // ============================================
 
     function setProtocolPaused(bool paused) external onlyOwner {
-        isProtocolPaused = paused;
+        isPaused = paused;
+        emit ProtocolPaused(paused);
     }
 
-    function setProtocolFeeRate(uint256 rate) external onlyOwner {
-        require(rate <= 1000, "Fee too high"); // max 10%
-        protocolFeeRate = rate;
+    function setTreasuryFee(uint256 fee) external onlyOwner {
+        require(fee <= 1000, "Fee too high");
+        treasuryFee = fee;
     }
 
     function setCancelFeeRate(uint256 rate) external onlyOwner {
-        require(rate <= 5000, "Fee too high"); // max 50%
+        require(rate <= 5000, "Rate too high");
         cancelFeeRate = rate;
     }
 
     function setPriceOracle(address _oracle) external onlyOwner {
         priceOracle = _oracle;
         emit OracleUpdated(_oracle);
-    }
-
-    function withdrawFees(address to) external onlyOwner {
-        uint256 amount = totalProtocolFees;
-        require(amount > 0, "No fees to withdraw");
-        
-        totalProtocolFees = 0;
-        paymentToken.safeTransfer(to, amount);
-        
-        emit ProtocolFeeWithdrawn(to, amount);
     }
 
     function pause() external onlyOwner {
@@ -475,8 +456,8 @@ contract AlphaGuard is Ownable, ReentrancyGuard, Pausable {
         uint256 minCoverage,
         uint256 maxCoverage,
         uint256 durationDays,
-        uint256 totalPolicies,
-        uint256 totalCoverage,
+        uint256 productTotalPolicies,
+        uint256 productTotalCoverage,
         bool isActive
     ) {
         InsuranceProduct storage product = products[productId];
@@ -555,26 +536,18 @@ contract AlphaGuard is Ownable, ReentrancyGuard, Pausable {
      */
     function calculatePremium(uint256 productId, uint256 coverageAmount) external view returns (uint256) {
         require(productId < productCounter, "Product not found");
-        InsuranceProduct storage product = products[productId];
-        return (coverageAmount * product.premiumRate) / BASIS_POINTS;
+        return (coverageAmount * products[productId].premiumRate) / BASIS_POINTS;
     }
 
     /**
      * @notice 获取协议统计
      */
     function getProtocolStats() external view returns (
-        uint256 totalProducts,
-        uint256 totalPoliciesCount,
-        uint256 totalClaimsCount,
-        uint256 totalPayoutsAmount,
-        uint256 totalFeesCollected
+        uint256 productCount,
+        uint256 policyCount,
+        uint256 claimCount,
+        uint256 payoutTotal
     ) {
-        return (
-            productCounter,
-            policyCounter,
-            totalClaims,
-            totalPayouts,
-            totalProtocolFees
-        );
+        return (productCounter, totalPolicies, totalClaims, totalPayouts);
     }
 }
