@@ -9,14 +9,15 @@ import "@openzeppelin/contracts/utils/Pausable.sol";
 
 /**
  * @title AlphaNestCore
- * @notice AlphaNest 平台核心合约 - 积分系统与质押权重管理
- * @dev 管理用户积分、$ALPHA 质押、挖矿权重计算
+ * @notice AlphaNest 平台核心合约 - 多资产质押系统
+ * @dev 支持多种资产质押、多种锁定期、早鸟奖励
  * 
- * 功能:
- * 1. 积分系统 - 用户通过各种活动获取积分
- * 2. 质押系统 - 用户质押 $ALPHA 获得分红和挖矿权重
- * 3. 手续费分配 - 协议收入分配给质押者
- * 4. 尸体币复活 - 归零币销毁兑换积分
+ * 功能对齐 Solana 合约:
+ * 1. 多资产质押 - 支持 ETH/USDC/USDT/ALPHA
+ * 2. 锁定期选择 - 灵活/30天/90天/180天/365天
+ * 3. 奖励倍数 - 根据锁定期 1x-5x
+ * 4. 早鸟奖励 - 前30天额外奖励
+ * 5. 积分系统 - 用户活动积分
  */
 contract AlphaNestCore is AccessControl, ReentrancyGuard, Pausable {
     using SafeERC20 for IERC20;
@@ -29,14 +30,39 @@ contract AlphaNestCore is AccessControl, ReentrancyGuard, Pausable {
     bytes32 public constant POINTS_MANAGER_ROLE = keccak256("POINTS_MANAGER_ROLE");
 
     // ============================================
-    // 类型定义
+    // 枚举类型
+    // ============================================
+
+    enum LockPeriod {
+        Flexible,           // 灵活质押 - 1x 奖励
+        ThirtyDays,         // 30天锁定 - 1.5x 奖励
+        NinetyDays,         // 90天锁定 - 2x 奖励
+        OneEightyDays,      // 180天锁定 - 3x 奖励
+        ThreeSixtyFiveDays  // 365天锁定 - 5x 奖励
+    }
+
+    enum AssetType {
+        ETH,
+        USDC,
+        USDT,
+        ALPHA
+    }
+
+    // ============================================
+    // 结构体
     // ============================================
 
     struct StakeInfo {
         uint256 amount;             // 质押数量
+        uint256 valueUSD;           // USD 价值
+        AssetType assetType;        // 资产类型
+        LockPeriod lockPeriod;      // 锁定期
         uint256 startTime;          // 质押开始时间
-        uint256 lastClaimTime;      // 上次领取时间
-        uint256 accumulatedRewards; // 累计待领取奖励
+        uint256 unlockTime;         // 解锁时间
+        uint256 rewardMultiplier;   // 奖励倍数 (100 = 1x)
+        uint256 earlyBirdBonus;     // 早鸟奖励 (百分比)
+        uint256 pendingRewards;     // 待领取奖励
+        uint256 rewardDebt;         // 奖励债务
     }
 
     struct PointsRecord {
@@ -46,11 +72,21 @@ contract AlphaNestCore is AccessControl, ReentrancyGuard, Pausable {
         uint256 lastUpdateTime;     // 上次更新时间
     }
 
-    struct DeadCoinBurn {
-        address token;              // 被销毁的代币
-        uint256 amount;             // 销毁数量
-        uint256 pointsReceived;     // 获得的积分
-        uint256 timestamp;          // 时间戳
+    struct TokenConfig {
+        address tokenAddress;       // 代币地址 (ETH 为 address(0))
+        uint8 decimals;             // 小数位数
+        bool isActive;              // 是否激活
+        uint256 minStakeAmount;     // 最小质押量
+        uint256 totalStaked;        // 总质押量
+        uint256 totalStakers;       // 总质押人数
+    }
+
+    struct PoolInfo {
+        uint256 totalStakedValueUSD;  // 总质押价值 (USD)
+        uint256 rewardPerSecond;      // 每秒奖励
+        uint256 accRewardPerShare;    // 累计每份奖励
+        uint256 lastRewardTime;       // 上次奖励时间
+        uint256 launchTime;           // 启动时间
     }
 
     // ============================================
@@ -58,55 +94,52 @@ contract AlphaNestCore is AccessControl, ReentrancyGuard, Pausable {
     // ============================================
 
     IERC20 public alphaToken;           // $ALPHA 代币
-    
-    // 质押相关
-    uint256 public totalStaked;         // 总质押量
-    uint256 public rewardPerShare;      // 每份质押的累计奖励
-    uint256 public lastRewardTime;      // 上次奖励分配时间
-    uint256 public minStakeAmount;      // 最小质押量
-    uint256 public unstakeCooldown;     // 解除质押冷却期
-    
-    // 费用分配
-    uint256 public stakersShareRate;    // 质押者分成比例 (basis points, 3000 = 30%)
-    uint256 public treasuryShareRate;   // 国库分成比例 (4000 = 40%)
-    uint256 public buybackShareRate;    // 回购销毁比例 (3000 = 30%)
+    IERC20 public usdcToken;            // USDC 代币
+    IERC20 public usdtToken;            // USDT 代币
     
     address public treasury;            // 国库地址
-    address public buybackAddress;      // 回购地址
+    address public priceOracle;         // 价格预言机
     
-    // 积分相关
-    uint256 public pointsPerVerify;     // 每次验证获得的积分
-    uint256 public deadCoinPointRate;   // 尸体币兑换比率 (basis points)
+    PoolInfo public pool;
     
-    // 映射
-    mapping(address => StakeInfo) public stakes;
+    // 代币配置
+    mapping(AssetType => TokenConfig) public tokenConfigs;
+    
+    // 用户质押信息 (用户地址 => 资产类型 => 质押信息)
+    mapping(address => mapping(AssetType => StakeInfo)) public stakes;
+    
+    // 用户积分
     mapping(address => PointsRecord) public points;
-    mapping(address => DeadCoinBurn[]) public burnHistory;
-    mapping(address => uint256) public pendingUnstake;
-    mapping(address => uint256) public unstakeRequestTime;
     
-    // 白名单代币 (可用于兑换积分的尸体币)
-    mapping(address => bool) public whitelistedDeadCoins;
-    mapping(address => uint256) public deadCoinValues;  // 代币对应的积分价值
+    // 费用分配比例 (basis points)
+    uint256 public stakersShareRate = 3000;    // 30%
+    uint256 public treasuryShareRate = 4000;   // 40%
+    uint256 public buybackShareRate = 3000;    // 30%
     
     uint256 public constant PRECISION = 1e18;
+    uint256 public constant BASIS_POINTS = 10000;
 
     // ============================================
     // 事件
     // ============================================
 
-    event Staked(address indexed user, uint256 amount, uint256 totalStaked);
-    event UnstakeRequested(address indexed user, uint256 amount, uint256 unlockTime);
-    event Unstaked(address indexed user, uint256 amount);
+    event Staked(
+        address indexed user, 
+        AssetType assetType, 
+        uint256 amount, 
+        uint256 valueUSD,
+        LockPeriod lockPeriod,
+        uint256 rewardMultiplier
+    );
+    event Unstaked(address indexed user, AssetType assetType, uint256 amount);
     event RewardsClaimed(address indexed user, uint256 amount);
     event RewardsDistributed(uint256 stakersAmount, uint256 treasuryAmount, uint256 buybackAmount);
     
     event PointsEarned(address indexed user, uint256 amount, string reason);
     event PointsSpent(address indexed user, uint256 amount, string reason);
-    event DeadCoinBurned(address indexed user, address indexed token, uint256 amount, uint256 pointsReceived);
     
-    event DeadCoinWhitelisted(address indexed token, uint256 pointValue);
-    event DeadCoinRemoved(address indexed token);
+    event TokenConfigUpdated(AssetType assetType, address tokenAddress, bool isActive);
+    event PriceOracleUpdated(address indexed newOracle);
     event ConfigUpdated(string param, uint256 value);
 
     // ============================================
@@ -115,28 +148,34 @@ contract AlphaNestCore is AccessControl, ReentrancyGuard, Pausable {
 
     constructor(
         address _alphaToken,
+        address _usdcToken,
+        address _usdtToken,
         address _treasury,
-        address _buybackAddress
+        address _priceOracle
     ) {
-        require(_alphaToken != address(0), "Invalid token");
+        require(_alphaToken != address(0), "Invalid ALPHA token");
         require(_treasury != address(0), "Invalid treasury");
-        require(_buybackAddress != address(0), "Invalid buyback");
         
         alphaToken = IERC20(_alphaToken);
+        usdcToken = IERC20(_usdcToken);
+        usdtToken = IERC20(_usdtToken);
         treasury = _treasury;
-        buybackAddress = _buybackAddress;
+        priceOracle = _priceOracle;
         
-        // 默认配置
-        stakersShareRate = 3000;    // 30%
-        treasuryShareRate = 4000;   // 40%
-        buybackShareRate = 3000;    // 30%
+        // 初始化池信息
+        pool = PoolInfo({
+            totalStakedValueUSD: 0,
+            rewardPerSecond: 1000,  // 基础奖励率
+            accRewardPerShare: 0,
+            lastRewardTime: block.timestamp,
+            launchTime: block.timestamp
+        });
         
-        minStakeAmount = 100 * 1e18;     // 最小 100 $ALPHA
-        unstakeCooldown = 7 days;         // 7天冷却期
-        pointsPerVerify = 100;            // 每次验证 100 积分
-        deadCoinPointRate = 1000;         // 10% 价值转换
-        
-        lastRewardTime = block.timestamp;
+        // 初始化代币配置
+        _initTokenConfig(AssetType.ETH, address(0), 18, 0.01 ether);
+        _initTokenConfig(AssetType.USDC, _usdcToken, 6, 10 * 1e6);
+        _initTokenConfig(AssetType.USDT, _usdtToken, 6, 10 * 1e6);
+        _initTokenConfig(AssetType.ALPHA, _alphaToken, 18, 100 * 1e18);
         
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantRole(OPERATOR_ROLE, msg.sender);
@@ -148,73 +187,124 @@ contract AlphaNestCore is AccessControl, ReentrancyGuard, Pausable {
     // ============================================
 
     /**
-     * @notice 质押 $ALPHA 代币
-     * @param amount 质押数量
+     * @notice 质押 ETH
+     * @param lockPeriod 锁定期
      */
-    function stake(uint256 amount) external nonReentrant whenNotPaused {
-        require(amount >= minStakeAmount, "Below minimum stake");
+    function stakeETH(LockPeriod lockPeriod) external payable nonReentrant whenNotPaused {
+        require(msg.value > 0, "Amount must be > 0");
+        require(msg.value >= tokenConfigs[AssetType.ETH].minStakeAmount, "Below minimum");
         
-        _updateRewards(msg.sender);
+        uint256 ethPriceUSD = getETHPrice();
+        uint256 valueUSD = (msg.value * ethPriceUSD) / 1e18;
+        
+        _stake(msg.sender, AssetType.ETH, msg.value, valueUSD, lockPeriod);
+    }
+
+    /**
+     * @notice 质押 USDC
+     * @param amount 质押数量
+     * @param lockPeriod 锁定期
+     */
+    function stakeUSDC(uint256 amount, LockPeriod lockPeriod) external nonReentrant whenNotPaused {
+        require(amount > 0, "Amount must be > 0");
+        require(amount >= tokenConfigs[AssetType.USDC].minStakeAmount, "Below minimum");
+        
+        usdcToken.safeTransferFrom(msg.sender, address(this), amount);
+        
+        // USDC 是稳定币，1 USDC = 1 USD
+        uint256 valueUSD = amount; // 6 位小数
+        
+        _stake(msg.sender, AssetType.USDC, amount, valueUSD, lockPeriod);
+    }
+
+    /**
+     * @notice 质押 USDT
+     * @param amount 质押数量
+     * @param lockPeriod 锁定期
+     */
+    function stakeUSDT(uint256 amount, LockPeriod lockPeriod) external nonReentrant whenNotPaused {
+        require(amount > 0, "Amount must be > 0");
+        require(amount >= tokenConfigs[AssetType.USDT].minStakeAmount, "Below minimum");
+        
+        usdtToken.safeTransferFrom(msg.sender, address(this), amount);
+        
+        // USDT 是稳定币，1 USDT = 1 USD
+        uint256 valueUSD = amount; // 6 位小数
+        
+        _stake(msg.sender, AssetType.USDT, amount, valueUSD, lockPeriod);
+    }
+
+    /**
+     * @notice 质押 ALPHA
+     * @param amount 质押数量
+     * @param lockPeriod 锁定期
+     */
+    function stakeALPHA(uint256 amount, LockPeriod lockPeriod) external nonReentrant whenNotPaused {
+        require(amount > 0, "Amount must be > 0");
+        require(amount >= tokenConfigs[AssetType.ALPHA].minStakeAmount, "Below minimum");
         
         alphaToken.safeTransferFrom(msg.sender, address(this), amount);
         
-        stakes[msg.sender].amount += amount;
-        stakes[msg.sender].startTime = block.timestamp;
-        totalStaked += amount;
+        uint256 alphaPriceUSD = getALPHAPrice();
+        uint256 valueUSD = (amount * alphaPriceUSD) / 1e18;
         
-        emit Staked(msg.sender, amount, totalStaked);
+        _stake(msg.sender, AssetType.ALPHA, amount, valueUSD, lockPeriod);
     }
 
     /**
-     * @notice 请求解除质押
-     * @param amount 解除数量
+     * @notice 解除质押
+     * @param assetType 资产类型
      */
-    function requestUnstake(uint256 amount) external nonReentrant {
-        StakeInfo storage stakeInfo = stakes[msg.sender];
-        require(stakeInfo.amount >= amount, "Insufficient stake");
-        require(pendingUnstake[msg.sender] == 0, "Pending unstake exists");
+    function unstake(AssetType assetType) external nonReentrant {
+        StakeInfo storage stakeInfo = stakes[msg.sender][assetType];
+        require(stakeInfo.amount > 0, "No stake found");
         
-        _updateRewards(msg.sender);
+        // 检查锁定期
+        if (stakeInfo.lockPeriod != LockPeriod.Flexible) {
+            require(block.timestamp >= stakeInfo.unlockTime, "Still locked");
+        }
         
-        stakeInfo.amount -= amount;
-        totalStaked -= amount;
+        _updateRewards(msg.sender, assetType);
         
-        pendingUnstake[msg.sender] = amount;
-        unstakeRequestTime[msg.sender] = block.timestamp;
+        uint256 amount = stakeInfo.amount;
+        uint256 valueUSD = stakeInfo.valueUSD;
         
-        emit UnstakeRequested(msg.sender, amount, block.timestamp + unstakeCooldown);
-    }
-
-    /**
-     * @notice 完成解除质押（冷却期后）
-     */
-    function completeUnstake() external nonReentrant {
-        uint256 amount = pendingUnstake[msg.sender];
-        require(amount > 0, "No pending unstake");
-        require(
-            block.timestamp >= unstakeRequestTime[msg.sender] + unstakeCooldown,
-            "Cooldown not finished"
-        );
+        // 清除质押信息
+        stakeInfo.amount = 0;
+        stakeInfo.valueUSD = 0;
         
-        pendingUnstake[msg.sender] = 0;
-        unstakeRequestTime[msg.sender] = 0;
+        // 更新池和代币统计
+        pool.totalStakedValueUSD -= valueUSD;
+        tokenConfigs[assetType].totalStaked -= amount;
+        tokenConfigs[assetType].totalStakers -= 1;
         
-        alphaToken.safeTransfer(msg.sender, amount);
+        // 转移资产
+        if (assetType == AssetType.ETH) {
+            (bool success, ) = msg.sender.call{value: amount}("");
+            require(success, "ETH transfer failed");
+        } else if (assetType == AssetType.USDC) {
+            usdcToken.safeTransfer(msg.sender, amount);
+        } else if (assetType == AssetType.USDT) {
+            usdtToken.safeTransfer(msg.sender, amount);
+        } else if (assetType == AssetType.ALPHA) {
+            alphaToken.safeTransfer(msg.sender, amount);
+        }
         
-        emit Unstaked(msg.sender, amount);
+        emit Unstaked(msg.sender, assetType, amount);
     }
 
     /**
      * @notice 领取质押奖励
+     * @param assetType 资产类型
      */
-    function claimRewards() external nonReentrant {
-        _updateRewards(msg.sender);
+    function claimRewards(AssetType assetType) external nonReentrant {
+        _updateRewards(msg.sender, assetType);
         
-        uint256 rewards = stakes[msg.sender].accumulatedRewards;
+        StakeInfo storage stakeInfo = stakes[msg.sender][assetType];
+        uint256 rewards = stakeInfo.pendingRewards;
         require(rewards > 0, "No rewards");
         
-        stakes[msg.sender].accumulatedRewards = 0;
-        stakes[msg.sender].lastClaimTime = block.timestamp;
+        stakeInfo.pendingRewards = 0;
         
         alphaToken.safeTransfer(msg.sender, rewards);
         
@@ -226,10 +316,7 @@ contract AlphaNestCore is AccessControl, ReentrancyGuard, Pausable {
     // ============================================
 
     /**
-     * @notice 发放积分（仅限积分管理员）
-     * @param user 用户地址
-     * @param amount 积分数量
-     * @param reason 原因
+     * @notice 发放积分
      */
     function grantPoints(
         address user,
@@ -240,28 +327,7 @@ contract AlphaNestCore is AccessControl, ReentrancyGuard, Pausable {
     }
 
     /**
-     * @notice 批量发放积分
-     * @param users 用户地址数组
-     * @param amounts 积分数量数组
-     * @param reason 原因
-     */
-    function batchGrantPoints(
-        address[] calldata users,
-        uint256[] calldata amounts,
-        string calldata reason
-    ) external onlyRole(POINTS_MANAGER_ROLE) {
-        require(users.length == amounts.length, "Length mismatch");
-        
-        for (uint256 i = 0; i < users.length; i++) {
-            _addPoints(users[i], amounts[i], reason);
-        }
-    }
-
-    /**
-     * @notice 消耗积分（仅限积分管理员）
-     * @param user 用户地址
-     * @param amount 积分数量
-     * @param reason 原因
+     * @notice 消耗积分
      */
     function spendPoints(
         address user,
@@ -271,108 +337,35 @@ contract AlphaNestCore is AccessControl, ReentrancyGuard, Pausable {
         _deductPoints(user, amount, reason);
     }
 
-    /**
-     * @notice 验证持仓获取积分
-     * @dev 前端调用验证后，后端调用此函数发放积分
-     */
-    function verifyAndEarn(address user) external onlyRole(POINTS_MANAGER_ROLE) {
-        _addPoints(user, pointsPerVerify, "verify_holding");
-    }
-
-    // ============================================
-    // 尸体币复活功能
-    // ============================================
-
-    /**
-     * @notice 销毁尸体币兑换积分
-     * @param token 代币地址
-     * @param amount 销毁数量
-     */
-    function burnDeadCoin(address token, uint256 amount) external nonReentrant whenNotPaused {
-        require(whitelistedDeadCoins[token], "Token not whitelisted");
-        require(amount > 0, "Amount must be > 0");
-        
-        // 转入代币到销毁地址
-        IERC20(token).safeTransferFrom(msg.sender, address(0xdead), amount);
-        
-        // 计算积分
-        uint256 tokenValue = deadCoinValues[token];
-        uint256 pointsToGrant = (amount * tokenValue * deadCoinPointRate) / (10000 * PRECISION);
-        
-        // 发放积分
-        _addPoints(msg.sender, pointsToGrant, "dead_coin_burn");
-        
-        // 记录历史
-        burnHistory[msg.sender].push(DeadCoinBurn({
-            token: token,
-            amount: amount,
-            pointsReceived: pointsToGrant,
-            timestamp: block.timestamp
-        }));
-        
-        emit DeadCoinBurned(msg.sender, token, amount, pointsToGrant);
-    }
-
-    // ============================================
-    // 费用分配
-    // ============================================
-
-    /**
-     * @notice 分配协议收入
-     * @param amount 收入金额
-     */
-    function distributeRevenue(uint256 amount) external onlyRole(OPERATOR_ROLE) nonReentrant {
-        require(amount > 0, "Amount must be > 0");
-        
-        alphaToken.safeTransferFrom(msg.sender, address(this), amount);
-        
-        uint256 stakersAmount = (amount * stakersShareRate) / 10000;
-        uint256 treasuryAmount = (amount * treasuryShareRate) / 10000;
-        uint256 buybackAmount = amount - stakersAmount - treasuryAmount;
-        
-        // 分配给质押者
-        if (totalStaked > 0 && stakersAmount > 0) {
-            rewardPerShare += (stakersAmount * PRECISION) / totalStaked;
-        }
-        
-        // 转入国库
-        if (treasuryAmount > 0) {
-            alphaToken.safeTransfer(treasury, treasuryAmount);
-        }
-        
-        // 转入回购地址
-        if (buybackAmount > 0) {
-            alphaToken.safeTransfer(buybackAddress, buybackAmount);
-        }
-        
-        lastRewardTime = block.timestamp;
-        
-        emit RewardsDistributed(stakersAmount, treasuryAmount, buybackAmount);
-    }
-
     // ============================================
     // 管理功能
     // ============================================
 
-    function setMinStakeAmount(uint256 amount) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        minStakeAmount = amount;
-        emit ConfigUpdated("minStakeAmount", amount);
+    function setTokenConfig(
+        AssetType assetType,
+        address tokenAddress,
+        uint8 decimals,
+        uint256 minStakeAmount,
+        bool isActive
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        TokenConfig storage config = tokenConfigs[assetType];
+        config.tokenAddress = tokenAddress;
+        config.decimals = decimals;
+        config.minStakeAmount = minStakeAmount;
+        config.isActive = isActive;
+        
+        emit TokenConfigUpdated(assetType, tokenAddress, isActive);
     }
 
-    function setUnstakeCooldown(uint256 duration) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        unstakeCooldown = duration;
-        emit ConfigUpdated("unstakeCooldown", duration);
+    function setPriceOracle(address _oracle) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        priceOracle = _oracle;
+        emit PriceOracleUpdated(_oracle);
     }
 
-    function setPointsPerVerify(uint256 amount) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        pointsPerVerify = amount;
-        emit ConfigUpdated("pointsPerVerify", amount);
-    }
-
-    function setDeadCoinPointRate(uint256 rate) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        require(rate <= 10000, "Rate too high");
-        deadCoinPointRate = rate;
-        emit ConfigUpdated("deadCoinPointRate", rate);
+    function setRewardPerSecond(uint256 _rate) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _updatePoolRewards();
+        pool.rewardPerSecond = _rate;
+        emit ConfigUpdated("rewardPerSecond", _rate);
     }
 
     function setShareRates(
@@ -380,32 +373,10 @@ contract AlphaNestCore is AccessControl, ReentrancyGuard, Pausable {
         uint256 _treasuryRate,
         uint256 _buybackRate
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        require(_stakersRate + _treasuryRate + _buybackRate == 10000, "Invalid rates");
+        require(_stakersRate + _treasuryRate + _buybackRate == BASIS_POINTS, "Invalid rates");
         stakersShareRate = _stakersRate;
         treasuryShareRate = _treasuryRate;
         buybackShareRate = _buybackRate;
-    }
-
-    function setTreasury(address _treasury) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        require(_treasury != address(0), "Invalid address");
-        treasury = _treasury;
-    }
-
-    function setBuybackAddress(address _buyback) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        require(_buyback != address(0), "Invalid address");
-        buybackAddress = _buyback;
-    }
-
-    function whitelistDeadCoin(address token, uint256 pointValue) external onlyRole(OPERATOR_ROLE) {
-        whitelistedDeadCoins[token] = true;
-        deadCoinValues[token] = pointValue;
-        emit DeadCoinWhitelisted(token, pointValue);
-    }
-
-    function removeDeadCoin(address token) external onlyRole(OPERATOR_ROLE) {
-        whitelistedDeadCoins[token] = false;
-        deadCoinValues[token] = 0;
-        emit DeadCoinRemoved(token);
     }
 
     function pause() external onlyRole(DEFAULT_ADMIN_ROLE) {
@@ -423,21 +394,35 @@ contract AlphaNestCore is AccessControl, ReentrancyGuard, Pausable {
     /**
      * @notice 获取用户质押信息
      */
-    function getStakeInfo(address user) external view returns (
+    function getStakeInfo(address user, AssetType assetType) external view returns (
         uint256 stakedAmount,
-        uint256 pendingRewards,
-        uint256 pendingUnstakeAmount,
-        uint256 unstakeUnlockTime
+        uint256 valueUSD,
+        LockPeriod lockPeriod,
+        uint256 unlockTime,
+        uint256 rewardMultiplier,
+        uint256 earlyBirdBonus,
+        uint256 pendingRewards
     ) {
-        StakeInfo storage stakeInfo = stakes[user];
-        
-        stakedAmount = stakeInfo.amount;
-        pendingRewards = _pendingRewards(user);
-        pendingUnstakeAmount = pendingUnstake[user];
-        
-        if (pendingUnstakeAmount > 0) {
-            unstakeUnlockTime = unstakeRequestTime[user] + unstakeCooldown;
-        }
+        StakeInfo storage info = stakes[user][assetType];
+        return (
+            info.amount,
+            info.valueUSD,
+            info.lockPeriod,
+            info.unlockTime,
+            info.rewardMultiplier,
+            info.earlyBirdBonus,
+            _calculatePendingRewards(user, assetType)
+        );
+    }
+
+    /**
+     * @notice 获取用户所有质押的总 USD 价值
+     */
+    function getUserTotalStakedUSD(address user) external view returns (uint256 total) {
+        total += stakes[user][AssetType.ETH].valueUSD;
+        total += stakes[user][AssetType.USDC].valueUSD;
+        total += stakes[user][AssetType.USDT].valueUSD;
+        total += stakes[user][AssetType.ALPHA].valueUSD;
     }
 
     /**
@@ -453,63 +438,181 @@ contract AlphaNestCore is AccessControl, ReentrancyGuard, Pausable {
     }
 
     /**
-     * @notice 获取用户挖矿权重
-     * @dev 权重 = 质押量 * 时间系数
+     * @notice 获取锁定期对应的奖励倍数
      */
-    function getMiningWeight(address user) external view returns (uint256) {
-        StakeInfo storage stakeInfo = stakes[user];
-        if (stakeInfo.amount == 0) return 0;
-        
-        // 时间系数: 质押越久权重越高 (最高 2x)
-        uint256 stakeDuration = block.timestamp - stakeInfo.startTime;
-        uint256 timeMultiplier = PRECISION + (stakeDuration * PRECISION) / (365 days);
-        if (timeMultiplier > 2 * PRECISION) {
-            timeMultiplier = 2 * PRECISION;
-        }
-        
-        return (stakeInfo.amount * timeMultiplier) / PRECISION;
+    function getRewardMultiplier(LockPeriod lockPeriod) public pure returns (uint256) {
+        if (lockPeriod == LockPeriod.Flexible) return 100;          // 1x
+        if (lockPeriod == LockPeriod.ThirtyDays) return 150;        // 1.5x
+        if (lockPeriod == LockPeriod.NinetyDays) return 200;        // 2x
+        if (lockPeriod == LockPeriod.OneEightyDays) return 300;     // 3x
+        if (lockPeriod == LockPeriod.ThreeSixtyFiveDays) return 500; // 5x
+        return 100;
     }
 
     /**
-     * @notice 获取用户尸体币销毁历史
+     * @notice 获取锁定期时长（秒）
      */
-    function getBurnHistory(address user) external view returns (DeadCoinBurn[] memory) {
-        return burnHistory[user];
+    function getLockDuration(LockPeriod lockPeriod) public pure returns (uint256) {
+        if (lockPeriod == LockPeriod.Flexible) return 0;
+        if (lockPeriod == LockPeriod.ThirtyDays) return 30 days;
+        if (lockPeriod == LockPeriod.NinetyDays) return 90 days;
+        if (lockPeriod == LockPeriod.OneEightyDays) return 180 days;
+        if (lockPeriod == LockPeriod.ThreeSixtyFiveDays) return 365 days;
+        return 0;
     }
 
     /**
-     * @notice 获取年化收益率 (APY) 估算
+     * @notice 获取早鸟奖励百分比
      */
-    function getEstimatedAPY() external view returns (uint256) {
-        if (totalStaked == 0) return 0;
+    function getEarlyBirdBonus() public view returns (uint256) {
+        uint256 daysSinceLaunch = (block.timestamp - pool.launchTime) / 1 days;
         
-        // 简化估算: 基于最近分配的奖励
-        // 实际 APY 取决于协议收入
-        return (rewardPerShare * 365 days * 10000) / PRECISION;
+        if (daysSinceLaunch <= 7) return 50;   // +50%
+        if (daysSinceLaunch <= 14) return 30;  // +30%
+        if (daysSinceLaunch <= 30) return 20;  // +20%
+        return 0;
+    }
+
+    /**
+     * @notice 获取全局质押统计
+     */
+    function getGlobalStats() external view returns (
+        uint256 totalStakedUSD,
+        uint256 totalStakers,
+        uint256 rewardPerSecond
+    ) {
+        uint256 stakers = tokenConfigs[AssetType.ETH].totalStakers +
+                         tokenConfigs[AssetType.USDC].totalStakers +
+                         tokenConfigs[AssetType.USDT].totalStakers +
+                         tokenConfigs[AssetType.ALPHA].totalStakers;
+        
+        return (pool.totalStakedValueUSD, stakers, pool.rewardPerSecond);
+    }
+
+    // ============================================
+    // 价格预言机函数 (简化版)
+    // ============================================
+
+    function getETHPrice() public view returns (uint256) {
+        // TODO: 集成 Chainlink 预言机
+        // 返回模拟价格 $2500 (18 位小数)
+        return 2500 * 1e18;
+    }
+
+    function getALPHAPrice() public view returns (uint256) {
+        // TODO: 集成 Chainlink 预言机
+        // 返回模拟价格 $0.001 (18 位小数)
+        return 1e15; // 0.001 * 1e18
     }
 
     // ============================================
     // 内部函数
     // ============================================
 
-    function _updateRewards(address user) internal {
-        StakeInfo storage stakeInfo = stakes[user];
-        
-        if (stakeInfo.amount > 0) {
-            uint256 pending = _pendingRewards(user);
-            stakeInfo.accumulatedRewards += pending;
-        }
-        
-        stakeInfo.lastClaimTime = block.timestamp;
+    function _initTokenConfig(
+        AssetType assetType,
+        address tokenAddress,
+        uint8 decimals,
+        uint256 minStakeAmount
+    ) internal {
+        tokenConfigs[assetType] = TokenConfig({
+            tokenAddress: tokenAddress,
+            decimals: decimals,
+            isActive: true,
+            minStakeAmount: minStakeAmount,
+            totalStaked: 0,
+            totalStakers: 0
+        });
     }
 
-    function _pendingRewards(address user) internal view returns (uint256) {
-        StakeInfo storage stakeInfo = stakes[user];
+    function _stake(
+        address user,
+        AssetType assetType,
+        uint256 amount,
+        uint256 valueUSD,
+        LockPeriod lockPeriod
+    ) internal {
+        require(tokenConfigs[assetType].isActive, "Token not active");
         
-        if (stakeInfo.amount == 0) return 0;
+        _updateRewards(user, assetType);
         
-        return (stakeInfo.amount * rewardPerShare) / PRECISION - 
-               (stakeInfo.amount * stakeInfo.lastClaimTime) / PRECISION;
+        StakeInfo storage stakeInfo = stakes[user][assetType];
+        
+        // 如果是新质押
+        bool isNewStake = stakeInfo.amount == 0;
+        
+        // 计算奖励倍数和早鸟奖励
+        uint256 rewardMultiplier = getRewardMultiplier(lockPeriod);
+        uint256 earlyBirdBonus = getEarlyBirdBonus();
+        uint256 lockDuration = getLockDuration(lockPeriod);
+        
+        // 更新质押信息
+        stakeInfo.amount += amount;
+        stakeInfo.valueUSD += valueUSD;
+        stakeInfo.assetType = assetType;
+        stakeInfo.lockPeriod = lockPeriod;
+        stakeInfo.startTime = block.timestamp;
+        stakeInfo.unlockTime = block.timestamp + lockDuration;
+        stakeInfo.rewardMultiplier = rewardMultiplier;
+        stakeInfo.earlyBirdBonus = earlyBirdBonus;
+        
+        // 更新池统计
+        pool.totalStakedValueUSD += valueUSD;
+        tokenConfigs[assetType].totalStaked += amount;
+        
+        if (isNewStake) {
+            tokenConfigs[assetType].totalStakers += 1;
+        }
+        
+        emit Staked(user, assetType, amount, valueUSD, lockPeriod, rewardMultiplier);
+    }
+
+    function _updatePoolRewards() internal {
+        if (pool.totalStakedValueUSD > 0) {
+            uint256 timeElapsed = block.timestamp - pool.lastRewardTime;
+            if (timeElapsed > 0) {
+                uint256 reward = (timeElapsed * pool.rewardPerSecond * PRECISION) / pool.totalStakedValueUSD;
+                pool.accRewardPerShare += reward;
+            }
+        }
+        pool.lastRewardTime = block.timestamp;
+    }
+
+    function _updateRewards(address user, AssetType assetType) internal {
+        _updatePoolRewards();
+        
+        StakeInfo storage stakeInfo = stakes[user][assetType];
+        
+        if (stakeInfo.valueUSD > 0) {
+            uint256 pending = _calculatePendingRewards(user, assetType);
+            stakeInfo.pendingRewards += pending;
+        }
+        
+        stakeInfo.rewardDebt = (stakeInfo.valueUSD * pool.accRewardPerShare) / PRECISION;
+    }
+
+    function _calculatePendingRewards(address user, AssetType assetType) internal view returns (uint256) {
+        StakeInfo storage stakeInfo = stakes[user][assetType];
+        
+        if (stakeInfo.valueUSD == 0) return stakeInfo.pendingRewards;
+        
+        uint256 accRewardPerShare = pool.accRewardPerShare;
+        
+        if (pool.totalStakedValueUSD > 0 && block.timestamp > pool.lastRewardTime) {
+            uint256 timeElapsed = block.timestamp - pool.lastRewardTime;
+            uint256 reward = (timeElapsed * pool.rewardPerSecond * PRECISION) / pool.totalStakedValueUSD;
+            accRewardPerShare += reward;
+        }
+        
+        uint256 baseReward = (stakeInfo.valueUSD * accRewardPerShare) / PRECISION - stakeInfo.rewardDebt;
+        
+        // 应用奖励倍数
+        uint256 multipliedReward = (baseReward * stakeInfo.rewardMultiplier) / 100;
+        
+        // 应用早鸟奖励
+        uint256 finalReward = (multipliedReward * (100 + stakeInfo.earlyBirdBonus)) / 100;
+        
+        return stakeInfo.pendingRewards + finalReward;
     }
 
     function _addPoints(address user, uint256 amount, string memory reason) internal {
@@ -531,4 +634,7 @@ contract AlphaNestCore is AccessControl, ReentrancyGuard, Pausable {
         
         emit PointsSpent(user, amount, reason);
     }
+
+    // 接收 ETH
+    receive() external payable {}
 }
