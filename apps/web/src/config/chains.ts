@@ -1,6 +1,29 @@
 /**
  * 链配置 - BSC (Four.meme) 为主链
+ * Four.meme 是 BSC 上类似 pump.fun 的 Meme 代币发射平台
  */
+
+// Meme 发射平台配置
+export const memeLaunchPlatforms = {
+  // BSC - Four.meme (类似 pump.fun)
+  fourMeme: {
+    name: 'Four.meme',
+    chain: 'bsc',
+    type: 'meme-launchpad',
+    description: 'BSC Meme Token Launchpad (Similar to pump.fun)',
+    website: 'https://four.meme',
+    features: ['fair-launch', 'bonding-curve', 'auto-liquidity', 'anti-rug'],
+  },
+  // Solana - pump.fun
+  pumpFun: {
+    name: 'pump.fun',
+    chain: 'solana',
+    type: 'meme-launchpad',
+    description: 'Solana Meme Token Launchpad',
+    website: 'https://pump.fun',
+    features: ['fair-launch', 'bonding-curve', 'auto-liquidity'],
+  },
+};
 
 // 支持的区块链配置
 export const chainConfigs = {
@@ -13,6 +36,7 @@ export const chainConfigs = {
     tradeEnabled: true,
     isPrimary: true,
     platform: 'Four.meme',
+    platformType: 'meme-launchpad', // 类似 pump.fun
     nativeCurrency: {
       name: 'BNB',
       symbol: 'BNB',
@@ -23,6 +47,7 @@ export const chainConfigs = {
       staking: true,
       insurance: true,
       memeTokens: true,
+      memeLaunch: true, // Meme 发射
       smartMoney: true,
     },
     dataSources: [
@@ -80,24 +105,27 @@ export const chainConfigs = {
     blockExplorer: 'https://testnet.bscscan.com',
   },
   
-  // 数据展示链 - Solana
+  // Solana - pump.fun
   solana: {
     id: 'solana',
     name: 'Solana',
     icon: '/chains/solana.svg',
     tradeEnabled: true,
     isPrimary: false,
+    platform: 'pump.fun',
+    platformType: 'meme-launchpad',
     features: {
       trading: true,
       staking: true,
       insurance: true,
       memeTokens: true,
+      memeLaunch: true, // pump.fun Meme 发射
       smartMoney: true,
     },
     dataSources: [
+      'pump.fun',
       'helius',
       'jupiter',
-      'pumpfun',
       'dexscreener',
       'gmgn'
     ]

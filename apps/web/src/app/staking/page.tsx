@@ -528,17 +528,25 @@ export default function StakingPage() {
           </Card>
           
           {/* Four.meme 信息 */}
-          <Card className="border-purple-500/30 bg-gradient-to-br from-purple-500/5 to-pink-500/5">
+          <Card className="border-yellow-500/30 bg-gradient-to-br from-yellow-500/5 to-orange-500/5">
             <CardContent className="p-3 md:p-4">
               <div className="flex items-center gap-2 mb-2">
-                <Sparkles className="h-4 w-4 text-purple-500" />
+                <Sparkles className="h-4 w-4 text-yellow-500" />
                 <span className="text-sm font-medium">Four.meme</span>
               </div>
-              <p className="text-[10px] md:text-xs text-muted-foreground mb-3">
-                BSC Meme Token Platform
+              <p className="text-[10px] md:text-xs text-muted-foreground mb-2">
+                BSC Meme Launchpad
               </p>
+              <p className="text-[10px] text-muted-foreground mb-3">
+                Similar to pump.fun on Solana
+              </p>
+              <div className="flex flex-wrap gap-1 mb-3">
+                <Badge variant="outline" className="text-[8px] border-yellow-500/30">Fair Launch</Badge>
+                <Badge variant="outline" className="text-[8px] border-yellow-500/30">Bonding Curve</Badge>
+                <Badge variant="outline" className="text-[8px] border-yellow-500/30">Anti-Rug</Badge>
+              </div>
               <Link href="https://four.meme" target="_blank">
-                <Button size="sm" variant="outline" className="w-full h-8 text-xs border-purple-500/30 text-purple-400 hover:bg-purple-500/10">
+                <Button size="sm" variant="outline" className="w-full h-8 text-xs border-yellow-500/30 text-yellow-500 hover:bg-yellow-500/10">
                   <ExternalLink className="h-3 w-3 mr-1.5" />
                   Visit Four.meme
                 </Button>
