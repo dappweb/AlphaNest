@@ -40,13 +40,28 @@ const getNavigation = (t: any) => [
     badge: null
   },
   {
-    name: `🔥 ${t.nav.staking}`,
-    href: '/staking',
+    name: '🐄 POP Vault',
+    href: '/vault',
     icon: Coins,
     special: true,
     featured: true,
+    shortcut: 'Ctrl+V',
+    badge: { text: '50% APY', variant: 'destructive' as const }
+  },
+  {
+    name: '🛡️ CowGuard',
+    href: '/cowguard',
+    icon: Coins,
+    special: true,
+    shortcut: 'Ctrl+I',
+    badge: { text: '保险', variant: 'default' as const }
+  },
+  {
+    name: `🔥 ${t.nav.staking}`,
+    href: '/staking',
+    icon: Coins,
     shortcut: 'Ctrl+S',
-    badge: { text: 'HOT', variant: 'destructive' as const }
+    badge: { text: 'HOT', variant: 'default' as const }
   },
   {
     name: t.nav.memeHunter,
