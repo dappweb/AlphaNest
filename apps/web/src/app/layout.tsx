@@ -110,29 +110,31 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <head>
-        {/* DNS 预解析 */}
-        <link rel="dns-prefetch" href="https://alphanest-api.dappweb.workers.dev" />
-        <link rel="dns-prefetch" href="https://api.dexscreener.com" />
+        {/* DNS 预解析 - 关键 API */}
+        <link rel="dns-prefetch" href="https://devnet.helius-rpc.com" />
+        <link rel="dns-prefetch" href="https://mainnet.helius-rpc.com" />
+        <link rel="dns-prefetch" href="https://price.jup.ag" />
+        <link rel="dns-prefetch" href="https://api.helius.xyz" />
         <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
         <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
-        <link rel="dns-prefetch" href="https://api.jup.ag" />
-        <link rel="dns-prefetch" href="https://api.0x.org" />
         
-        {/* 预连接关键资源 */}
-        <link rel="preconnect" href="https://alphanest-api.dappweb.workers.dev" crossOrigin="anonymous" />
-        <link rel="preconnect" href="https://api.dexscreener.com" crossOrigin="anonymous" />
+        {/* 预连接关键资源 - 提升首次请求速度 */}
+        <link rel="preconnect" href="https://devnet.helius-rpc.com" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://price.jup.ag" crossOrigin="anonymous" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         
         {/* 预加载关键页面 */}
         <link rel="prefetch" href="/staking" />
-        <link rel="prefetch" href="/trade" />
-        <link rel="prefetch" href="/meme" />
+        <link rel="prefetch" href="/insurance" />
         
         {/* 性能优化 */}
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta httpEquiv="x-dns-prefetch-control" content="on" />
+        
+        {/* 资源提示 - 优化加载优先级 */}
+        <link rel="preload" href="/logo.svg" as="image" type="image/svg+xml" />
       </head>
       <body className={`${inter.variable} font-sans antialiased`}>
         <Providers>

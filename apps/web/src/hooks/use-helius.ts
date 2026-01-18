@@ -2,9 +2,11 @@
  * Helius API Hook
  * 提供 Solana 代币价格、余额、交易历史等功能
  * https://docs.helius.dev/
+ * 
+ * 优化: 使用内存缓存减少重复请求
  */
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { 
   HELIUS_API_KEY, 
   getHeliusConfig,
@@ -15,6 +17,7 @@ import {
   type HeliusPriceData,
 } from '@/config/helius';
 import { SOLANA_TOKENS, SOLANA_TOKEN_DECIMALS } from '@/config/solana';
+import { memoryCache, CACHE_TTL } from '@/lib/cache';
 
 // 网络配置
 const NETWORK = (process.env.NEXT_PUBLIC_SOLANA_NETWORK === 'mainnet-beta' ? 'mainnet' : 'devnet') as 'mainnet' | 'devnet';
@@ -79,9 +82,23 @@ export function useHeliusTokenPrice(mintAddress: string) {
   const [price, setPrice] = useState<TokenPriceResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
+  const lastFetchRef = useRef<number>(0);
 
-  const fetchPrice = useCallback(async () => {
+  const fetchPrice = useCallback(async (force = false) => {
     if (!mintAddress || !HELIUS_API_KEY) return;
+
+    // 防抖 - 最小间隔 5 秒
+    const now = Date.now();
+    if (!force && now - lastFetchRef.current < 5000) return;
+    lastFetchRef.current = now;
+
+    // 检查缓存
+    const cacheKey = `price:${mintAddress}`;
+    const cached = memoryCache.get<TokenPriceResult>(cacheKey);
+    if (cached && !force) {
+      setPrice(cached);
+      return;
+    }
 
     setIsLoading(true);
     setError(null);
@@ -95,21 +112,25 @@ export function useHeliusTokenPrice(mintAddress: string) {
       
       if (data.data && data.data[mintAddress]) {
         const tokenData = data.data[mintAddress];
-        setPrice({
+        const priceResult: TokenPriceResult = {
           price: tokenData.price || 0,
           priceChange24h: tokenData.priceChange24h,
           volume24h: tokenData.volume24h,
           marketCap: tokenData.marketCap,
           lastUpdated: new Date(),
-        });
+        };
+        setPrice(priceResult);
+        memoryCache.set(cacheKey, priceResult, CACHE_TTL.PRICE);
       } else {
         // 尝试使用 DAS API 获取价格
         const dasResponse = await heliusRpcRequest<any>('getAsset', [mintAddress]);
         if (dasResponse?.token_info?.price_info) {
-          setPrice({
+          const priceResult: TokenPriceResult = {
             price: dasResponse.token_info.price_info.price_per_token || 0,
             lastUpdated: new Date(),
-          });
+          };
+          setPrice(priceResult);
+          memoryCache.set(cacheKey, priceResult, CACHE_TTL.PRICE);
         }
       }
     } catch (err) {
@@ -122,11 +143,11 @@ export function useHeliusTokenPrice(mintAddress: string) {
   useEffect(() => {
     fetchPrice();
     // 每 30 秒刷新一次
-    const interval = setInterval(fetchPrice, 30000);
+    const interval = setInterval(() => fetchPrice(true), 30000);
     return () => clearInterval(interval);
   }, [fetchPrice]);
 
-  return { price, isLoading, error, refetch: fetchPrice };
+  return { price, isLoading, error, refetch: () => fetchPrice(true) };
 }
 
 // 批量获取代币价格
@@ -184,9 +205,23 @@ export function useHeliusTokenBalances(walletAddress: string | undefined) {
   const [balances, setBalances] = useState<HeliusTokenBalance[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
+  const lastFetchRef = useRef<number>(0);
 
-  const fetchBalances = useCallback(async () => {
+  const fetchBalances = useCallback(async (force = false) => {
     if (!walletAddress || !HELIUS_API_KEY) return;
+
+    // 防抖 - 最小间隔 10 秒
+    const now = Date.now();
+    if (!force && now - lastFetchRef.current < 10000) return;
+    lastFetchRef.current = now;
+
+    // 检查缓存
+    const cacheKey = `balances:${walletAddress}`;
+    const cached = memoryCache.get<HeliusTokenBalance[]>(cacheKey);
+    if (cached && !force) {
+      setBalances(cached);
+      return;
+    }
 
     setIsLoading(true);
     setError(null);
@@ -230,6 +265,7 @@ export function useHeliusTokenBalances(walletAddress: string | undefined) {
       }
 
       setBalances(tokenBalances);
+      memoryCache.set(cacheKey, tokenBalances, CACHE_TTL.BALANCE);
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Failed to fetch balances'));
     } finally {
@@ -249,7 +285,7 @@ export function useHeliusTokenBalances(walletAddress: string | undefined) {
   // SOL 余额
   const solBalance = useMemo(() => getBalance(SOLANA_TOKENS.SOL), [getBalance]);
 
-  return { balances, solBalance, getBalance, isLoading, error, refetch: fetchBalances };
+  return { balances, solBalance, getBalance, isLoading, error, refetch: () => fetchBalances(true) };
 }
 
 // ============================================

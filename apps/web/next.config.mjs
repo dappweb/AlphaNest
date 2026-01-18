@@ -44,7 +44,15 @@ const nextConfig = {
       '@radix-ui/react-tooltip',
       '@radix-ui/react-progress',
       '@radix-ui/react-scroll-area',
+      '@radix-ui/react-select',
+      '@radix-ui/react-checkbox',
+      '@radix-ui/react-label',
+      '@solana/web3.js',
+      'wagmi',
+      'viem',
     ],
+    // 客户端路由优化
+    clientTraceMetadata: ['baggage', 'sentry-trace'],
   },
   
   // 减少打包体积
