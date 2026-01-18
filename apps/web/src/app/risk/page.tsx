@@ -12,7 +12,7 @@ export default function RiskPage() {
                 </div>
                 <h1 className="text-3xl font-bold">Risk Disclaimer</h1>
                 <p className="text-muted-foreground">
-                    Important information about the risks of using AlphaNest
+                    Important information about the risks of using PopCowDefi
                 </p>
             </div>
 
@@ -125,7 +125,7 @@ export default function RiskPage() {
                     <h2 className="text-lg font-semibold">Not Financial Advice</h2>
                 </div>
                 <p className="text-muted-foreground text-sm leading-relaxed">
-                    The information provided on AlphaNest is for informational purposes only and should not
+                    The information provided on PopCowDefi is for informational purposes only and should not
                     be construed as financial, investment, trading, or other advice. We do not recommend
                     buying or selling any tokens. Always do your own research (DYOR) before making any
                     investment decisions.
@@ -135,8 +135,8 @@ export default function RiskPage() {
             {/* Acknowledgment */}
             <div className="p-6 rounded-lg bg-primary/5 border border-primary/20 text-center">
                 <p className="text-sm text-muted-foreground">
-                    By using AlphaNest, you acknowledge that you have read, understood, and accept
-                    these risks. You agree that AlphaNest is not responsible for any losses you may incur.
+                    By using PopCowDefi, you acknowledge that you have read, understood, and accept
+                    these risks. You agree that PopCowDefi is not responsible for any losses you may incur.
                 </p>
             </div>
         </div>

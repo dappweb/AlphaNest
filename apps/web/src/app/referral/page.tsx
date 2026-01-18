@@ -22,7 +22,7 @@ export default function ReferralPage() {
             Invite & Earn
           </h1>
           <p className="text-sm md:text-base text-muted-foreground mt-1">
-            Share AlphaNest with friends and earn up to 15% commission
+            Share PopCowDefi with friends and earn up to 15% commission
           </p>
         </div>
         <ChainSwitcher 

@@ -89,7 +89,7 @@ export default function SettingsPage() {
 
   // Load settings from localStorage
   useEffect(() => {
-    const saved = localStorage.getItem('alphanest-settings');
+    const saved = localStorage.getItem('popcow-settings');
     if (saved) {
       try {
         setSettings({ ...defaultSettings, ...JSON.parse(saved) });
@@ -104,7 +104,7 @@ export default function SettingsPage() {
     setSaveStatus('idle');
     
     try {
-      localStorage.setItem('alphanest-settings', JSON.stringify(settings));
+      localStorage.setItem('popcow-settings', JSON.stringify(settings));
       setSaveStatus('success');
       setTimeout(() => setSaveStatus('idle'), 3000);
     } catch (e) {
@@ -540,7 +540,7 @@ export default function SettingsPage() {
                 size="sm"
                 onClick={() => {
                   setSettings(defaultSettings);
-                  localStorage.removeItem('alphanest-settings');
+                  localStorage.removeItem('popcow-settings');
                 }}
               >
                 Reset

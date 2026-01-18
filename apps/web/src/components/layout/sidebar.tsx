@@ -107,7 +107,7 @@ export function Sidebar() {
         />
         {!collapsed && (
           <span className="font-bold text-lg bg-gradient-to-r from-yellow-500 to-purple-500 bg-clip-text text-transparent">
-            AlphaNest
+            PopCowDefi
           </span>
         )}
       </div>

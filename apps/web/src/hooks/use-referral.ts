@@ -74,7 +74,7 @@ function generateReferralCode(address: string): string {
 
 // 获取推荐链接
 function getReferralLink(code: string): string {
-  const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://alphanest.io';
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://popcow.xyz';
   return `${baseUrl}?ref=${code}`;
 }
 
@@ -128,7 +128,7 @@ export function useReferralCode() {
     }
 
     // 从 localStorage 获取或生成推荐码
-    const storageKey = `alphanest-referral-${address}`;
+    const storageKey = `popcow-referral-${address}`;
     const saved = localStorage.getItem(storageKey);
     
     if (saved) {
@@ -186,7 +186,7 @@ export function useReferralCode() {
   const shareToTwitter = useCallback(() => {
     if (!referralCode) return;
     const text = encodeURIComponent(
-      `🦙 I'm earning passive income with AlphaNest!\n\n` +
+      `🦙 I'm earning passive income with PopCowDefi!\n\n` +
       `✅ Stake Meme tokens (Four.meme & pump.fun)\n` +
       `✅ Get insurance protection\n` +
       `✅ Earn up to 25% APY\n\n` +
@@ -199,7 +199,7 @@ export function useReferralCode() {
   const shareToTelegram = useCallback(() => {
     if (!referralCode) return;
     const text = encodeURIComponent(
-      `🦙 AlphaNest - Meme Token Staking & Insurance\n\n` +
+      `🦙 PopCowDefi - Meme Token Staking & Insurance\n\n` +
       `Join with my code: ${referralCode.code}\n` +
       `Get 5% bonus on your first stake!\n\n` +
       `${referralCode.link}`
@@ -240,7 +240,7 @@ export function useReferralStats() {
     setIsLoading(true);
     
     // 从 localStorage 获取模拟数据
-    const storageKey = `alphanest-referral-stats-${address}`;
+    const storageKey = `popcow-referral-stats-${address}`;
     const saved = localStorage.getItem(storageKey);
     
     let mockStats: ReferralStats;
@@ -268,7 +268,7 @@ export function useReferralStats() {
   const refetch = useCallback(() => {
     // 重新获取数据
     if (address) {
-      const storageKey = `alphanest-referral-stats-${address}`;
+      const storageKey = `popcow-referral-stats-${address}`;
       const saved = localStorage.getItem(storageKey);
       if (saved) {
         try {
@@ -320,7 +320,7 @@ export function useReferralRecords() {
     setIsLoading(true);
     
     // 从 localStorage 获取模拟数据
-    const storageKey = `alphanest-referral-records-${address}`;
+    const storageKey = `popcow-referral-records-${address}`;
     const saved = localStorage.getItem(storageKey);
     
     if (saved) {

@@ -3,7 +3,7 @@ import { http } from 'wagmi';
 import { bsc, bscTestnet, mainnet, sepolia } from 'wagmi/chains';
 
 export const wagmiConfig = getDefaultConfig({
-  appName: 'AlphaNest - Four.meme',
+  appName: 'PopCowDefi - Four.meme',
   projectId: process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID || 'YOUR_PROJECT_ID',
   chains: [bsc, bscTestnet, mainnet, sepolia],
   transports: {

@@ -67,7 +67,7 @@ export function ChainSwitcher({
   // 根据连接状态自动切换链
   useEffect(() => {
     // 从 localStorage 读取偏好
-    const savedPreference = localStorage.getItem('alphanest-settings');
+    const savedPreference = localStorage.getItem('popcow-settings');
     if (savedPreference) {
       try {
         const settings = JSON.parse(savedPreference);
@@ -269,7 +269,7 @@ export function useActiveChain() {
   const { connected: solanaConnected } = useWallet();
 
   useEffect(() => {
-    const savedPreference = localStorage.getItem('alphanest-settings');
+    const savedPreference = localStorage.getItem('popcow-settings');
     if (savedPreference) {
       try {
         const settings = JSON.parse(savedPreference);

@@ -22,7 +22,7 @@ export interface AdminInfo {
  */
 export function getAdminToken(): string | null {
   if (typeof window === 'undefined') return null;
-  return localStorage.getItem('alphanest_admin_token');
+  return localStorage.getItem('popcow_admin_token');
 }
 
 /**
@@ -30,7 +30,7 @@ export function getAdminToken(): string | null {
  */
 export function setAdminToken(token: string): void {
   if (typeof window === 'undefined') return;
-  localStorage.setItem('alphanest_admin_token', token);
+  localStorage.setItem('popcow_admin_token', token);
 }
 
 /**
@@ -38,8 +38,8 @@ export function setAdminToken(token: string): void {
  */
 export function removeAdminToken(): void {
   if (typeof window === 'undefined') return;
-  localStorage.removeItem('alphanest_admin_token');
-  localStorage.removeItem('alphanest_admin_info');
+  localStorage.removeItem('popcow_admin_token');
+  localStorage.removeItem('popcow_admin_info');
 }
 
 /**
@@ -47,7 +47,7 @@ export function removeAdminToken(): void {
  */
 export function saveAdminInfo(info: AdminInfo): void {
   if (typeof window === 'undefined') return;
-  localStorage.setItem('alphanest_admin_info', JSON.stringify(info));
+  localStorage.setItem('popcow_admin_info', JSON.stringify(info));
   setAdminToken(info.token);
 }
 
@@ -56,7 +56,7 @@ export function saveAdminInfo(info: AdminInfo): void {
  */
 export function getAdminInfo(): AdminInfo | null {
   if (typeof window === 'undefined') return null;
-  const info = localStorage.getItem('alphanest_admin_info');
+  const info = localStorage.getItem('popcow_admin_info');
   if (!info) return null;
   try {
     return JSON.parse(info);

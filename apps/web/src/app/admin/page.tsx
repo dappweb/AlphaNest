@@ -177,7 +177,7 @@ export default function AdminPage() {
 
     try {
       const timestamp = Date.now();
-      const message = `AlphaNest Admin Login\n\nWallet: ${evmAddress}\nTimestamp: ${timestamp}\n\n请签名以验证您的管理员身份`;
+      const message = `PopCowDefi Admin Login\n\nWallet: ${evmAddress}\nTimestamp: ${timestamp}\n\n请签名以验证您的管理员身份`;
 
       // 签名消息
       const signature = await evmSignMessage({ message });
@@ -215,7 +215,7 @@ export default function AdminPage() {
     try {
       const walletAddress = solanaPublicKey.toBase58();
       const timestamp = Date.now();
-      const message = `AlphaNest Admin Login\n\nWallet: ${walletAddress}\nTimestamp: ${timestamp}\n\n请签名以验证您的管理员身份`;
+      const message = `PopCowDefi Admin Login\n\nWallet: ${walletAddress}\nTimestamp: ${timestamp}\n\n请签名以验证您的管理员身份`;
 
       // 签名消息
       const encodedMessage = new TextEncoder().encode(message);
@@ -445,7 +445,7 @@ export default function AdminPage() {
             管理员控制台
           </h1>
           <p className="text-muted-foreground mt-1 text-sm sm:text-base">
-            管理 AlphaNest 平台配置
+            管理 PopCowDefi 平台配置
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">

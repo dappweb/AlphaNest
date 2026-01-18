@@ -24,7 +24,7 @@ export default function PrivacyPage() {
                         1. Information We Collect
                     </h2>
                     <p className="text-muted-foreground leading-relaxed mb-4">
-                        AlphaNest collects minimal information to provide our services:
+                        PopCowDefi collects minimal information to provide our services:
                     </p>
                     <ul className="space-y-2 text-muted-foreground">
                         <li className="flex items-start gap-2">
