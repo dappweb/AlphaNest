@@ -8,16 +8,33 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
 
 /**
+ * @title Chainlink 价格预言机接口
+ */
+interface AggregatorV3Interface {
+    function decimals() external view returns (uint8);
+    function description() external view returns (string memory);
+    function version() external view returns (uint256);
+    function latestRoundData() external view returns (
+        uint80 roundId,
+        int256 answer,
+        uint256 startedAt,
+        uint256 updatedAt,
+        uint80 answeredInRound
+    );
+}
+
+/**
  * @title MultiAssetStaking
  * @notice 多资产质押合约 - 对齐 Solana multi-asset-staking
  * @dev 支持多种资产质押、多种锁定期、自定义代币
  * 
  * 功能:
- * 1. 多资产质押 - 支持 ETH/USDC/USDT + 自定义代币
+ * 1. 多资产质押 - 支持 ETH/BNB/USDC/USDT + 自定义代币
  * 2. 锁定期选择 - 灵活/30天/90天/180天/365天
  * 3. 奖励倍数 - 根据锁定期 1x-5x
  * 4. 早鸟奖励 - 前30天额外奖励
  * 5. 自定义代币 - 管理员可添加新的质押代币
+ * 6. Chainlink 价格预言机 - 从链上获取实时价格
  */
 contract MultiAssetStaking is AccessControl, ReentrancyGuard, Pausable {
     using SafeERC20 for IERC20;
@@ -90,7 +107,22 @@ contract MultiAssetStaking is AccessControl, ReentrancyGuard, Pausable {
 
     IERC20 public rewardToken;          // 奖励代币
     address public treasury;            // 国库地址
-    address public priceOracle;         // 价格预言机
+    
+    // Chainlink 价格预言机
+    // BSC Mainnet:
+    //   BNB/USD: 0x0567F2323251f0Aab15c8dFb1967E4e8A7D42aeE
+    //   USDT/USD: 0xB97Ad0E74fa7d920791E90258A6E2085088b4320
+    //   USDC/USD: 0x51597f405303C4377E36123cBc172b13269EA163
+    // BSC Testnet:
+    //   BNB/USD: 0x2514895c72f50D8bd4B4F9b1110F0D6bD2c97526
+    // Ethereum Mainnet:
+    //   ETH/USD: 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419
+    // Sepolia:
+    //   ETH/USD: 0x694AA1769357215DE4FAC081bf1f309aDC325306
+    
+    mapping(address => address) public priceFeeds;  // token => Chainlink feed
+    bool public useChainlinkOracle;     // 是否使用 Chainlink
+    uint256 public oracleStalenessThreshold;  // 价格过期阈值 (秒)
     
     PoolInfo public pool;
     
@@ -154,7 +186,8 @@ contract MultiAssetStaking is AccessControl, ReentrancyGuard, Pausable {
     
     event RewardsAdded(uint256 amount);
     event RewardRateUpdated(uint256 newRate);
-    event PriceOracleUpdated(address indexed newOracle);
+    event PriceFeedUpdated(address indexed token, address indexed feed);
+    event OracleSettingsUpdated(bool useChainlink, uint256 stalenessThreshold);
 
     // ============================================
     // 构造函数
@@ -163,14 +196,22 @@ contract MultiAssetStaking is AccessControl, ReentrancyGuard, Pausable {
     constructor(
         address _rewardToken,
         address _treasury,
-        address _priceOracle
+        address _nativePriceFeed  // Chainlink BNB/USD 或 ETH/USD 喂价地址
     ) {
         require(_rewardToken != address(0), "Invalid reward token");
         require(_treasury != address(0), "Invalid treasury");
         
         rewardToken = IERC20(_rewardToken);
         treasury = _treasury;
-        priceOracle = _priceOracle;
+        
+        // 初始化 Chainlink 预言机设置
+        useChainlinkOracle = true;
+        oracleStalenessThreshold = 3600; // 1小时
+        
+        // 设置原生代币 (ETH/BNB) 价格喂价
+        if (_nativePriceFeed != address(0)) {
+            priceFeeds[ETH_ADDRESS] = _nativePriceFeed;
+        }
         
         // 初始化池信息
         pool = PoolInfo({
@@ -188,10 +229,10 @@ contract MultiAssetStaking is AccessControl, ReentrancyGuard, Pausable {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantRole(OPERATOR_ROLE, msg.sender);
         
-        // 默认添加 ETH 支持
+        // 默认添加原生代币 (ETH/BNB) 支持
         _addToken(
             ETH_ADDRESS,
-            "ETH",
+            "Native",  // ETH on Ethereum, BNB on BSC
             18,
             1000,  // 10% base APY
             100,   // 1x multiplier
@@ -392,9 +433,38 @@ contract MultiAssetStaking is AccessControl, ReentrancyGuard, Pausable {
         pool.reserveRatio = reserve;
     }
 
-    function setPriceOracle(address _oracle) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        priceOracle = _oracle;
-        emit PriceOracleUpdated(_oracle);
+    /**
+     * @notice 设置代币的 Chainlink 价格喂价地址
+     */
+    function setPriceFeed(address token, address feed) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        priceFeeds[token] = feed;
+        emit PriceFeedUpdated(token, feed);
+    }
+
+    /**
+     * @notice 批量设置价格喂价
+     */
+    function setPriceFeeds(
+        address[] calldata tokens,
+        address[] calldata feeds
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(tokens.length == feeds.length, "Length mismatch");
+        for (uint256 i = 0; i < tokens.length; i++) {
+            priceFeeds[tokens[i]] = feeds[i];
+            emit PriceFeedUpdated(tokens[i], feeds[i]);
+        }
+    }
+
+    /**
+     * @notice 设置预言机使用设置
+     */
+    function setOracleSettings(
+        bool _useChainlink,
+        uint256 _stalenessThreshold
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        useChainlinkOracle = _useChainlink;
+        oracleStalenessThreshold = _stalenessThreshold;
+        emit OracleSettingsUpdated(_useChainlink, _stalenessThreshold);
     }
 
     function pause() external onlyRole(DEFAULT_ADMIN_ROLE) {
@@ -534,21 +604,141 @@ contract MultiAssetStaking is AccessControl, ReentrancyGuard, Pausable {
     }
 
     // ============================================
-    // 价格预言机函数 (简化版)
+    // 价格预言机函数 - Chainlink 集成
     // ============================================
 
+    /**
+     * @notice 获取代币价格 (18位小数)
+     * @dev 优先使用 Chainlink，否则回退到默认值
+     */
     function getTokenPrice(address tokenAddress) public view returns (uint256) {
-        // TODO: 集成 Chainlink 预言机
-        // 返回模拟价格 (18 位小数)
-        if (tokenAddress == ETH_ADDRESS) {
-            return 2500 * 1e18; // $2500
+        // 尝试从 Chainlink 获取价格
+        if (useChainlinkOracle && priceFeeds[tokenAddress] != address(0)) {
+            return _getChainlinkPrice(tokenAddress);
         }
-        // 稳定币
+        
+        // 回退: 使用默认价格
+        return _getFallbackPrice(tokenAddress);
+    }
+
+    /**
+     * @notice 从 Chainlink 获取价格
+     */
+    function _getChainlinkPrice(address tokenAddress) internal view returns (uint256) {
+        address feed = priceFeeds[tokenAddress];
+        require(feed != address(0), "No price feed");
+        
+        AggregatorV3Interface priceFeed = AggregatorV3Interface(feed);
+        
+        (
+            uint80 roundId,
+            int256 answer,
+            ,
+            uint256 updatedAt,
+            uint80 answeredInRound
+        ) = priceFeed.latestRoundData();
+        
+        // 验证数据有效性
+        require(answer > 0, "Invalid price");
+        require(updatedAt > 0, "Round not complete");
+        require(answeredInRound >= roundId, "Stale price");
+        require(block.timestamp - updatedAt <= oracleStalenessThreshold, "Price too old");
+        
+        // Chainlink 返回 8 位小数，转换为 18 位
+        uint8 feedDecimals = priceFeed.decimals();
+        if (feedDecimals < 18) {
+            return uint256(answer) * 10**(18 - feedDecimals);
+        } else if (feedDecimals > 18) {
+            return uint256(answer) / 10**(feedDecimals - 18);
+        }
+        return uint256(answer);
+    }
+
+    /**
+     * @notice 回退价格 (无预言机时使用)
+     */
+    function _getFallbackPrice(address tokenAddress) internal view returns (uint256) {
+        // 原生代币 (ETH/BNB) 默认价格
+        if (tokenAddress == ETH_ADDRESS) {
+            return 600 * 1e18; // $600 (保守估计)
+        }
+        
+        // 稳定币 (6位小数的通常是稳定币)
         if (tokenConfigs[tokenAddress].decimals == 6) {
             return 1e18; // $1
         }
-        // 其他代币默认 $0.001
-        return 1e15;
+        
+        // Meme 代币默认很低价格
+        return 1e15; // $0.001
+    }
+
+    /**
+     * @notice 检查价格喂价是否健康
+     */
+    function isPriceFeedHealthy(address tokenAddress) external view returns (bool healthy, string memory reason) {
+        address feed = priceFeeds[tokenAddress];
+        
+        if (feed == address(0)) {
+            return (false, "No price feed configured");
+        }
+        
+        AggregatorV3Interface priceFeed = AggregatorV3Interface(feed);
+        
+        try priceFeed.latestRoundData() returns (
+            uint80 roundId,
+            int256 answer,
+            uint256,
+            uint256 updatedAt,
+            uint80 answeredInRound
+        ) {
+            if (answer <= 0) return (false, "Invalid price");
+            if (updatedAt == 0) return (false, "Round not complete");
+            if (answeredInRound < roundId) return (false, "Stale price");
+            if (block.timestamp - updatedAt > oracleStalenessThreshold) return (false, "Price too old");
+            return (true, "Healthy");
+        } catch {
+            return (false, "Feed call failed");
+        }
+    }
+
+    /**
+     * @notice 获取价格喂价详情
+     */
+    function getPriceFeedInfo(address tokenAddress) external view returns (
+        address feedAddress,
+        uint256 price,
+        uint256 lastUpdate,
+        uint8 feedDecimals,
+        bool isHealthy
+    ) {
+        feedAddress = priceFeeds[tokenAddress];
+        
+        if (feedAddress == address(0)) {
+            price = _getFallbackPrice(tokenAddress);
+            return (address(0), price, 0, 0, false);
+        }
+        
+        AggregatorV3Interface priceFeed = AggregatorV3Interface(feedAddress);
+        feedDecimals = priceFeed.decimals();
+        
+        try priceFeed.latestRoundData() returns (
+            uint80,
+            int256 answer,
+            uint256,
+            uint256 updatedAt,
+            uint80
+        ) {
+            if (feedDecimals < 18) {
+                price = uint256(answer) * 10**(18 - feedDecimals);
+            } else {
+                price = uint256(answer);
+            }
+            lastUpdate = updatedAt;
+            isHealthy = (block.timestamp - updatedAt <= oracleStalenessThreshold) && (answer > 0);
+        } catch {
+            price = _getFallbackPrice(tokenAddress);
+            isHealthy = false;
+        }
     }
 
     // ============================================

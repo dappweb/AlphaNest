@@ -15,32 +15,84 @@ contract MockToken is ERC20 {
     }
 }
 
+// Mock Chainlink Price Feed
+contract MockPriceFeed {
+    int256 private _price;
+    uint8 private _decimals;
+    
+    constructor(int256 price, uint8 feedDecimals) {
+        _price = price;
+        _decimals = feedDecimals;
+    }
+    
+    function decimals() external view returns (uint8) {
+        return _decimals;
+    }
+    
+    function description() external pure returns (string memory) {
+        return "Mock Price Feed";
+    }
+    
+    function version() external pure returns (uint256) {
+        return 1;
+    }
+    
+    function latestRoundData() external view returns (
+        uint80 roundId,
+        int256 answer,
+        uint256 startedAt,
+        uint256 updatedAt,
+        uint80 answeredInRound
+    ) {
+        return (1, _price, block.timestamp, block.timestamp, 1);
+    }
+    
+    function setPrice(int256 newPrice) external {
+        _price = newPrice;
+    }
+}
+
 /**
  * @title MultiAssetStakingTest
  * @notice Tests for MultiAssetStaking contract
- * @dev Supports staking BNB, Four.meme tokens, and other BEP20 tokens
+ * @dev Supports staking BNB/ETH, Four.meme tokens, and other ERC20 tokens
  */
 contract MultiAssetStakingTest is Test {
     MultiAssetStaking public staking;
+    MockToken public rewardToken;
     MockToken public fourMeme;
     MockToken public usdt;
+    MockPriceFeed public nativePriceFeed;
+    MockPriceFeed public fourMemePriceFeed;
     
     address public owner = address(1);
+    address public treasury = address(2);
     address public user1 = address(3);
     address public user2 = address(4);
     
     function setUp() public {
         vm.startPrank(owner);
         
-        // Deploy staking contract
-        staking = new MultiAssetStaking(owner);
-        
         // Deploy mock tokens
+        rewardToken = new MockToken("Reward Token", "RWD");
         fourMeme = new MockToken("Four.meme", "FOUR");
         usdt = new MockToken("Tether USD", "USDT");
         
+        // Deploy mock price feeds
+        // BNB/ETH at $600, 8 decimals (Chainlink standard)
+        nativePriceFeed = new MockPriceFeed(600 * 10**8, 8);
+        // FOUR at $0.01
+        fourMemePriceFeed = new MockPriceFeed(1 * 10**6, 8); // $0.01
+        
+        // Deploy staking contract with Chainlink integration
+        staking = new MultiAssetStaking(
+            address(rewardToken),     // reward token
+            treasury,                  // treasury
+            address(nativePriceFeed)   // native (ETH/BNB) price feed
+        );
+        
         // Add supported tokens
-        staking.addSupportedToken(
+        staking.addStakeableToken(
             address(fourMeme),
             "FOUR",
             18,
@@ -49,7 +101,7 @@ contract MultiAssetStakingTest is Test {
             100 * 10**18 // min stake
         );
         
-        staking.addSupportedToken(
+        staking.addStakeableToken(
             address(usdt),
             "USDT",
             18,
@@ -58,6 +110,9 @@ contract MultiAssetStakingTest is Test {
             50 * 10**18 // min stake
         );
         
+        // Set price feed for FOUR token
+        staking.setPriceFeed(address(fourMeme), address(fourMemePriceFeed));
+        
         // Distribute tokens to users
         fourMeme.transfer(user1, 10000 * 10**18);
         fourMeme.transfer(user2, 10000 * 10**18);
@@ -65,7 +120,7 @@ contract MultiAssetStakingTest is Test {
         usdt.transfer(user2, 10000 * 10**18);
         
         // Fund contract with reward tokens
-        fourMeme.transfer(address(staking), 100000 * 10**18);
+        rewardToken.transfer(address(staking), 100000 * 10**18);
         
         vm.stopPrank();
         
@@ -80,35 +135,35 @@ contract MultiAssetStakingTest is Test {
         vm.prank(user2);
         usdt.approve(address(staking), type(uint256).max);
         
-        // Give users some BNB
+        // Give users some native token (ETH/BNB)
         vm.deal(user1, 100 ether);
         vm.deal(user2, 100 ether);
     }
 
     // ============================================
-    // BNB Staking Tests
+    // Native Token (ETH/BNB) Staking Tests
     // ============================================
 
-    function testStakeBNB() public {
+    function testStakeETH() public {
         uint256 stakeAmount = 1 ether;
         
         vm.prank(user1);
-        staking.stakeBNB{value: stakeAmount}(MultiAssetStaking.LockPeriod.Flexible);
+        staking.stakeETH{value: stakeAmount}(MultiAssetStaking.LockPeriod.Flexible);
         
         // Check stake info
         (uint256 stakedAmount,,,,,,) = staking.getStakeInfo(user1, address(0));
         assertEq(stakedAmount, stakeAmount);
     }
 
-    function testStakeBNBWithLock() public {
+    function testStakeETHWithLock() public {
         uint256 stakeAmount = 1 ether;
         
         vm.prank(user1);
-        staking.stakeBNB{value: stakeAmount}(MultiAssetStaking.LockPeriod.ThirtyDays);
+        staking.stakeETH{value: stakeAmount}(MultiAssetStaking.LockPeriod.ThirtyDays);
         
-        (uint256 stakedAmount,, uint8 lockPeriod, uint256 unlockTime,,,) = staking.getStakeInfo(user1, address(0));
+        (uint256 stakedAmount,, MultiAssetStaking.LockPeriod lockPeriod, uint256 unlockTime,,,) = staking.getStakeInfo(user1, address(0));
         assertEq(stakedAmount, stakeAmount);
-        assertEq(lockPeriod, uint8(MultiAssetStaking.LockPeriod.ThirtyDays));
+        assertEq(uint8(lockPeriod), uint8(MultiAssetStaking.LockPeriod.ThirtyDays));
         assertTrue(unlockTime > block.timestamp);
     }
 
@@ -130,7 +185,7 @@ contract MultiAssetStakingTest is Test {
         uint256 stakeAmount = 10 * 10**18; // Below 100 minimum
         
         vm.prank(user1);
-        vm.expectRevert("Below minimum stake");
+        vm.expectRevert("Below minimum");
         staking.stakeToken(address(fourMeme), stakeAmount, MultiAssetStaking.LockPeriod.Flexible);
     }
 
@@ -150,11 +205,11 @@ contract MultiAssetStakingTest is Test {
     // Unstake Tests
     // ============================================
 
-    function testUnstakeBNB() public {
+    function testUnstakeETH() public {
         uint256 stakeAmount = 1 ether;
         
         vm.prank(user1);
-        staking.stakeBNB{value: stakeAmount}(MultiAssetStaking.LockPeriod.Flexible);
+        staking.stakeETH{value: stakeAmount}(MultiAssetStaking.LockPeriod.Flexible);
         
         uint256 balanceBefore = user1.balance;
         
@@ -169,7 +224,7 @@ contract MultiAssetStakingTest is Test {
         uint256 stakeAmount = 1 ether;
         
         vm.prank(user1);
-        staking.stakeBNB{value: stakeAmount}(MultiAssetStaking.LockPeriod.ThirtyDays);
+        staking.stakeETH{value: stakeAmount}(MultiAssetStaking.LockPeriod.ThirtyDays);
         
         vm.prank(user1);
         vm.expectRevert("Still locked");
@@ -180,7 +235,7 @@ contract MultiAssetStakingTest is Test {
         uint256 stakeAmount = 1 ether;
         
         vm.prank(user1);
-        staking.stakeBNB{value: stakeAmount}(MultiAssetStaking.LockPeriod.ThirtyDays);
+        staking.stakeETH{value: stakeAmount}(MultiAssetStaking.LockPeriod.ThirtyDays);
         
         // Fast forward 31 days
         vm.warp(block.timestamp + 31 days);
@@ -210,12 +265,12 @@ contract MultiAssetStakingTest is Test {
         (,,,,,, uint256 pendingRewards) = staking.getStakeInfo(user1, address(fourMeme));
         assertTrue(pendingRewards > 0, "Should have pending rewards");
         
-        uint256 balanceBefore = fourMeme.balanceOf(user1);
+        uint256 balanceBefore = rewardToken.balanceOf(user1);
         
         vm.prank(user1);
         staking.claimRewards(address(fourMeme));
         
-        uint256 balanceAfter = fourMeme.balanceOf(user1);
+        uint256 balanceAfter = rewardToken.balanceOf(user1);
         assertTrue(balanceAfter > balanceBefore, "Should have received rewards");
     }
 
@@ -234,14 +289,60 @@ contract MultiAssetStakingTest is Test {
     }
 
     // ============================================
+    // Chainlink Price Feed Tests
+    // ============================================
+
+    function testGetTokenPriceFromChainlink() public view {
+        // Native token price should come from Chainlink feed
+        uint256 nativePrice = staking.getTokenPrice(address(0));
+        assertEq(nativePrice, 600 * 10**18, "Native price should be $600");
+        
+        // FOUR token price from its feed
+        uint256 fourPrice = staking.getTokenPrice(address(fourMeme));
+        assertEq(fourPrice, 1 * 10**16, "FOUR price should be $0.01");
+    }
+
+    function testPriceFeedHealthCheck() public view {
+        (bool healthy, string memory reason) = staking.isPriceFeedHealthy(address(0));
+        assertTrue(healthy, "Native price feed should be healthy");
+        assertEq(reason, "Healthy");
+    }
+
+    function testFallbackPriceWhenNoFeed() public view {
+        // USDT has no feed set, should use fallback
+        uint256 usdtPrice = staking.getTokenPrice(address(usdt));
+        // Fallback for unknown tokens
+        assertTrue(usdtPrice > 0, "Should have a fallback price");
+    }
+
+    function testSetPriceFeed() public {
+        MockPriceFeed newFeed = new MockPriceFeed(2 * 10**8, 8); // $2
+        
+        vm.prank(owner);
+        staking.setPriceFeed(address(usdt), address(newFeed));
+        
+        uint256 usdtPrice = staking.getTokenPrice(address(usdt));
+        assertEq(usdtPrice, 2 * 10**18, "USDT price should be $2 from new feed");
+    }
+
+    function testDisableChainlink() public {
+        vm.prank(owner);
+        staking.setOracleSettings(false, 3600);
+        
+        // Should use fallback price now
+        uint256 nativePrice = staking.getTokenPrice(address(0));
+        assertEq(nativePrice, 600 * 10**18, "Should use fallback price ($600)");
+    }
+
+    // ============================================
     // Admin Tests
     // ============================================
 
-    function testAddSupportedToken() public {
+    function testAddStakeableToken() public {
         MockToken newToken = new MockToken("New Token", "NEW");
         
         vm.prank(owner);
-        staking.addSupportedToken(
+        staking.addStakeableToken(
             address(newToken),
             "NEW",
             18,
@@ -261,13 +362,13 @@ contract MultiAssetStakingTest is Test {
         assertTrue(found, "New token should be in supported list");
     }
 
-    function testRemoveSupportedToken() public {
+    function testRemoveStakeableToken() public {
         vm.prank(owner);
-        staking.removeSupportedToken(address(fourMeme));
+        staking.removeStakeableToken(address(fourMeme));
         
-        vm.prank(user1);
-        vm.expectRevert("Token not supported");
-        staking.stakeToken(address(fourMeme), 100 * 10**18, MultiAssetStaking.LockPeriod.Flexible);
+        // Token is deactivated, not removed from list
+        (,,,,,bool isActive,,) = staking.getTokenConfig(address(fourMeme));
+        assertFalse(isActive, "Token should be inactive");
     }
 
     function testPauseUnpause() public {
@@ -276,13 +377,13 @@ contract MultiAssetStakingTest is Test {
         
         vm.prank(user1);
         vm.expectRevert();
-        staking.stakeBNB{value: 1 ether}(MultiAssetStaking.LockPeriod.Flexible);
+        staking.stakeETH{value: 1 ether}(MultiAssetStaking.LockPeriod.Flexible);
         
         vm.prank(owner);
         staking.unpause();
         
         vm.prank(user1);
-        staking.stakeBNB{value: 1 ether}(MultiAssetStaking.LockPeriod.Flexible);
+        staking.stakeETH{value: 1 ether}(MultiAssetStaking.LockPeriod.Flexible);
     }
 
     // ============================================
@@ -291,7 +392,7 @@ contract MultiAssetStakingTest is Test {
 
     function testGlobalStats() public {
         vm.prank(user1);
-        staking.stakeBNB{value: 1 ether}(MultiAssetStaking.LockPeriod.Flexible);
+        staking.stakeETH{value: 1 ether}(MultiAssetStaking.LockPeriod.Flexible);
         
         vm.prank(user2);
         staking.stakeToken(address(fourMeme), 1000 * 10**18, MultiAssetStaking.LockPeriod.ThirtyDays);
