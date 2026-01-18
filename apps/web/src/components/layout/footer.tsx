@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import { Github, ExternalLink } from 'lucide-react';
+import { ExternalLink } from 'lucide-react';
 
 // SVG Icons
 const XIcon = () => (
@@ -18,7 +18,6 @@ const TelegramIcon = () => (
 const socialLinks = [
   { name: 'Twitter', href: 'https://x.com/popcowxyz', icon: <XIcon /> },
   { name: 'Telegram', href: 'https://t.me/popcowxyz', icon: <TelegramIcon /> },
-  { name: 'GitHub', href: 'https://github.com/popcowxyz', icon: <Github className="h-5 w-5" /> },
 ];
 
 const footerLinks = [

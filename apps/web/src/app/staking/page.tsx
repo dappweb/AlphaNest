@@ -44,15 +44,32 @@ import {
   LOCK_PERIOD_LABELS as SOLANA_LOCK_LABELS,
 } from '@/hooks/use-solana-staking';
 import { ChainSwitcher, useActiveChain, type ChainType } from '@/components/ui/chain-switcher';
+import { useStakingReferral, DEFAULT_REFERRER } from '@/hooks/use-staking-referral';
+import { Gift, UserPlus } from 'lucide-react';
 
 export default function StakingPage() {
-  const { isConnected: evmConnected } = useAccount();
+  const { isConnected: evmConnected, address: evmAddress } = useAccount();
   const { connected: solanaConnected, publicKey: solanaPublicKey } = useWallet();
   const { switchChain } = useSwitchChain();
   const { t } = useTranslation();
   const { activeChain, setActiveChain, isBsc, isSolana } = useActiveChain();
   
   const isConnected = isBsc ? evmConnected : solanaConnected;
+  
+  // 推荐系统 - 新用户必须绑定推荐人
+  const {
+    hasReferrer,
+    needsReferrer,
+    autoBindReferrer,
+    bindToDefaultReferrer,
+    isBindingReferrer,
+    bindSuccess,
+    getReferrerFromUrl,
+    inviteeBonus,
+  } = useStakingReferral();
+  
+  // 显示推荐人绑定提示
+  const [showReferralModal, setShowReferralModal] = useState(false);
   
   // 选择的代币类型: 'BNB' | 'FOUR'
   const [selectedToken, setSelectedToken] = useState<'BNB' | 'FOUR'>('BNB');
@@ -90,6 +107,13 @@ export default function StakingPage() {
 
   const handleStake = async () => {
     if (!stakeAmount || Number(stakeAmount) <= 0) return;
+    
+    // 检查是否需要绑定推荐人（新用户必须绑定）
+    if (needsReferrer && isBsc) {
+      setShowReferralModal(true);
+      return;
+    }
+    
     try {
       if (selectedToken === 'BNB') {
         await stakeBNB(stakeAmount, lockPeriod);
@@ -100,6 +124,26 @@ export default function StakingPage() {
       setTimeout(() => refetch(), 2000);
     } catch (error) {
       console.error('Stake failed:', error);
+    }
+  };
+  
+  // 处理推荐人绑定后继续质押
+  const handleBindAndStake = async () => {
+    try {
+      await autoBindReferrer();
+      setShowReferralModal(false);
+      // 绑定成功后自动执行质押
+      setTimeout(async () => {
+        if (selectedToken === 'BNB') {
+          await stakeBNB(stakeAmount, lockPeriod);
+        } else {
+          await stakeFourMeme(stakeAmount, lockPeriod);
+        }
+        setStakeAmount('');
+        setTimeout(() => refetch(), 2000);
+      }, 2000);
+    } catch (error) {
+      console.error('Bind referrer failed:', error);
     }
   };
 
@@ -501,6 +545,44 @@ export default function StakingPage() {
                     </p>
                   )}
                 </div>
+              )}
+
+              {/* 新用户需要绑定推荐人提示 */}
+              {isConnected && needsReferrer && isBsc && (
+                <Alert className="bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border-yellow-500/30">
+                  <Gift className="h-4 w-4 text-yellow-500" />
+                  <AlertDescription className="flex items-center justify-between flex-wrap gap-2">
+                    <div>
+                      <span className="text-sm font-medium">首次质押需要绑定推荐人</span>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        获得 {inviteeBonus}% 额外奖励！默认推荐人: 官方
+                      </p>
+                    </div>
+                    <Button 
+                      size="sm" 
+                      onClick={autoBindReferrer}
+                      disabled={isBindingReferrer}
+                      className="bg-yellow-500 hover:bg-yellow-600"
+                    >
+                      {isBindingReferrer ? (
+                        <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                      ) : (
+                        <UserPlus className="h-3 w-3 mr-1" />
+                      )}
+                      立即绑定
+                    </Button>
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {/* 绑定成功提示 */}
+              {bindSuccess && (
+                <Alert className="bg-green-500/10 border-green-500/30">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <AlertDescription className="text-sm">
+                    推荐人绑定成功！您将获得 {inviteeBonus}% 首次质押奖励
+                  </AlertDescription>
+                </Alert>
               )}
 
               {/* 未连接钱包 */}

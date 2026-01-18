@@ -15,6 +15,10 @@ import { formatEther, parseEther, zeroAddress } from 'viem';
 // Contract address
 const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_MULTI_ASSET_STAKING_ADDRESS as `0x${string}` || '0x0000000000000000000000000000000000000000';
 
+// 默认推荐人（管理员地址）
+export const DEFAULT_REFERRER = process.env.NEXT_PUBLIC_ADMIN_WALLET_ADDRESS as `0x${string}` || '0x1234567890123456789012345678901234567890';
+export const DEFAULT_REFERRER_SOLANA = process.env.NEXT_PUBLIC_ADMIN_SOLANA_ADDRESS || 'AdminSolanaWalletAddressHere';
+
 // Referral ABI - 对齐 MultiAssetStaking.sol 推荐返佣功能
 const REFERRAL_ABI = [
   // 绑定推荐人
@@ -279,6 +283,7 @@ export function useInviteeBonus() {
 
 /**
  * 绑定推荐人
+ * 如果没有指定推荐人，默认使用管理员地址
  */
 export function useBindReferrer() {
   const { writeContract, data: hash, isPending, error } = useWriteContract();
@@ -288,23 +293,36 @@ export function useBindReferrer() {
   });
 
   const bindReferrer = useCallback(
-    async (referrerAddress: `0x${string}`) => {
-      if (!referrerAddress || referrerAddress === zeroAddress) {
-        throw new Error('Invalid referrer address');
-      }
+    async (referrerAddress?: `0x${string}`) => {
+      // 如果没有指定推荐人，使用默认管理员地址
+      const finalReferrer = referrerAddress && referrerAddress !== zeroAddress 
+        ? referrerAddress 
+        : DEFAULT_REFERRER;
 
       writeContract({
         address: CONTRACT_ADDRESS,
         abi: REFERRAL_ABI,
         functionName: 'bindReferrer',
-        args: [referrerAddress],
+        args: [finalReferrer],
       });
     },
     [writeContract]
   );
 
+  // 绑定到默认推荐人（管理员）
+  const bindToDefaultReferrer = useCallback(async () => {
+    writeContract({
+      address: CONTRACT_ADDRESS,
+      abi: REFERRAL_ABI,
+      functionName: 'bindReferrer',
+      args: [DEFAULT_REFERRER],
+    });
+  }, [writeContract]);
+
   return {
     bindReferrer,
+    bindToDefaultReferrer,
+    defaultReferrer: DEFAULT_REFERRER,
     isPending: isPending || isConfirming,
     isSuccess,
     error,
@@ -341,17 +359,23 @@ export function useClaimReferralRewards() {
 
 /**
  * 组合 Hook - 完整推荐返佣功能
+ * 新用户必须有推荐人，默认推荐人是管理员
  */
 export function useStakingReferral() {
   const { address, isConnected } = useAccount();
   const { isEnabled } = useReferralEnabled();
-  const { hasReferrer } = useHasReferrer();
+  const { hasReferrer, isLoading: loadingHasReferrer } = useHasReferrer();
   const { referrer } = useMyReferrer();
   const { referralInfo, isLoading, refetch } = useReferralInfo();
   const { bonusRate } = useInviteeBonus();
 
   const bindReferrerAction = useBindReferrer();
   const claimRewardsAction = useClaimReferralRewards();
+
+  // 检查是否需要绑定推荐人（新用户必须绑定）
+  const needsReferrer = useMemo(() => {
+    return isConnected && !loadingHasReferrer && !hasReferrer;
+  }, [isConnected, loadingHasReferrer, hasReferrer]);
 
   // 生成推荐链接
   const referralLink = useMemo(() => {
@@ -366,15 +390,38 @@ export function useStakingReferral() {
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
   }, [address]);
 
+  // 从 URL 获取推荐人地址
+  const getReferrerFromUrl = useCallback(() => {
+    if (typeof window === 'undefined') return null;
+    const params = new URLSearchParams(window.location.search);
+    const ref = params.get('ref');
+    if (ref && ref.startsWith('0x') && ref.length === 42) {
+      return ref as `0x${string}`;
+    }
+    return null;
+  }, []);
+
+  // 自动绑定推荐人（优先使用 URL 参数，否则使用默认管理员）
+  const autoBindReferrer = useCallback(async () => {
+    const urlReferrer = getReferrerFromUrl();
+    const referrerToUse = urlReferrer || DEFAULT_REFERRER;
+    await bindReferrerAction.bindReferrer(referrerToUse);
+  }, [getReferrerFromUrl, bindReferrerAction]);
+
   return {
     // 状态
     isConnected,
     isEnabled,
     hasReferrer,
+    needsReferrer, // 新用户需要绑定推荐人
     myReferrer: referrer,
     referralInfo,
     isLoading,
     inviteeBonus: bonusRate,
+
+    // 默认推荐人（管理员）
+    defaultReferrer: DEFAULT_REFERRER,
+    defaultReferrerSolana: DEFAULT_REFERRER_SOLANA,
 
     // 推荐链接/码
     referralLink,
@@ -383,12 +430,17 @@ export function useStakingReferral() {
 
     // 操作
     bindReferrer: bindReferrerAction.bindReferrer,
+    bindToDefaultReferrer: bindReferrerAction.bindToDefaultReferrer,
+    autoBindReferrer, // 自动绑定（URL 参数或默认管理员）
     isBindingReferrer: bindReferrerAction.isPending,
     bindSuccess: bindReferrerAction.isSuccess,
 
     claimRewards: claimRewardsAction.claimRewards,
     isClaimingRewards: claimRewardsAction.isPending,
     claimSuccess: claimRewardsAction.isSuccess,
+
+    // URL 工具
+    getReferrerFromUrl,
 
     // 刷新
     refetch,

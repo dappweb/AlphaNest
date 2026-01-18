@@ -17,6 +17,10 @@ function useSolanaWalletSafe() {
   }
 }
 
+// 默认推荐人（管理员地址）- 新用户必须有推荐人
+export const DEFAULT_REFERRER_EVM = process.env.NEXT_PUBLIC_ADMIN_WALLET_ADDRESS as `0x${string}` || '0x1234567890123456789012345678901234567890';
+export const DEFAULT_REFERRER_SOLANA = process.env.NEXT_PUBLIC_ADMIN_SOLANA_ADDRESS || 'AdminSolanaWalletAddressHere';
+
 // 推荐系统配置
 export const REFERRAL_CONFIG = {
   // 奖励比例 (基于被邀请人质押/保险的金额)
@@ -31,6 +35,13 @@ export const REFERRAL_CONFIG = {
   inviteeBonus: 5, // 被邀请人获得 5% 首次质押奖励
   // 最小领取金额
   minClaimAmount: 10, // $10 USDC
+  // 默认推荐人（管理员）
+  defaultReferrer: {
+    evm: DEFAULT_REFERRER_EVM,
+    solana: DEFAULT_REFERRER_SOLANA,
+  },
+  // 新用户必须有推荐人
+  requireReferrer: true,
 };
 
 // 推荐等级

@@ -32,28 +32,32 @@ const getNavigation = (t: any) => [
     href: '/',
     icon: LayoutDashboard,
     shortcut: 'Ctrl+D',
-    badge: null
+    badge: null,
+    description: null,
   },
   {
     name: `🔥 ${t.nav.staking}`,
     href: '/staking',
     icon: Coins,
     shortcut: 'Ctrl+S',
-    badge: { text: 'BSC+SOL', variant: 'default' as const }
+    badge: { text: 'BSC+SOL', variant: 'default' as const },
+    description: 'Stake MEME tokens to earn rewards. Support BSC & Solana, up to 25% APY with lock bonuses.',
   },
   {
     name: '🛡️ Insurance',
     href: '/insurance',
     icon: Shield,
     shortcut: 'Ctrl+I',
-    badge: { text: 'MEME', variant: 'secondary' as const }
+    badge: { text: 'MEME', variant: 'secondary' as const },
+    description: 'CowGuard insurance protects your MEME assets. Get coverage against rug pulls and price crashes.',
   },
   {
     name: '🎁 Referral',
     href: '/referral',
     icon: Gift,
     shortcut: 'Ctrl+R',
-    badge: { text: 'NEW', variant: 'default' as const, className: 'bg-green-500 text-white' }
+    badge: { text: 'NEW', variant: 'default' as const, className: 'bg-green-500 text-white' },
+    description: 'Invite friends and earn 5-15% commission on their staking. On-chain rewards, auto-distributed.',
   },
 ];
 
@@ -167,8 +171,13 @@ export function Sidebar() {
                     </TooltipTrigger>
                     <TooltipContent side="right" className="max-w-xs">
                       <p className="font-medium">{item.name}</p>
+                      {item.description && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {item.description}
+                        </p>
+                      )}
                       {item.shortcut && (
-                        <p className="text-xs text-muted-foreground mt-1 opacity-70">
+                        <p className="text-xs text-muted-foreground/70 mt-1">
                           {item.shortcut}
                         </p>
                       )}
@@ -177,7 +186,18 @@ export function Sidebar() {
                 );
               }
 
-              return <div key={item.name}>{linkContent}</div>;
+              return (
+                <Tooltip key={item.name}>
+                  <TooltipTrigger asChild>
+                    {linkContent}
+                  </TooltipTrigger>
+                  {item.description && (
+                    <TooltipContent side="right" className="max-w-xs">
+                      <p className="text-xs">{item.description}</p>
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+              );
             })}
           </div>
         </TooltipProvider>
