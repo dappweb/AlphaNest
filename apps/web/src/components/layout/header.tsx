@@ -181,7 +181,7 @@ export function Header() {
             <ThemeIcon className="h-4 w-4" />
           </Button>
 
-          {/* Solana 钱包连接按钮 */}
+          {/* Solana wallet connection button */}
           <WalletMultiButton className="!bg-primary hover:!bg-primary/90 !text-primary-foreground" />
         </div>
       </header>

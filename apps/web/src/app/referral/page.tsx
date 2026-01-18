@@ -18,14 +18,14 @@ export default function ReferralPage() {
       <div>
         <h1 className="text-2xl md:text-3xl font-bold tracking-tight flex items-center gap-2">
           <Gift className="h-6 w-6 md:h-7 md:w-7 text-purple-500" />
-          邀请与收益
+          Invite & Earn
         </h1>
         <p className="text-sm md:text-base text-muted-foreground mt-1">
-          分享 PopCowDefi 给好友，获得最高 15% 返佣
+          Share PopCowDefi with friends and earn up to 15% commission
         </p>
       </div>
 
-      {/* 徽章 */}
+      {/* Badges */}
       <div className="flex items-center gap-2 flex-wrap">
         <Badge className="bg-purple-500/20 text-purple-500 border-purple-500/30 text-[10px] md:text-xs">
           <Zap className="h-3 w-3 mr-1" />
@@ -33,49 +33,49 @@ export default function ReferralPage() {
         </Badge>
         <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/30 text-[10px] md:text-xs">
           <Shield className="h-3 w-3 mr-1" />
-          即时奖励
+          Instant Rewards
         </Badge>
         <Badge variant="outline" className="text-[10px] md:text-xs">
           <TrendingUp className="h-3 w-3 mr-1" />
-          最高 15% 返佣
+          Up to 15% Commission
         </Badge>
       </div>
 
-      {/* 未连接钱包提示 */}
+      {/* Wallet Not Connected Alert */}
       {!isConnected && (
         <Alert className="bg-yellow-500/10 border-yellow-500/30">
           <Info className="h-4 w-4 text-yellow-500" />
           <AlertDescription className="text-sm">
-            连接钱包获取您的专属邀请码，开始赚取收益！
+            Connect your wallet to get your exclusive referral code and start earning!
           </AlertDescription>
         </Alert>
       )}
 
-      {/* 主要内容 */}
+      {/* Main Content */}
       <div className="grid lg:grid-cols-3 gap-4 md:gap-6">
-        {/* 左侧 - 推荐码和统计 */}
+        {/* Left - Referral Code & Stats */}
         <div className="lg:col-span-2 space-y-4 md:space-y-6">
-          {/* 推荐码卡片 */}
+          {/* Referral Code Card */}
           <ReferralCodeCard />
 
-          {/* 统计信息 */}
+          {/* Statistics */}
           <ReferralStats />
 
-          {/* 推荐记录 */}
+          {/* Referral Records */}
           <ReferralRecords />
         </div>
 
-        {/* 右侧 - 等级和说明 */}
+        {/* Right - Tiers & Info */}
         <div className="space-y-4">
-          {/* 等级列表 */}
+          {/* Tier List */}
           <TierList />
 
-          {/* 奖励规则 */}
+          {/* Reward Rules */}
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm flex items-center gap-2">
                 <Award className="h-4 w-4 text-yellow-500" />
-                如何工作
+                How It Works
               </CardTitle>
             </CardHeader>
             <CardContent className="pb-3 space-y-3 text-xs text-muted-foreground">
@@ -83,70 +83,70 @@ export default function ReferralPage() {
                 <div className="h-5 w-5 rounded-full bg-yellow-500/20 text-yellow-500 flex items-center justify-center text-[10px] font-bold shrink-0">
                   1
                 </div>
-                <p>分享您的专属邀请码或链接给好友</p>
+                <p>Share your exclusive referral code or link with friends</p>
               </div>
               <div className="flex items-start gap-2">
                 <div className="h-5 w-5 rounded-full bg-yellow-500/20 text-yellow-500 flex items-center justify-center text-[10px] font-bold shrink-0">
                   2
                 </div>
-                <p>好友注册并质押或购买保险</p>
+                <p>Friends register and stake or purchase insurance</p>
               </div>
               <div className="flex items-start gap-2">
                 <div className="h-5 w-5 rounded-full bg-yellow-500/20 text-yellow-500 flex items-center justify-center text-[10px] font-bold shrink-0">
                   3
                 </div>
-                <p>您获得他们活动的返佣（5-15%）</p>
+                <p>You earn commission (5-15%) on their activities</p>
               </div>
               <div className="flex items-start gap-2">
                 <div className="h-5 w-5 rounded-full bg-green-500/20 text-green-500 flex items-center justify-center text-[10px] font-bold shrink-0">
                   ✓
                 </div>
-                <p>好友首次质押可获得 {REFERRAL_CONFIG.inviteeBonus}% 奖励！</p>
+                <p>Friends get {REFERRAL_CONFIG.inviteeBonus}% bonus on first stake!</p>
               </div>
             </CardContent>
           </Card>
 
-          {/* 双向奖励说明 */}
+          {/* Double Rewards Info */}
           <Card className="border-yellow-500/30 bg-gradient-to-br from-yellow-500/5 to-orange-500/5">
             <CardContent className="p-4">
               <div className="flex items-center gap-2 mb-3">
                 <Gift className="h-4 w-4 text-yellow-500" />
-                <span className="text-sm font-medium">双重奖励</span>
+                <span className="text-sm font-medium">Double Rewards</span>
               </div>
               <div className="space-y-2 text-xs">
                 <div className="flex justify-between items-center p-2 rounded bg-secondary/50">
-                  <span className="text-muted-foreground">您获得</span>
+                  <span className="text-muted-foreground">You Get</span>
                   <span className="font-bold text-yellow-500">5-15%</span>
                 </div>
                 <div className="flex justify-between items-center p-2 rounded bg-secondary/50">
-                  <span className="text-muted-foreground">好友获得</span>
+                  <span className="text-muted-foreground">Friend Gets</span>
                   <span className="font-bold text-green-500">+{REFERRAL_CONFIG.inviteeBonus}%</span>
                 </div>
               </div>
               <p className="text-[10px] text-muted-foreground mt-3">
-                返佣基于质押金额和保险保费计算
+                Commission calculated based on staking amount and insurance premiums
               </p>
             </CardContent>
           </Card>
 
-          {/* Solana 支持 */}
+          {/* Solana Support */}
           <Card className="bg-secondary/30">
             <CardContent className="p-4">
               <div className="flex items-center gap-2 mb-3">
                 <Zap className="h-4 w-4 text-blue-500" />
-                <span className="text-sm font-medium">Solana 支持</span>
+                <span className="text-sm font-medium">Solana Support</span>
               </div>
               <div className="space-y-2">
                 <div className="flex items-center gap-2 p-2 rounded bg-purple-500/10 border border-purple-500/20">
                   <span className="text-base">🟣</span>
                   <div className="flex-1">
                     <p className="text-xs font-medium">Solana - pump.fun</p>
-                    <p className="text-[10px] text-muted-foreground">SOL, SPL 代币</p>
+                    <p className="text-[10px] text-muted-foreground">SOL, SPL tokens</p>
                   </div>
                 </div>
               </div>
               <p className="text-[10px] text-muted-foreground mt-3">
-                邀请码适用于 Solana 网络
+                Referral code works on Solana network
               </p>
             </CardContent>
           </Card>
@@ -156,26 +156,26 @@ export default function ReferralPage() {
             <CardHeader className="pb-2">
               <CardTitle className="text-sm flex items-center gap-2">
                 <Info className="h-4 w-4 text-blue-500" />
-                常见问题
+                FAQ
               </CardTitle>
             </CardHeader>
             <CardContent className="pb-3 space-y-3">
               <div>
-                <p className="text-xs font-medium">什么时候可以领取奖励？</p>
+                <p className="text-xs font-medium">When can I claim rewards?</p>
                 <p className="text-[10px] text-muted-foreground mt-0.5">
-                  奖励实时累积。达到最低 ${REFERRAL_CONFIG.minClaimAmount} 即可领取。
+                  Rewards accumulate in real-time. You can claim when you reach the minimum ${REFERRAL_CONFIG.minClaimAmount}.
                 </p>
               </div>
               <div>
-                <p className="text-xs font-medium">收益持续多久？</p>
+                <p className="text-xs font-medium">How long do earnings last?</p>
                 <p className="text-[10px] text-muted-foreground mt-0.5">
-                  永久！只要您的推荐人保持活跃，您就能持续获得返佣。
+                  Forever! As long as your referrals stay active, you'll keep earning commission.
                 </p>
               </div>
               <div>
-                <p className="text-xs font-medium">可以推荐自己吗？</p>
+                <p className="text-xs font-medium">Can I refer myself?</p>
                 <p className="text-[10px] text-muted-foreground mt-0.5">
-                  不可以，自我推荐不被允许，会被标记。
+                  No, self-referral is not allowed and will be flagged.
                 </p>
               </div>
             </CardContent>

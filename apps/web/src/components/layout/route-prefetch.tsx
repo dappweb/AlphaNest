@@ -5,14 +5,14 @@ import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 
 /**
- * 路由预取组件
- * 在用户可能访问的页面上预加载关键路由
+ * Route prefetch component
+ * Preload critical routes on pages users are likely to visit
  */
 export function RoutePrefetch() {
   const pathname = usePathname();
 
   useEffect(() => {
-    // 预取关键路由
+    // Prefetch critical routes
     const criticalRoutes = [
       '/staking',
       '/insurance',
@@ -20,11 +20,11 @@ export function RoutePrefetch() {
       '/admin',
     ];
 
-    // 根据当前路径预取相关路由
+    // Prefetch related routes based on current path
     const prefetchRoutes: string[] = [];
 
     if (pathname === '/') {
-      // 在首页预取最常用的路由
+      // Prefetch most commonly used routes on homepage
       prefetchRoutes.push(...criticalRoutes.slice(0, 3));
     } else if (pathname === '/staking') {
       prefetchRoutes.push('/insurance', '/referral');
@@ -32,7 +32,7 @@ export function RoutePrefetch() {
       prefetchRoutes.push('/staking', '/referral');
     }
 
-    // 使用 Link 组件预取（Next.js 会自动处理）
+    // Use Link component to prefetch (Next.js will handle automatically)
     prefetchRoutes.forEach((route) => {
       const link = document.createElement('link');
       link.rel = 'prefetch';
@@ -41,7 +41,7 @@ export function RoutePrefetch() {
     });
 
     return () => {
-      // 清理
+      // Cleanup
       prefetchRoutes.forEach((route) => {
         const link = document.querySelector(`link[href="${route}"]`);
         if (link) {
@@ -51,7 +51,7 @@ export function RoutePrefetch() {
     };
   }, [pathname]);
 
-  // 使用隐藏的 Link 组件触发预取
+  // Use hidden Link components to trigger prefetch
   return (
     <div className="hidden">
       {['/staking', '/insurance', '/referral', '/admin'].map((route) => (

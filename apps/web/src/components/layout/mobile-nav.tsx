@@ -13,20 +13,20 @@ import { cn } from '@/lib/utils';
 import { useIsAdmin } from '@/hooks/use-is-admin';
 
 const baseMobileNavItems = [
-  { name: '首页', href: '/', icon: LayoutDashboard },
-  { name: '质押', href: '/staking', icon: Coins, highlight: true },
-  { name: '保险', href: '/insurance', icon: Shield },
-  { name: '邀请', href: '/referral', icon: Gift, highlight: true },
+  { name: 'Home', href: '/', icon: LayoutDashboard },
+  { name: 'Stake', href: '/staking', icon: Coins, highlight: true },
+  { name: 'Insure', href: '/insurance', icon: Shield },
+  { name: 'Invite', href: '/referral', icon: Gift, highlight: true },
 ];
 
 export function MobileNav() {
   const pathname = usePathname();
   const { isAdmin } = useIsAdmin();
 
-  // 构建移动端导航项 - 如果是管理员则添加管理入口
+  // Build mobile navigation items - add admin entry if user is admin
   const mobileNavItems = [
     ...baseMobileNavItems,
-    ...(isAdmin ? [{ name: '管理', href: '/admin', icon: Settings }] : []),
+    ...(isAdmin ? [{ name: 'Admin', href: '/admin', icon: Settings }] : []),
   ];
 
   return (
