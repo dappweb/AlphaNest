@@ -5,7 +5,17 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAccount } from 'wagmi';
-import { useWallet } from '@solana/wallet-adapter-react';
+
+// Safe Solana wallet hook - returns null if provider not available
+function useSolanaWalletSafe() {
+  try {
+    // Dynamic import to avoid SSR issues
+    const { useWallet } = require('@solana/wallet-adapter-react');
+    return useWallet();
+  } catch {
+    return { publicKey: null, connected: false };
+  }
+}
 
 // 推荐系统配置
 export const REFERRAL_CONFIG = {
@@ -114,7 +124,7 @@ function getReferralsToNextTier(currentCount: number, nextTier: ReferralTier | n
  */
 export function useReferralCode() {
   const { address: evmAddress } = useAccount();
-  const { publicKey: solanaPublicKey } = useWallet();
+  const { publicKey: solanaPublicKey } = useSolanaWalletSafe();
   
   const [referralCode, setReferralCode] = useState<ReferralCode | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -222,7 +232,7 @@ export function useReferralCode() {
  */
 export function useReferralStats() {
   const { address: evmAddress } = useAccount();
-  const { publicKey: solanaPublicKey } = useWallet();
+  const { publicKey: solanaPublicKey } = useSolanaWalletSafe();
   
   const [stats, setStats] = useState<ReferralStats | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -304,7 +314,7 @@ function createDefaultStats(): ReferralStats {
  */
 export function useReferralRecords() {
   const { address: evmAddress } = useAccount();
-  const { publicKey: solanaPublicKey } = useWallet();
+  const { publicKey: solanaPublicKey } = useSolanaWalletSafe();
   
   const [records, setRecords] = useState<ReferralRecord[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -422,7 +432,7 @@ export function useCheckReferralCode() {
  */
 export function useReferral() {
   const { address: evmAddress, isConnected: evmConnected } = useAccount();
-  const { publicKey: solanaPublicKey, connected: solanaConnected } = useWallet();
+  const { publicKey: solanaPublicKey, connected: solanaConnected } = useSolanaWalletSafe();
 
   const code = useReferralCode();
   const stats = useReferralStats();

@@ -1,11 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAccount, useSwitchChain } from 'wagmi';
-import { useWallet } from '@solana/wallet-adapter-react';
-import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
-import { bsc, bscTestnet } from 'wagmi/chains';
+import { bsc } from 'wagmi/chains';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -16,8 +14,42 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Zap, Circle, ChevronDown, Wallet, ExternalLink } from 'lucide-react';
+import { Circle, ChevronDown, Wallet, ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+// Safe Solana wallet hook
+function useSolanaWalletSafe() {
+  try {
+    const { useWallet } = require('@solana/wallet-adapter-react');
+    return useWallet();
+  } catch {
+    return { publicKey: null, connected: false };
+  }
+}
+
+// Dynamic import for WalletMultiButton
+function SolanaWalletButton() {
+  try {
+    const { WalletMultiButton } = require('@solana/wallet-adapter-react-ui');
+    return (
+      <WalletMultiButton 
+        style={{ 
+          height: '36px',
+          fontSize: '14px',
+          borderRadius: '6px',
+          padding: '0 12px',
+        }} 
+      />
+    );
+  } catch {
+    return (
+      <Button size="sm" disabled className="h-9 bg-purple-500">
+        <Wallet className="h-4 w-4 mr-1.5" />
+        Solana
+      </Button>
+    );
+  }
+}
 
 export type ChainType = 'bsc' | 'solana';
 
@@ -56,35 +88,59 @@ export function ChainSwitcher({
   className,
 }: ChainSwitcherProps) {
   const [activeChain, setActiveChain] = useState<ChainType>(defaultChain);
+  const [prevEvmConnected, setPrevEvmConnected] = useState(false);
+  const [prevSolanaConnected, setPrevSolanaConnected] = useState(false);
   
   // EVM (BSC) wallet
   const { isConnected: evmConnected, address: evmAddress, chainId } = useAccount();
   const { switchChain } = useSwitchChain();
   
-  // Solana wallet
-  const { connected: solanaConnected, publicKey: solanaPublicKey } = useWallet();
+  // Solana wallet (safe)
+  const { connected: solanaConnected, publicKey: solanaPublicKey } = useSolanaWalletSafe();
 
-  // 根据连接状态自动切换链
+  // 保存链偏好到 localStorage
+  const saveChainPreference = useCallback((chain: ChainType) => {
+    try {
+      const saved = localStorage.getItem('popcow-settings');
+      const settings = saved ? JSON.parse(saved) : {};
+      settings.preferredChain = chain;
+      localStorage.setItem('popcow-settings', JSON.stringify(settings));
+    } catch {}
+  }, []);
+
+  // 初始化时读取偏好
   useEffect(() => {
-    // 从 localStorage 读取偏好
     const savedPreference = localStorage.getItem('popcow-settings');
     if (savedPreference) {
       try {
         const settings = JSON.parse(savedPreference);
         if (settings.preferredChain && settings.preferredChain !== 'auto') {
           setActiveChain(settings.preferredChain as ChainType);
-          return;
         }
       } catch {}
     }
+  }, []);
 
-    // Auto detect based on connected wallet
-    if (evmConnected && !solanaConnected) {
+  // 🔥 核心逻辑：监听钱包连接状态变化，自动切换链
+  useEffect(() => {
+    // BSC 钱包刚连接 (之前未连接，现在连接了)
+    if (evmConnected && !prevEvmConnected) {
       setActiveChain('bsc');
-    } else if (solanaConnected && !evmConnected) {
-      setActiveChain('solana');
+      saveChainPreference('bsc');
+      onChainChange?.('bsc');
     }
-  }, [evmConnected, solanaConnected]);
+    
+    // Solana 钱包刚连接 (之前未连接，现在连接了)
+    if (solanaConnected && !prevSolanaConnected) {
+      setActiveChain('solana');
+      saveChainPreference('solana');
+      onChainChange?.('solana');
+    }
+
+    // 更新上一次状态
+    setPrevEvmConnected(evmConnected);
+    setPrevSolanaConnected(solanaConnected);
+  }, [evmConnected, solanaConnected, prevEvmConnected, prevSolanaConnected, onChainChange, saveChainPreference]);
 
   const handleChainSelect = (chain: ChainType) => {
     setActiveChain(chain);
@@ -225,14 +281,7 @@ export function ChainSwitcher({
               }}
             </ConnectButton.Custom>
           ) : (
-            <WalletMultiButton 
-              style={{ 
-                height: '36px',
-                fontSize: '14px',
-                borderRadius: '6px',
-                padding: '0 12px',
-              }} 
-            />
+            <SolanaWalletButton />
           )}
         </div>
       )}
@@ -262,12 +311,27 @@ export function ChainIndicator({ chain }: { chain: ChainType }) {
 
 /**
  * 获取当前活跃链的 Hook
+ * 当用户连接钱包时，自动切换到对应的链
  */
 export function useActiveChain() {
   const [activeChain, setActiveChain] = useState<ChainType>('bsc');
+  const [prevEvmConnected, setPrevEvmConnected] = useState(false);
+  const [prevSolanaConnected, setPrevSolanaConnected] = useState(false);
+  
   const { isConnected: evmConnected } = useAccount();
-  const { connected: solanaConnected } = useWallet();
+  const { connected: solanaConnected } = useSolanaWalletSafe();
 
+  // 保存偏好
+  const savePreference = useCallback((chain: ChainType) => {
+    try {
+      const saved = localStorage.getItem('popcow-settings');
+      const settings = saved ? JSON.parse(saved) : {};
+      settings.preferredChain = chain;
+      localStorage.setItem('popcow-settings', JSON.stringify(settings));
+    } catch {}
+  }, []);
+
+  // 初始化时读取偏好
   useEffect(() => {
     const savedPreference = localStorage.getItem('popcow-settings');
     if (savedPreference) {
@@ -275,23 +339,42 @@ export function useActiveChain() {
         const settings = JSON.parse(savedPreference);
         if (settings.preferredChain && settings.preferredChain !== 'auto') {
           setActiveChain(settings.preferredChain as ChainType);
-          return;
         }
       } catch {}
     }
+  }, []);
 
-    if (evmConnected && !solanaConnected) {
+  // 🔥 监听钱包连接状态变化，自动切换链
+  useEffect(() => {
+    // BSC 钱包刚连接
+    if (evmConnected && !prevEvmConnected) {
       setActiveChain('bsc');
-    } else if (solanaConnected && !evmConnected) {
-      setActiveChain('solana');
+      savePreference('bsc');
     }
-  }, [evmConnected, solanaConnected]);
+    
+    // Solana 钱包刚连接
+    if (solanaConnected && !prevSolanaConnected) {
+      setActiveChain('solana');
+      savePreference('solana');
+    }
+
+    setPrevEvmConnected(evmConnected);
+    setPrevSolanaConnected(solanaConnected);
+  }, [evmConnected, solanaConnected, prevEvmConnected, prevSolanaConnected, savePreference]);
+
+  // 手动切换链
+  const switchChain = useCallback((chain: ChainType) => {
+    setActiveChain(chain);
+    savePreference(chain);
+  }, [savePreference]);
 
   return {
     activeChain,
-    setActiveChain,
+    setActiveChain: switchChain,
     isBsc: activeChain === 'bsc',
     isSolana: activeChain === 'solana',
+    evmConnected,
+    solanaConnected,
   };
 }
 
