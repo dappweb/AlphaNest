@@ -22,7 +22,7 @@ Sentry.init({
   ],
 
   // 发送前处理
-  beforeSend(event) {
+  beforeSend(event: any) {
     if (process.env.NODE_ENV === 'development') {
       return null;
     }

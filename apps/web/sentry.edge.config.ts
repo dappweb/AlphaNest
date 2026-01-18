@@ -12,7 +12,7 @@ Sentry.init({
 
   environment: process.env.NODE_ENV,
 
-  beforeSend(event) {
+  beforeSend(event: any) {
     if (process.env.NODE_ENV === 'development') {
       return null;
     }

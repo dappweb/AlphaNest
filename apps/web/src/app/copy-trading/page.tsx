@@ -129,13 +129,13 @@ export default function CopyTradingPage() {
                 </Card>
               ) : (
                 settings.map((setting) => (
-                  <Card key={setting.traderId}>
+                  <Card key={setting.traderAddress}>
                     <CardContent className="p-6">
                       <div className="flex items-center justify-between">
                         <div>
-                          <h3 className="font-medium">Trader #{setting.traderId}</h3>
+                          <h3 className="font-medium">Trader #{setting.traderAddress.slice(0, 8)}</h3>
                           <p className="text-sm text-muted-foreground">
-                            Copy Ratio: {setting.copyRatio * 100}%
+                            Copy Amount: ${setting.copyAmount}
                           </p>
                         </div>
                         <div className="flex items-center gap-2">
@@ -147,9 +147,9 @@ export default function CopyTradingPage() {
                             size="sm"
                             onClick={() => {
                               if (setting.isActive) {
-                                stopCopyTrading(setting.traderId);
+                                stopCopyTrading(setting.traderAddress);
                               } else {
-                                startCopyTrading(setting.traderId, setting);
+                                startCopyTrading(setting.traderAddress, setting);
                               }
                             }}
                           >
@@ -344,19 +344,13 @@ function TraderCard({ trader }: { trader: any }) {
             onClick={() => {
               if (isConnected) {
                 startCopyTrading(trader.id, {
-                  traderId: trader.id,
-                  userAddress: '', // Will be filled by hook
-                  isActive: true,
-                  copyRatio: 0.5,
-                  maxAmount: 500,
-                  minAmount: 10,
+                  copyAmount: 100,
+                  maxCopyAmount: 500,
                   stopLoss: 0.2,
                   takeProfit: 0.5,
-                  autoExecute: true,
-                  onlyVerified: true,
-                  maxDailyTrades: 10,
-                  maxDailyVolume: 1000,
-                  blacklistTokens: [],
+                  copyBuy: true,
+                  copySell: true,
+                  isActive: true,
                 });
               }
             }}

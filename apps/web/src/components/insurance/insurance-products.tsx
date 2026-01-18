@@ -216,37 +216,37 @@ export function InsuranceProducts() {
       setError(null);
       
       try {
-        const response = await getInsuranceProducts();
-        if (response.success && response.data) {
+        const products = await getInsuranceProducts();
+        if (products && products.length > 0) {
           // Map API data to component format
-          const mappedProducts: InsuranceProduct[] = response.data.map((product: ApiInsuranceProduct, index: number) => {
+          const mappedProducts: InsuranceProduct[] = products.map((product: ApiInsuranceProduct, index: number) => {
             // Calculate risk level based on odds
-            const avgOdds = (product.currentOdds.rug + product.currentOdds.safe) / 2;
+            const avgOdds = (product.rugOdds + product.safeOdds) / 2;
             let riskLevel: 'low' | 'medium' | 'high' = 'medium';
             if (avgOdds < 1.5) riskLevel = 'high';
             else if (avgOdds > 2.5) riskLevel = 'low';
 
             // Calculate expires in
-            const expiresAt = product.expiresAt || Date.now() + 86400000; // Default 24h
+            const expiresAt = product.expiresAt * 1000 || Date.now() + 86400000; // Convert to ms
             const expiresInMs = expiresAt - Date.now();
             const expiresInHours = Math.floor(expiresInMs / 3600000);
             const expiresIn = expiresInHours > 0 ? `${expiresInHours}h` : '<1h';
 
             return {
-              id: product.id || `product-${index}`,
+              id: `product-${product.poolId}`,
               tokenName: product.tokenName || 'Unknown Token',
               tokenSymbol: product.tokenSymbol || 'UNK',
               chain: product.chain || 'base',
               address: product.tokenAddress || '',
-              premiumRate: product.premiumRate || 5,
-              poolSize: parseFloat(product.poolSize || '0'),
+              premiumRate: 5,
+              poolSize: parseFloat(product.totalRugBets) + parseFloat(product.totalSafeBets),
               currentOdds: {
-                rug: parseFloat(product.currentOdds?.rug?.toString() || '2.0'),
-                safe: parseFloat(product.currentOdds?.safe?.toString() || '2.0'),
+                rug: product.rugOdds,
+                safe: product.safeOdds,
               },
               expiresIn,
               riskLevel,
-              poolId: index + 1, // Use index as poolId for now
+              poolId: product.poolId,
               expiresAt,
             };
           });
@@ -271,7 +271,7 @@ export function InsuranceProducts() {
 
           setProducts([...popCowProducts, ...mappedProducts]);
         } else {
-          setError(response.error || 'Failed to load insurance products');
+          setError('Failed to load insurance products');
         }
       } catch (err) {
         console.error('Error fetching insurance products:', err);

@@ -43,7 +43,7 @@ Sentry.init({
   ],
 
   // 发送前处理
-  beforeSend(event, hint) {
+  beforeSend(event: any, hint?: any) {
     // 过滤掉开发环境的错误
     if (process.env.NODE_ENV === 'development') {
       console.log('Sentry Event (dev):', event);
