@@ -8,7 +8,7 @@ import { wagmiConfig } from '@/config/wagmi';
 import { SolanaProvider } from './solana-provider';
 import '@rainbow-me/rainbowkit/styles.css';
 
-// 轻量级加载屏幕
+// Lightweight loading screen
 function LoadingScreen() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background">
@@ -24,13 +24,13 @@ interface ProvidersProps {
   children: ReactNode;
 }
 
-// 创建单例 QueryClient - 优化配置
+// Create singleton QueryClient - optimized configuration
 const createQueryClient = () =>
   new QueryClient({
     defaultOptions: {
       queries: {
-        staleTime: 5 * 60 * 1000, // 5分钟缓存
-        gcTime: 10 * 60 * 1000, // 10分钟垃圾回收
+        staleTime: 5 * 60 * 1000, // 5 minutes cache
+        gcTime: 10 * 60 * 1000, // 10 minutes garbage collection
         refetchOnWindowFocus: false,
         refetchOnReconnect: false,
         retry: 1,

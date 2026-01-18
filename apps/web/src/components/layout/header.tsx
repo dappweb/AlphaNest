@@ -183,7 +183,7 @@ export function Header() {
             size="icon"
             onClick={cycleTheme}
             className="h-9 w-9"
-            title={`当前主题: ${theme === 'dark' ? '深色' : theme === 'light' ? '浅色' : '跟随系统'}`}
+            title={`Current theme: ${theme === 'dark' ? 'Dark' : theme === 'light' ? 'Light' : 'System'}`}
           >
             <ThemeIcon className="h-4 w-4" />
           </Button>
