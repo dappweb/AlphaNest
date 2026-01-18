@@ -1,32 +1,14 @@
 'use client';
 
-import { useMemo, useState, useEffect } from 'react';
-import dynamic from 'next/dynamic';
-
-// 动态导入 Solana 组件避免 SSR 问题
-const SolanaWalletProvider = dynamic(
-  () => import('./solana-wallet-provider').then((mod) => mod.SolanaWalletProvider),
-  { 
-    ssr: false,
-    loading: () => null,
-  }
-);
+import { SolanaWalletProvider } from './solana-wallet-provider';
 
 interface SolanaProviderProps {
   children: React.ReactNode;
 }
 
 export function SolanaProvider({ children }: SolanaProviderProps) {
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  // 在客户端渲染前直接返回 children
-  if (!mounted) {
-    return <>{children}</>;
-  }
-
+  // 直接导入并使用 SolanaWalletProvider
+  // 不再使用 dynamic import，因为 WalletProvider 需要在组件树中始终可用
+  // 这样可以确保 WalletContext 总是可用
   return <SolanaWalletProvider>{children}</SolanaWalletProvider>;
 }

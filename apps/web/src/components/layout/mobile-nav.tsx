@@ -7,11 +7,9 @@ import {
   Coins,
   Shield,
   Gift,
-  MoreHorizontal,
   Settings,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useSidebarStore } from '@/stores/sidebar-store';
 import { useIsAdmin } from '@/hooks/use-is-admin';
 
 const baseMobileNavItems = [
@@ -23,14 +21,12 @@ const baseMobileNavItems = [
 
 export function MobileNav() {
   const pathname = usePathname();
-  const { toggleMobileOpen } = useSidebarStore();
   const { isAdmin } = useIsAdmin();
 
   // Build mobile nav items - add Admin if user is admin
   const mobileNavItems = [
     ...baseMobileNavItems,
     ...(isAdmin ? [{ name: 'Admin', href: '/admin', icon: Settings }] : []),
-    { name: 'More', href: '#more', icon: MoreHorizontal, isMore: true },
   ];
 
   return (
@@ -41,24 +37,8 @@ export function MobileNav() {
           {mobileNavItems.map((item) => {
             const isActive = item.href === '/' 
               ? pathname === '/' 
-              : pathname.startsWith(item.href) && item.href !== '#more';
+              : pathname.startsWith(item.href);
             
-            if (item.isMore) {
-              return (
-                <button
-                  key={item.name}
-                  onClick={toggleMobileOpen}
-                  className={cn(
-                    'flex flex-col items-center justify-center gap-0.5 px-2 py-1.5 min-w-[56px] rounded-xl transition-all duration-200',
-                    'text-muted-foreground hover:text-foreground active:scale-95'
-                  )}
-                >
-                  <item.icon className="h-5 w-5" />
-                  <span className="text-[10px] font-medium">{item.name}</span>
-                </button>
-              );
-            }
-
             return (
               <Link
                 key={item.name}

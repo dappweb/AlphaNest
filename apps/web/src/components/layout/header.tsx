@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Bell, Search, X, Menu, Sun, Moon, Monitor } from 'lucide-react';
+import Link from 'next/link';
+import { Bell, Search, X, Sun, Moon, Monitor } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { NotificationCenter } from '@/components/notifications';
 import Image from 'next/image';
@@ -15,7 +16,7 @@ export function Header() {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const { isCollapsed, toggleMobileOpen } = useSidebarStore();
+  const { isCollapsed } = useSidebarStore();
   const { t } = useTranslation();
   const { theme, cycleTheme } = useTheme();
 
@@ -67,21 +68,8 @@ export function Header() {
     <>
       <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background/95 px-4 md:px-6 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="flex items-center gap-2 md:gap-4">
-          {/* Mobile Menu Toggle */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="md:hidden"
-            onClick={toggleMobileOpen}
-          >
-            <Menu className="h-5 w-5" />
-          </Button>
-
-          {/* PopCowDefi Logo - Show when sidebar is collapsed or on mobile */}
-          <div className={cn(
-            "items-center gap-2 transition-opacity duration-200",
-            isCollapsed ? "hidden md:flex" : "flex md:hidden"
-          )}>
+          {/* PopCowDefi Logo - Always visible on the left */}
+          <Link href="/" className="flex items-center gap-2 transition-opacity duration-200 hover:opacity-80">
             <Image
               src="/logo.png"
               alt="PopCowDefi Logo"
@@ -92,7 +80,7 @@ export function Header() {
             <span className="text-sm font-bold bg-gradient-to-r from-orange-500 to-orange-600 bg-clip-text text-transparent hidden sm:inline">
               PopCowDefi
             </span>
-          </div>
+          </Link>
 
           <form onSubmit={handleSearch} className="relative hidden sm:block">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />

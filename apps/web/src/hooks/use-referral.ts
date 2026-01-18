@@ -5,24 +5,23 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSolanaReferrerInfo } from './use-solana-referral';
+import { useWallet } from '@solana/wallet-adapter-react';
 // 项目仅支持 Solana，已移除 wagmi
 
 // Safe Solana wallet hook - returns null if provider not available
+// 直接使用 useWallet hook，确保在 WalletProvider 内部调用
 function useSolanaWalletSafe() {
-  try {
-    // Dynamic import to avoid SSR issues
-    const { useWallet } = require('@solana/wallet-adapter-react');
-    const wallet = useWallet();
-    // 检查 WalletProvider 是否已初始化
-    if (!wallet || typeof wallet.publicKey === 'undefined') {
-      return { publicKey: null, connected: false };
-    }
-    return wallet;
-  } catch (error) {
-    // 如果 WalletProvider 未初始化，返回默认值
-    console.debug('WalletProvider not available:', error);
-    return { publicKey: null, connected: false };
-  }
+  // 直接使用 useWallet hook
+  // 这必须在 WalletProvider 内部调用
+  // 如果 WalletProvider 未初始化，React 会抛出错误
+  // 但因为我们确保所有组件都在 WalletProvider 内部，这应该是安全的
+  const wallet = useWallet();
+
+  // 安全地访问属性
+  return {
+    publicKey: wallet?.publicKey || null,
+    connected: wallet?.connected || false,
+  };
 }
 
 // 默认推荐人（管理员地址）- 新用户必须有推荐人
