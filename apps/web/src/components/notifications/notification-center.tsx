@@ -145,7 +145,7 @@ export function NotificationCenter({ isOpen, onClose }: NotificationCenterProps)
       type: 'system',
       priority: 'low',
       title: '🔔 System Update',
-      message: 'New features added to PopCow Alpha',
+      message: 'New features added to PopCowDefi',
       timestamp: '3 hours ago',
       read: true,
       actionUrl: '/popcow',

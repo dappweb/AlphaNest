@@ -14,8 +14,8 @@ import {
 } from 'lucide-react';
 
 export const metadata: Metadata = {
-    title: 'Terms of Service | AlphaNest',
-    description: 'Read the terms of service for using the AlphaNest platform. Learn about user responsibilities, risk acknowledgment, and service descriptions.',
+    title: 'Terms of Service | PopCowDefi',
+    description: 'Read the terms of service for using the PopCowDefi platform. Learn about user responsibilities, risk acknowledgment, and service descriptions.',
 };
 
 // Reusable Section Component
@@ -97,7 +97,7 @@ export default function TermsPage() {
                         Last updated: January 11, 2026
                     </p>
                     <p className="text-sm text-muted-foreground/70 max-w-2xl mx-auto">
-                        Please read these terms carefully before using our platform. By using AlphaNest, you agree to be bound by these terms.
+                        Please read these terms carefully before using our platform. By using PopCowDefi, you agree to be bound by these terms.
                     </p>
                 </div>
 
@@ -105,7 +105,7 @@ export default function TermsPage() {
                 <div className="space-y-6">
                     <Section icon={FileText} title="1. Acceptance of Terms" delay={100}>
                         <p className="text-muted-foreground leading-relaxed">
-                            By accessing and using AlphaNest (&quot;the Platform&quot;), you agree to be bound by these Terms of Service.
+                            By accessing and using PopCowDefi (&quot;the Platform&quot;), you agree to be bound by these Terms of Service.
                             If you do not agree to these terms, please do not use the Platform. These terms apply to all users
                             of the Platform, including without limitation users who are browsers, vendors, customers, merchants,
                             and/or contributors of content.
@@ -114,7 +114,7 @@ export default function TermsPage() {
 
                     <Section icon={Shield} title="2. Description of Services" delay={200}>
                         <p className="text-muted-foreground leading-relaxed mb-4">
-                            AlphaNest provides the following services:
+                            PopCowDefi provides the following services:
                         </p>
                         <ul className="space-y-1">
                             <ListItem>Cross-chain Meme token trading and discovery</ListItem>
@@ -139,7 +139,7 @@ export default function TermsPage() {
                         <p className="text-muted-foreground leading-relaxed">
                             You acknowledge that trading cryptocurrency and digital assets involves significant risk.
                             The value of digital assets can fluctuate dramatically, and you may lose some or all of
-                            your investment. AlphaNest does not provide financial, investment, or legal advice.
+                            your investment. PopCowDefi does not provide financial, investment, or legal advice.
                             You are solely responsible for your trading decisions.
                         </p>
                     </Section>
@@ -156,7 +156,7 @@ export default function TermsPage() {
 
                     <Section icon={Ban} iconColor="text-red-500" title="5. Limitation of Liability" delay={500}>
                         <p className="text-muted-foreground leading-relaxed">
-                            AlphaNest and its affiliates shall not be liable for any indirect, incidental, special,
+                            PopCowDefi and its affiliates shall not be liable for any indirect, incidental, special,
                             consequential, or punitive damages resulting from your use of the Platform. This includes
                             but is not limited to loss of profits, data, or other intangible losses.
                         </p>
@@ -186,7 +186,7 @@ export default function TermsPage() {
                 {/* Footer CTA */}
                 <div className="text-center pt-8 border-t border-border/50">
                     <p className="text-sm text-muted-foreground mb-4">
-                        By continuing to use PopCow, you acknowledge that you have read and understood these terms.
+                        By continuing to use PopCowDefi, you acknowledge that you have read and understood these terms.
                     </p>
                     <div className="flex items-center justify-center gap-4">
                         <Link

@@ -14,7 +14,7 @@ function LoadingScreen() {
     <div className="flex min-h-screen items-center justify-center bg-background">
       <div className="text-center">
         <div className="inline-block h-10 w-10 animate-spin rounded-full border-3 border-primary border-t-transparent" />
-        <p className="mt-3 text-sm text-muted-foreground">Loading PopCow...</p>
+        <p className="mt-3 text-sm text-muted-foreground">Loading PopCowDefi...</p>
       </div>
     </div>
   );

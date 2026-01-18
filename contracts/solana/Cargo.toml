@@ -1,15 +1,7 @@
 [workspace]
 members = [
-    "programs/popcow-token",
     "programs/cowguard-insurance",
-    "programs/staking",
-    "programs/token-vesting",
-    "programs/yield-vault",
     "programs/multi-asset-staking",
-    "programs/reputation-registry",
-    "programs/governance",
-    "programs/points-system",
-    "programs/referral-system",
 ]
 resolver = "2"
 

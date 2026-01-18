@@ -8,16 +8,11 @@ import {
   LayoutDashboard,
   Coins,
   Settings,
-  Wallet,
-  Copy,
-  Gift,
+  Shield,
   ChevronLeft,
   ChevronRight,
   X,
-  Zap,
-  FileText,
-  Rocket,
-  Vote,
+  Gift,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -37,66 +32,36 @@ const getNavigation = (t: any) => [
     href: '/',
     icon: LayoutDashboard,
     shortcut: 'Ctrl+D',
-    badge: null
+    badge: null,
+    description: null,
   },
   {
     name: `🔥 ${t.nav.staking}`,
     href: '/staking',
     icon: Coins,
-    special: true,
-    featured: true,
     shortcut: 'Ctrl+S',
-    badge: { text: 'HOT', variant: 'destructive' as const }
+    badge: { text: 'BSC+SOL', variant: 'default' as const },
+    description: 'Stake MEME tokens to earn rewards. Support BSC & Solana, up to 25% APY with lock bonuses.',
   },
   {
-    name: t.nav.memeHunter,
-    href: '/meme',
-    icon: Zap,
-    shortcut: 'Ctrl+M',
-    badge: { text: 'HOT', variant: 'default' as const }
+    name: '🛡️ Insurance',
+    href: '/insurance',
+    icon: Shield,
+    shortcut: 'Ctrl+I',
+    badge: { text: 'MEME', variant: 'secondary' as const },
+    description: 'CowGuard insurance protects your MEME assets. Get coverage against rug pulls and price crashes.',
   },
   {
-    name: t.nav.cowPoints,
-    href: '/points',
-    icon: Coins,
-    shortcut: 'Ctrl+O',
-    badge: { text: '2.5x', variant: 'outline' as const }
-  },
-  {
-    name: t.nav.whitepaper,
-    href: '/whitepaper',
-    icon: FileText,
-    shortcut: 'Ctrl+W',
-    badge: null
-  },
-  {
-    name: t.nav.launch,
-    href: '/launch',
-    icon: Rocket,
-    shortcut: 'Ctrl+L',
-    badge: { text: 'NEW', variant: 'default' as const }
-  },
-  {
-    name: t.nav.governance || 'Governance',
-    href: '/governance',
-    icon: Vote,
-    shortcut: 'Ctrl+G',
-    badge: null
+    name: '🎁 Referral',
+    href: '/referral',
+    icon: Gift,
+    shortcut: 'Ctrl+R',
+    badge: { text: 'NEW', variant: 'default' as const, className: 'bg-green-500 text-white' },
+    description: 'Invite friends and earn 5-15% commission on their staking. On-chain rewards, auto-distributed.',
   },
 ];
 
 const getUserNavigation = (t: any) => [
-  {
-    name: t.nav.account,
-    href: '/account',
-    icon: Wallet,
-  },
-  {
-    name: t.nav.referral,
-    href: '/referral',
-    icon: Gift,
-    badge: { text: '10%', variant: 'default' as const }
-  },
   {
     name: t.nav.settings,
     href: '/settings',
@@ -139,13 +104,13 @@ export function Sidebar() {
       )}>
         <Image
           src="/logo.png"
-          alt="PopCow Logo"
+          alt="PopCowDefi Logo"
           width={32}
           height={32}
           className="rounded-lg flex-shrink-0"
         />
         {!collapsed && (
-          <span className="font-bold text-lg bg-gradient-to-r from-orange-500 to-orange-600 bg-clip-text text-transparent">
+          <span className="font-bold text-lg bg-gradient-to-r from-yellow-500 to-purple-500 bg-clip-text text-transparent">
             PopCowDefi
           </span>
         )}
@@ -206,8 +171,13 @@ export function Sidebar() {
                     </TooltipTrigger>
                     <TooltipContent side="right" className="max-w-xs">
                       <p className="font-medium">{item.name}</p>
+                      {item.description && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {item.description}
+                        </p>
+                      )}
                       {item.shortcut && (
-                        <p className="text-xs text-muted-foreground mt-1 opacity-70">
+                        <p className="text-xs text-muted-foreground/70 mt-1">
                           {item.shortcut}
                         </p>
                       )}
@@ -216,7 +186,18 @@ export function Sidebar() {
                 );
               }
 
-              return <div key={item.name}>{linkContent}</div>;
+              return (
+                <Tooltip key={item.name}>
+                  <TooltipTrigger asChild>
+                    {linkContent}
+                  </TooltipTrigger>
+                  {item.description && (
+                    <TooltipContent side="right" className="max-w-xs">
+                      <p className="text-xs">{item.description}</p>
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+              );
             })}
           </div>
         </TooltipProvider>
@@ -246,20 +227,12 @@ export function Sidebar() {
                     'hover:scale-[1.02] active:scale-[0.98]'
                   )}
                   onClick={(e) => {
-                    // Ensure navigation works even if tooltip interferes
                     e.stopPropagation();
                   }}
                 >
                   <item.icon className="h-5 w-5 flex-shrink-0" />
                   {!collapsed && (
-                    <>
-                      <span className="flex-1 truncate">{item.name}</span>
-                      {item.badge && (
-                        <Badge variant={item.badge.variant} className="text-xs">
-                          {item.badge.text}
-                        </Badge>
-                      )}
-                    </>
+                    <span className="flex-1 truncate">{item.name}</span>
                   )}
                 </Link>
               );

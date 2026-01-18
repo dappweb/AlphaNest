@@ -1,5 +1,3 @@
-import { withSentryConfig } from '@sentry/nextjs';
-
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'export',
@@ -44,6 +42,12 @@ const nextConfig = {
       '@radix-ui/react-tooltip',
       '@radix-ui/react-progress',
       '@radix-ui/react-scroll-area',
+      '@radix-ui/react-select',
+      '@radix-ui/react-checkbox',
+      '@radix-ui/react-label',
+      '@solana/web3.js',
+      'wagmi',
+      'viem',
     ],
   },
   
@@ -77,6 +81,8 @@ const nextConfig = {
       ...config.optimization,
       splitChunks: {
         chunks: 'all',
+        minSize: 20000,
+        maxSize: 244000,
         cacheGroups: {
           // 将大型库分离
           wagmi: {
@@ -97,16 +103,16 @@ const nextConfig = {
             priority: 20,
             reuseExistingChunk: true,
           },
-          charts: {
-            test: /[\\/]node_modules[\\/](lightweight-charts)[\\/]/,
-            name: 'charts',
-            priority: 15,
-            reuseExistingChunk: true,
-          },
           radix: {
             test: /[\\/]node_modules[\\/](@radix-ui)[\\/]/,
             name: 'radix',
             priority: 10,
+            reuseExistingChunk: true,
+          },
+          vendor: {
+            test: /[\\/]node_modules[\\/]/,
+            name: 'vendors',
+            priority: 5,
             reuseExistingChunk: true,
           },
         },
@@ -117,31 +123,4 @@ const nextConfig = {
   },
 };
 
-// Sentry 配置
-const sentryWebpackPluginOptions = {
-  // 组织和项目 (从环境变量读取)
-  org: process.env.SENTRY_ORG || 'alphanest',
-  project: process.env.SENTRY_PROJECT || 'alphanest-web',
-
-  // 静默模式 (减少构建日志)
-  silent: !process.env.CI,
-
-  // 上传 Source Maps (生产环境)
-  widenClientFileUpload: true,
-
-  // 隐藏 Source Maps (不暴露给用户)
-  hideSourceMaps: true,
-
-  // 禁用日志
-  disableLogger: true,
-
-  // 自动检测 CI 环境
-  automaticVercelMonitors: true,
-};
-
-// 如果没有配置 Sentry DSN，跳过 Sentry 包装
-const config = process.env.NEXT_PUBLIC_SENTRY_DSN
-  ? withSentryConfig(nextConfig, sentryWebpackPluginOptions)
-  : nextConfig;
-
-export default config;
+export default nextConfig;

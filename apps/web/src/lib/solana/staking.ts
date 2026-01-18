@@ -51,7 +51,7 @@ export async function getTokenBalance(
   }
 }
 
-// 获取用户 PopCow 代币余额
+// 获取用户 PopCowDefi 代币余额
 export async function getPopCowTokenBalance(
   connection: Connection,
   owner: PublicKey
@@ -67,7 +67,7 @@ export async function getPopCowDefiBalance(
   return getTokenBalance(connection, owner, POPCOWDEFI_TOKEN_MINT);
 }
 
-// 质押 PopCow 代币
+// 质押 PopCowDefi 代币
 export async function stakePopCowTokens(
   connection: Connection,
   owner: PublicKey,

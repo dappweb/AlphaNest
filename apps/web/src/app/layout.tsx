@@ -30,9 +30,9 @@ export const metadata: Metadata = {
     template: '%s | PopCowDefi',
   },
   description:
-    'Follow PopCow, the smartest cow in crypto! Discover Alpha projects, avoid Rug Pulls, and trade safely with PopCow\'s intelligence and CowGuard insurance.',
+    'Follow PopCowDefi, the smartest cow in crypto! Discover Alpha projects, avoid Rug Pulls, and trade safely with PopCowDefi\'s intelligence and CowGuard insurance.',
   keywords: [
-    'PopCow',
+    'PopCowDefi',
     'Crypto Cow',
     'Alpha Hunter',
     'Meme coins',
@@ -48,8 +48,8 @@ export const metadata: Metadata = {
     'Insurance',
     'Smart Trading',
   ],
-  authors: [{ name: 'PopCow Team' }],
-  creator: 'PopCow',
+  authors: [{ name: 'PopCowDefi Team' }],
+  creator: 'PopCowDefi',
   publisher: 'PopCowDefi Platform',
   manifest: '/manifest.json',
   appleWebApp: {
@@ -63,7 +63,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'PopCowDefi - The Smartest Cow in Crypto 🐄',
     description:
-      'Follow PopCow for Alpha discoveries, Rug Pull protection, and safe Meme coin trading.',
+      'Follow PopCowDefi for Alpha discoveries, Rug Pull protection, and safe Meme coin trading.',
     type: 'website',
     url: 'https://app.popcow.xyz',
     siteName: 'PopCowDefi',
@@ -72,15 +72,15 @@ export const metadata: Metadata = {
         url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'PopCow - The Smartest Cow in Crypto',
+        alt: 'PopCowDefi - The Smartest Cow in Crypto',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'PopCow - The Smartest Cow in Crypto 🐄',
+    title: 'PopCowDefi - The Smartest Cow in Crypto 🐄',
     description:
-      'Follow PopCow for Alpha discoveries, Rug Pull protection, and safe Meme coin trading.',
+      'Follow PopCowDefi for Alpha discoveries, Rug Pull protection, and safe Meme coin trading.',
     images: ['/og-image.png'],
     creator: '@popcowxyz',
   },
@@ -110,29 +110,31 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <head>
-        {/* DNS 预解析 */}
-        <link rel="dns-prefetch" href="https://alphanest-api.dappweb.workers.dev" />
-        <link rel="dns-prefetch" href="https://api.dexscreener.com" />
+        {/* DNS 预解析 - 关键 API */}
+        <link rel="dns-prefetch" href="https://devnet.helius-rpc.com" />
+        <link rel="dns-prefetch" href="https://mainnet.helius-rpc.com" />
+        <link rel="dns-prefetch" href="https://price.jup.ag" />
+        <link rel="dns-prefetch" href="https://api.helius.xyz" />
         <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
         <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
-        <link rel="dns-prefetch" href="https://api.jup.ag" />
-        <link rel="dns-prefetch" href="https://api.0x.org" />
         
-        {/* 预连接关键资源 */}
-        <link rel="preconnect" href="https://alphanest-api.dappweb.workers.dev" crossOrigin="anonymous" />
-        <link rel="preconnect" href="https://api.dexscreener.com" crossOrigin="anonymous" />
+        {/* 预连接关键资源 - 提升首次请求速度 */}
+        <link rel="preconnect" href="https://devnet.helius-rpc.com" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://price.jup.ag" crossOrigin="anonymous" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         
         {/* 预加载关键页面 */}
         <link rel="prefetch" href="/staking" />
-        <link rel="prefetch" href="/trade" />
-        <link rel="prefetch" href="/meme" />
+        <link rel="prefetch" href="/insurance" />
         
         {/* 性能优化 */}
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta httpEquiv="x-dns-prefetch-control" content="on" />
+        
+        {/* 资源提示 - 优化加载优先级 */}
+        <link rel="preload" href="/logo.svg" as="image" type="image/svg+xml" />
       </head>
       <body className={`${inter.variable} font-sans antialiased`}>
         <Providers>

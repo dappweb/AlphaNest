@@ -1,7 +1,8 @@
 'use client';
 
-import { Shield, TrendingUp, Users } from 'lucide-react';
+import { Shield, TrendingUp, Users, Zap, Rocket } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { formatUSD } from '@/lib/utils';
 
 const stats = [
@@ -28,25 +29,64 @@ const stats = [
 export function InsuranceHero() {
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-orange-500 to-orange-600 bg-clip-text text-transparent">
-          CowGuard Insurance 🛡️🐄
-        </h1>
-        <p className="mt-2 text-muted-foreground">
-          PopCow's revolutionary protection system - Keep your investments safe from Rug Pulls
-        </p>
+      {/* Hero Section */}
+      <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-blue-500 via-blue-600 to-cyan-500 p-6 md:p-8 text-white">
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-white rounded-full blur-3xl transform translate-x-1/2 -translate-y-1/2" />
+        </div>
+        
+        <div className="relative z-10">
+          <div className="flex items-center gap-2 flex-wrap mb-3">
+            <Badge className="bg-yellow-400/30 text-white border-0 text-xs">
+              <Zap className="h-3 w-3 mr-1" />
+              Four.meme (BSC)
+            </Badge>
+            <Badge className="bg-purple-400/30 text-white border-0 text-xs">
+              <Rocket className="h-3 w-3 mr-1" />
+              pump.fun (SOL)
+            </Badge>
+          </div>
+          
+          <h1 className="text-2xl md:text-3xl font-bold mb-2">
+            🛡️ Meme Token Insurance
+          </h1>
+          <p className="text-white/80 text-sm md:text-base max-w-xl">
+            Protect your Four.meme and pump.fun meme token investments from rug pulls, 
+            price crashes, and smart contract exploits.
+          </p>
+          
+          <div className="mt-4 pt-4 border-t border-white/20 grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div>
+              <p className="text-xl md:text-2xl font-bold">🟡 BSC</p>
+              <p className="text-white/70 text-xs">Four.meme Tokens</p>
+            </div>
+            <div>
+              <p className="text-xl md:text-2xl font-bold">🟣 SOL</p>
+              <p className="text-white/70 text-xs">pump.fun Tokens</p>
+            </div>
+            <div>
+              <p className="text-xl md:text-2xl font-bold">100%</p>
+              <p className="text-white/70 text-xs">Max Coverage</p>
+            </div>
+            <div>
+              <p className="text-xl md:text-2xl font-bold">24h</p>
+              <p className="text-white/70 text-xs">Claim Process</p>
+            </div>
+          </div>
+        </div>
       </div>
 
+      {/* Stats */}
       <div className="grid gap-4 sm:grid-cols-3">
         {stats.map((stat) => (
           <Card key={stat.label}>
-            <CardContent className="flex items-center gap-4 p-6">
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
-                <stat.icon className="h-6 w-6 text-primary" />
+            <CardContent className="flex items-center gap-4 p-4 md:p-6">
+              <div className="flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-lg bg-blue-500/10">
+                <stat.icon className="h-5 w-5 md:h-6 md:w-6 text-blue-500" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">{stat.label}</p>
-                <p className="text-2xl font-bold">
+                <p className="text-xs md:text-sm text-muted-foreground">{stat.label}</p>
+                <p className="text-xl md:text-2xl font-bold">
                   {stat.format === 'usd'
                     ? formatUSD(stat.value)
                     : stat.value.toLocaleString()}

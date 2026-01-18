@@ -71,7 +71,7 @@ export function useSettings() {
   useEffect(() => {
     const loadSettings = () => {
       try {
-        const saved = localStorage.getItem('alphanest-settings');
+        const saved = localStorage.getItem('popcow-settings');
         if (saved) {
           const parsedSettings = JSON.parse(saved);
           setSettings({ ...defaultSettings, ...parsedSettings });
@@ -92,7 +92,7 @@ export function useSettings() {
       const newSettings = { ...prev, [key]: value };
       // 保存到localStorage
       try {
-        localStorage.setItem('alphanest-settings', JSON.stringify(newSettings));
+        localStorage.setItem('popcow-settings', JSON.stringify(newSettings));
       } catch (error) {
         console.error('Failed to save settings:', error);
       }
@@ -106,7 +106,7 @@ export function useSettings() {
       const newSettings = { ...prev, ...updates };
       // 保存到localStorage
       try {
-        localStorage.setItem('alphanest-settings', JSON.stringify(newSettings));
+        localStorage.setItem('popcow-settings', JSON.stringify(newSettings));
       } catch (error) {
         console.error('Failed to save settings:', error);
       }
@@ -118,7 +118,7 @@ export function useSettings() {
   const resetSettings = useCallback(() => {
     setSettings(defaultSettings);
     try {
-      localStorage.removeItem('alphanest-settings');
+      localStorage.removeItem('popcow-settings');
     } catch (error) {
       console.error('Failed to reset settings:', error);
     }

@@ -1,203 +1,225 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { AlertTriangle, TrendingDown, TrendingUp, Clock, Loader2 } from 'lucide-react';
+import { useState } from 'react';
+import { AlertTriangle, Shield, Loader2, Zap, Rocket, CheckCircle, ArrowRight } from 'lucide-react';
 import { useAccount } from 'wagmi';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { formatUSD, formatAddress } from '@/lib/utils';
-import { usePurchasePolicy, useUsdcBalance, Position } from '@/hooks/use-alphaguard';
-import { getInsuranceProducts, type InsuranceProduct as ApiInsuranceProduct } from '@/lib/api';
+import { formatUSD } from '@/lib/utils';
+import { 
+  useCowGuardInsurance, 
+  useProductInfo,
+  useCalculatePremium,
+  InsuranceType, 
+  INSURANCE_TYPE_LABELS,
+  INSURANCE_TYPE_ICONS,
+} from '@/hooks/use-cowguard-insurance';
 
-interface InsuranceProduct {
-  id: string;
-  tokenName: string;
-  tokenSymbol: string;
-  chain: string;
-  address: string;
-  premiumRate: number;
-  poolSize: number;
-  currentOdds: { rug: number; safe: number };
-  expiresIn: string;
-  riskLevel: 'low' | 'medium' | 'high';
-  // Contract data
-  poolId: number;
-  expiresAt: number;
-}
+// 预设的保险产品
+const INSURANCE_PRODUCTS = [
+  {
+    id: 1,
+    platform: 'four.meme',
+    chain: 'BSC',
+    chainIcon: '🟡',
+    type: InsuranceType.RugPull,
+    name: 'Rug Pull Protection',
+    description: 'Protect against Four.meme token rug pulls',
+    premiumRate: 5,
+    coverageRate: 80,
+    minCoverage: 100,
+    maxCoverage: 10000,
+    duration: 30,
+    color: 'yellow',
+  },
+  {
+    id: 2,
+    platform: 'four.meme',
+    chain: 'BSC',
+    chainIcon: '🟡',
+    type: InsuranceType.PriceDrop,
+    name: 'Price Drop Protection',
+    description: 'Coverage for >50% price drops on Four.meme tokens',
+    premiumRate: 8,
+    coverageRate: 60,
+    minCoverage: 100,
+    maxCoverage: 5000,
+    duration: 7,
+    color: 'yellow',
+  },
+  {
+    id: 3,
+    platform: 'pump.fun',
+    chain: 'Solana',
+    chainIcon: '🟣',
+    type: InsuranceType.RugPull,
+    name: 'Rug Pull Protection',
+    description: 'Protect against pump.fun token rug pulls',
+    premiumRate: 5,
+    coverageRate: 80,
+    minCoverage: 100,
+    maxCoverage: 10000,
+    duration: 30,
+    color: 'purple',
+  },
+  {
+    id: 4,
+    platform: 'pump.fun',
+    chain: 'Solana',
+    chainIcon: '🟣',
+    type: InsuranceType.SmartContract,
+    name: 'Smart Contract Coverage',
+    description: 'Coverage for pump.fun contract exploits',
+    premiumRate: 3,
+    coverageRate: 100,
+    minCoverage: 500,
+    maxCoverage: 50000,
+    duration: 90,
+    color: 'purple',
+  },
+  {
+    id: 5,
+    platform: 'both',
+    chain: 'Multi-Chain',
+    chainIcon: '🌐',
+    type: InsuranceType.Comprehensive,
+    name: 'Comprehensive Coverage',
+    description: 'Full protection for all meme token risks',
+    premiumRate: 10,
+    coverageRate: 100,
+    minCoverage: 1000,
+    maxCoverage: 100000,
+    duration: 365,
+    color: 'blue',
+  },
+];
 
-function getRiskBadge(level: string) {
-  switch (level) {
-    case 'high':
-      return <Badge variant="destructive">High Risk</Badge>;
-    case 'medium':
-      return <Badge variant="warning">Medium Risk</Badge>;
-    default:
-      return <Badge variant="success">Low Risk</Badge>;
-  }
-}
-
-interface BuyModalProps {
-  product: InsuranceProduct | null;
+interface PurchaseModalProps {
+  product: typeof INSURANCE_PRODUCTS[0] | null;
   onClose: () => void;
 }
 
-function BuyModal({ product, onClose }: BuyModalProps) {
+function PurchaseModal({ product, onClose }: PurchaseModalProps) {
   const { isConnected } = useAccount();
-  const { balance } = useUsdcBalance();
-  const { purchasePolicy, isApproving, isPurchasing, isApproveSuccess, isPurchaseSuccess } = usePurchasePolicy();
+  const { purchase, usdcBalance } = useCowGuardInsurance();
+  const [coverageAmount, setCoverageAmount] = useState('1000');
   
-  const [amount, setAmount] = useState('100');
-  const [position, setPosition] = useState<Position>(Position.SAFE);
+  const { premium, isLoading: calcLoading } = useCalculatePremium(
+    product?.id || 0, 
+    coverageAmount
+  );
 
   if (!product) return null;
 
-  const potentialPayout = parseFloat(amount) * (position === Position.RUG ? product.currentOdds.rug : product.currentOdds.safe);
-  const isLoading = isApproving || isPurchasing;
-
   const handlePurchase = async () => {
     try {
-      await purchasePolicy(product.poolId, position, amount);
+      await purchase.purchaseInsurance(product.id, coverageAmount);
+      onClose();
     } catch (error) {
       console.error('Purchase failed:', error);
     }
   };
 
-  if (isPurchaseSuccess) {
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center">
-        <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" onClick={onClose} />
-        <Card className="relative w-full max-w-md mx-4">
-          <CardContent className="p-8 text-center">
-            <div className="w-16 h-16 rounded-full bg-success/10 flex items-center justify-center mx-auto mb-4">
-              <TrendingUp className="h-8 w-8 text-success" />
-            </div>
-            <h3 className="text-xl font-bold mb-2">Purchase Successful!</h3>
-            <p className="text-muted-foreground mb-4">
-              Your insurance policy for {product.tokenSymbol} has been created.
-            </p>
-            <Button onClick={onClose}>View My Policies</Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  const isLoading = purchase.isApproving || purchase.isPurchasing;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" onClick={onClose} />
-      <Card className="relative w-full max-w-md mx-4">
+      <Card className="relative w-full max-w-md">
         <CardHeader>
-          <CardTitle>Buy Insurance - {product.tokenSymbol}</CardTitle>
+          <div className="flex items-center gap-2">
+            <span className="text-2xl">{INSURANCE_TYPE_ICONS[product.type]}</span>
+            <div>
+              <CardTitle className="text-lg">{product.name}</CardTitle>
+              <CardDescription className="flex items-center gap-1">
+                <span>{product.chainIcon}</span>
+                {product.platform === 'both' ? 'Four.meme + pump.fun' : product.platform}
+              </CardDescription>
+            </div>
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Token Info */}
-          <div className="p-3 rounded-lg bg-muted/50">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Token</span>
-              <span className="font-medium">{product.tokenName} ({product.chain})</span>
+          {/* Product Info */}
+          <div className="grid grid-cols-2 gap-3 text-sm">
+            <div className="rounded-lg bg-secondary/50 p-3">
+              <p className="text-muted-foreground">Coverage Rate</p>
+              <p className="text-lg font-bold text-green-500">{product.coverageRate}%</p>
             </div>
-            <div className="flex items-center justify-between mt-2">
-              <span className="text-sm text-muted-foreground">Pool Size</span>
-              <span className="font-medium">{formatUSD(product.poolSize)}</span>
-            </div>
-          </div>
-
-          {/* Position Selection */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Your Prediction</label>
-            <div className="grid grid-cols-2 gap-3">
-              <Button
-                variant={position === Position.RUG ? 'destructive' : 'outline'}
-                className="h-16 flex-col"
-                onClick={() => setPosition(Position.RUG)}
-              >
-                <TrendingDown className="h-5 w-5 mb-1" />
-                <span>Bet Rug</span>
-                <span className="text-xs opacity-70">{product.currentOdds.rug}x payout</span>
-              </Button>
-              <Button
-                variant={position === Position.SAFE ? 'default' : 'outline'}
-                className="h-16 flex-col bg-success hover:bg-success/90"
-                onClick={() => setPosition(Position.SAFE)}
-              >
-                <TrendingUp className="h-5 w-5 mb-1" />
-                <span>Bet Safe</span>
-                <span className="text-xs opacity-70">{product.currentOdds.safe}x payout</span>
-              </Button>
+            <div className="rounded-lg bg-secondary/50 p-3">
+              <p className="text-muted-foreground">Duration</p>
+              <p className="text-lg font-bold">{product.duration} days</p>
             </div>
           </div>
 
-          {/* Amount */}
+          {/* Coverage Amount */}
           <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="text-sm font-medium">Amount (USDC)</label>
-              <span className="text-xs text-muted-foreground">Balance: {parseFloat(balance).toFixed(2)} USDC</span>
-            </div>
+            <label className="text-sm font-medium">Coverage Amount (USDT)</label>
             <Input
               type="number"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              placeholder="100"
-              min="10"
+              value={coverageAmount}
+              onChange={(e) => setCoverageAmount(e.target.value)}
+              min={product.minCoverage}
+              max={product.maxCoverage}
+              className="h-11"
             />
             <div className="flex gap-2">
-              {['50', '100', '250', '500'].map((val) => (
+              {[100, 500, 1000, 5000].map((val) => (
                 <Button
                   key={val}
                   variant="outline"
                   size="sm"
-                  className="flex-1"
-                  onClick={() => setAmount(val)}
+                  className="flex-1 text-xs"
+                  onClick={() => setCoverageAmount(val.toString())}
+                  disabled={val < product.minCoverage || val > product.maxCoverage}
                 >
                   ${val}
                 </Button>
               ))}
             </div>
+            <p className="text-xs text-muted-foreground">
+              Min: ${product.minCoverage} | Max: ${product.maxCoverage}
+            </p>
           </div>
 
-          {/* Summary */}
-          <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
+          {/* Premium */}
+          <div className="rounded-lg bg-blue-500/10 border border-blue-500/20 p-3">
             <div className="flex items-center justify-between">
-              <span className="text-sm">Potential Payout</span>
-              <span className="text-lg font-bold text-primary">{formatUSD(potentialPayout)}</span>
+              <span className="text-sm">Premium ({product.premiumRate}%)</span>
+              <span className="text-lg font-bold text-blue-500">
+                {calcLoading ? '...' : `$${premium}`}
+              </span>
             </div>
           </div>
 
           {/* Actions */}
-          <div className="flex gap-3">
+          <div className="flex gap-3 pt-2">
             <Button variant="outline" className="flex-1" onClick={onClose}>
               Cancel
             </Button>
-            {!isConnected ? (
-              <Button className="flex-1" disabled>
-                Connect Wallet
-              </Button>
-            ) : (
-              <Button 
-                className="flex-1" 
-                onClick={handlePurchase}
-                disabled={isLoading || parseFloat(amount) > parseFloat(balance)}
-              >
-                {isApproving ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Approving...
-                  </>
-                ) : isPurchasing ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Purchasing...
-                  </>
-                ) : isApproveSuccess ? (
-                  'Confirm Purchase'
-                ) : (
-                  'Buy Insurance'
-                )}
-              </Button>
-            )}
+            <Button 
+              className="flex-1 bg-blue-500 hover:bg-blue-600" 
+              onClick={handlePurchase}
+              disabled={!isConnected || isLoading}
+            >
+              {isLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <>
+                  Purchase
+                  <ArrowRight className="h-4 w-4 ml-1" />
+                </>
+              )}
+            </Button>
           </div>
+
+          {purchase.isSuccess && (
+            <p className="text-sm text-green-500 flex items-center gap-1">
+              <CheckCircle className="h-4 w-4" />
+              Insurance purchased successfully!
+            </p>
+          )}
         </CardContent>
       </Card>
     </div>
@@ -205,198 +227,142 @@ function BuyModal({ product, onClose }: BuyModalProps) {
 }
 
 export function InsuranceProducts() {
-  const [selectedProduct, setSelectedProduct] = useState<InsuranceProduct | null>(null);
-  const [products, setProducts] = useState<InsuranceProduct[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<typeof INSURANCE_PRODUCTS[0] | null>(null);
+  const [activeTab, setActiveTab] = useState<'all' | 'four.meme' | 'pump.fun'>('all');
 
-  useEffect(() => {
-    const fetchProducts = async () => {
-      setIsLoading(true);
-      setError(null);
-      
-      try {
-        const products = await getInsuranceProducts();
-        if (products && products.length > 0) {
-          // Map API data to component format
-          const mappedProducts: InsuranceProduct[] = products.map((product: ApiInsuranceProduct, index: number) => {
-            // Calculate risk level based on odds
-            const avgOdds = (product.rugOdds + product.safeOdds) / 2;
-            let riskLevel: 'low' | 'medium' | 'high' = 'medium';
-            if (avgOdds < 1.5) riskLevel = 'high';
-            else if (avgOdds > 2.5) riskLevel = 'low';
-
-            // Calculate expires in
-            const expiresAt = product.expiresAt * 1000 || Date.now() + 86400000; // Convert to ms
-            const expiresInMs = expiresAt - Date.now();
-            const expiresInHours = Math.floor(expiresInMs / 3600000);
-            const expiresIn = expiresInHours > 0 ? `${expiresInHours}h` : '<1h';
-
-            return {
-              id: `product-${product.poolId}`,
-              tokenName: product.tokenName || 'Unknown Token',
-              tokenSymbol: product.tokenSymbol || 'UNK',
-              chain: product.chain || 'base',
-              address: product.tokenAddress || '',
-              premiumRate: 5,
-              poolSize: parseFloat(product.totalRugBets) + parseFloat(product.totalSafeBets),
-              currentOdds: {
-                rug: product.rugOdds,
-                safe: product.safeOdds,
-              },
-              expiresIn,
-              riskLevel,
-              poolId: product.poolId,
-              expiresAt,
-            };
-          });
-
-          // Add PopCow special products at the beginning
-          const popCowProducts: InsuranceProduct[] = [
-            {
-              id: 'popcow-special',
-              tokenName: 'PopCow Alpha Protection Bundle',
-              tokenSymbol: 'COWGUARD',
-              chain: 'multi-chain',
-              address: 'PopCow...Protected',
-              premiumRate: 2, // Even lower premium for PopCow users
-              poolSize: 100000,
-              currentOdds: { rug: 1.5, safe: 3.0 },
-              expiresIn: '30d',
-              riskLevel: 'low',
-              poolId: 999,
-              expiresAt: Date.now() + 2592000000, // 30 days
-            }
-          ];
-
-          setProducts([...popCowProducts, ...mappedProducts]);
-        } else {
-          setError('Failed to load insurance products');
-        }
-      } catch (err) {
-        console.error('Error fetching insurance products:', err);
-        setError('Failed to load insurance products');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchProducts();
-  }, []);
-
-  if (isLoading) {
-    return (
-      <Card>
-        <CardContent className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          <span className="ml-2 text-muted-foreground">Loading insurance products...</span>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (error) {
-    return (
-      <Card>
-        <CardContent className="py-12">
-          <div className="flex items-center gap-2 text-destructive">
-            <AlertTriangle className="h-5 w-5" />
-            <span>{error}</span>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (products.length === 0) {
-    return (
-      <Card>
-        <CardContent className="py-12 text-center text-muted-foreground">
-          No insurance products available at the moment.
-        </CardContent>
-      </Card>
-    );
-  }
+const filteredProducts = INSURANCE_PRODUCTS.filter(p => {
+    if (activeTab === 'all') return true;
+    if (activeTab === 'four.meme') return p.platform === 'four.meme' || p.platform === 'both';
+    if (activeTab === 'pump.fun') return p.platform === 'pump.fun' || p.platform === 'both';
+    return true;
+  });
 
   return (
     <>
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <AlertTriangle className="h-5 w-5" />
-          Available Insurance Products
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          {products.map((product) => (
-            <div
-              key={product.id}
-              className={`flex items-center justify-between rounded-lg border p-4 transition-colors hover:bg-secondary/50 ${
-                product.id === 'popcow-special' 
-                  ? 'border-orange-500 bg-gradient-to-r from-orange-50/50 to-orange-100/50 dark:from-orange-950/20 dark:to-orange-900/20' 
-                  : ''
-              }`}
-            >
-              <div className="flex items-center gap-4">
-                <div className={`flex h-12 w-12 items-center justify-center rounded-full text-lg font-bold ${
-                  product.id === 'popcow-special'
-                    ? 'bg-orange-500 text-white'
-                    : 'bg-primary/10'
-                }`}>
-                  {product.id === 'popcow-special' ? '🐄' : product.tokenSymbol.charAt(0)}
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">{product.tokenName}</span>
-                    {product.id === 'popcow-special' && (
-                      <Badge className="bg-orange-500 hover:bg-orange-600">PopCow 专属</Badge>
-                    )}
-                    <span className="text-sm text-muted-foreground">
-                      ${product.tokenSymbol}
-                    </span>
-                    <Badge variant="outline">{product.chain}</Badge>
-                    {getRiskBadge(product.riskLevel)}
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    {product.id === 'popcow-special' 
-                      ? '🐄 PopCow\'s premium protection package - Maximum coverage, minimum risk' 
-                      : formatAddress(product.address)
-                    }
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-8">
-                <div className="text-center">
-                  <p className="text-sm text-muted-foreground">Premium Rate</p>
-                  <p className="font-bold">{product.premiumRate}%</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-sm text-muted-foreground">Pool Size</p>
-                  <p className="font-bold">{formatUSD(product.poolSize)}</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-sm text-muted-foreground flex items-center gap-1">
-                    <TrendingDown className="h-3 w-3" /> Rug Odds
-                  </p>
-                  <p className="font-bold text-destructive">{product.currentOdds.rug}x</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-sm text-muted-foreground flex items-center gap-1">
-                    <Clock className="h-3 w-3" /> Expires
-                  </p>
-                  <p className="font-bold">{product.expiresIn}</p>
-                </div>
-                  <Button onClick={() => setSelectedProduct(product)}>Buy Coverage</Button>
-              </div>
+      <Card>
+        <CardHeader>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="h-5 w-5 text-blue-500" />
+                Insurance Products
+              </CardTitle>
+              <CardDescription>
+                Choose protection for your meme token investments
+              </CardDescription>
             </div>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
+            
+            {/* Platform Filter */}
+            <div className="flex gap-1 bg-secondary/50 p-1 rounded-lg">
+              <Button
+                size="sm"
+                variant={activeTab === 'all' ? 'default' : 'ghost'}
+                onClick={() => setActiveTab('all')}
+                className="text-xs"
+              >
+                All
+              </Button>
+              <Button
+                size="sm"
+                variant={activeTab === 'four.meme' ? 'default' : 'ghost'}
+                onClick={() => setActiveTab('four.meme')}
+                className={`text-xs ${activeTab === 'four.meme' ? 'bg-yellow-500 hover:bg-yellow-600' : ''}`}
+              >
+                <Zap className="h-3 w-3 mr-1" />
+                Four.meme
+              </Button>
+              <Button
+                size="sm"
+                variant={activeTab === 'pump.fun' ? 'default' : 'ghost'}
+                onClick={() => setActiveTab('pump.fun')}
+                className={`text-xs ${activeTab === 'pump.fun' ? 'bg-purple-500 hover:bg-purple-600' : ''}`}
+              >
+                <Rocket className="h-3 w-3 mr-1" />
+                pump.fun
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-2">
+            {filteredProducts.map((product) => (
+              <Card 
+                key={product.id} 
+                className={`group hover:shadow-lg transition-all cursor-pointer border-2 ${
+                  product.color === 'yellow' 
+                    ? 'border-yellow-500/20 hover:border-yellow-500/50' 
+                    : product.color === 'purple'
+                    ? 'border-purple-500/20 hover:border-purple-500/50'
+                    : 'border-blue-500/20 hover:border-blue-500/50'
+                }`}
+                onClick={() => setSelectedProduct(product)}
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-3">
+                    <div className={`p-2 rounded-lg ${
+                      product.color === 'yellow' 
+                        ? 'bg-yellow-500/10' 
+                        : product.color === 'purple'
+                        ? 'bg-purple-500/10'
+                        : 'bg-blue-500/10'
+                    }`}>
+                      <span className="text-2xl">{INSURANCE_TYPE_ICONS[product.type]}</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="font-semibold text-sm">{product.name}</h3>
+                        <Badge 
+                          variant="outline" 
+                          className={`text-[10px] ${
+                            product.color === 'yellow' 
+                              ? 'border-yellow-500/30 text-yellow-500' 
+                              : product.color === 'purple'
+                              ? 'border-purple-500/30 text-purple-500'
+                              : 'border-blue-500/30 text-blue-500'
+                          }`}
+                        >
+                          {product.chainIcon} {product.chain}
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">{product.description}</p>
+                      
+                      <div className="grid grid-cols-3 gap-2 mt-3">
+                        <div>
+                          <p className="text-[10px] text-muted-foreground">Premium</p>
+                          <p className="text-sm font-bold">{product.premiumRate}%</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-muted-foreground">Coverage</p>
+                          <p className="text-sm font-bold text-green-500">{product.coverageRate}%</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-muted-foreground">Duration</p>
+                          <p className="text-sm font-bold">{product.duration}d</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <Button 
+                    className={`w-full mt-3 h-9 text-sm ${
+                      product.color === 'yellow' 
+                        ? 'bg-yellow-500 hover:bg-yellow-600' 
+                        : product.color === 'purple'
+                        ? 'bg-purple-500 hover:bg-purple-600'
+                        : 'bg-blue-500 hover:bg-blue-600'
+                    }`}
+                  >
+                    Get Coverage
+                    <ArrowRight className="h-4 w-4 ml-1" />
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
-      <BuyModal product={selectedProduct} onClose={() => setSelectedProduct(null)} />
+      <PurchaseModal product={selectedProduct} onClose={() => setSelectedProduct(null)} />
     </>
   );
 }
