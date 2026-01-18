@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useAccount, useSwitchChain } from 'wagmi';
+import { useWallet } from '@solana/wallet-adapter-react';
 import { bsc, bscTestnet } from 'wagmi/chains';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -37,11 +38,21 @@ import {
   FOUR_MEME_ADDRESS,
   SUPPORTED_TOKENS,
 } from '@/hooks/use-multi-asset-staking';
+import {
+  useSolanaStaking,
+  LockPeriod as SolanaLockPeriod,
+  LOCK_PERIOD_LABELS as SOLANA_LOCK_LABELS,
+} from '@/hooks/use-solana-staking';
+import { ChainSwitcher, useActiveChain, type ChainType } from '@/components/ui/chain-switcher';
 
 export default function StakingPage() {
-  const { isConnected } = useAccount();
+  const { isConnected: evmConnected } = useAccount();
+  const { connected: solanaConnected, publicKey: solanaPublicKey } = useWallet();
   const { switchChain } = useSwitchChain();
   const { t } = useTranslation();
+  const { activeChain, setActiveChain, isBsc, isSolana } = useActiveChain();
+  
+  const isConnected = isBsc ? evmConnected : solanaConnected;
   
   // 选择的代币类型: 'BNB' | 'FOUR'
   const [selectedToken, setSelectedToken] = useState<'BNB' | 'FOUR'>('BNB');
@@ -110,10 +121,43 @@ export default function StakingPage() {
     }
   };
 
+  // Solana 质押 hooks
+  const solanaStaking = useSolanaStaking();
+  const [solanaStakeAmount, setSolanaStakeAmount] = useState('');
+  const [solanaLockPeriod, setSolanaLockPeriod] = useState<SolanaLockPeriod>(SolanaLockPeriod.Flexible);
+
+  const handleSolanaStake = async () => {
+    if (!solanaStakeAmount || Number(solanaStakeAmount) <= 0) return;
+    try {
+      await solanaStaking.stakeSol.stakeSol(Number(solanaStakeAmount), solanaLockPeriod);
+      setSolanaStakeAmount('');
+      setTimeout(() => solanaStaking.refetch(), 2000);
+    } catch (error) {
+      console.error('Solana stake failed:', error);
+    }
+  };
+
   return (
     <div className="space-y-4 md:space-y-6">
-      {/* 网络切换提示 */}
-      {isConnected && !isBscNetwork && (
+      {/* 链切换器 */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight flex items-center gap-2">
+            <Coins className={`h-6 w-6 md:h-7 md:w-7 ${isBsc ? 'text-yellow-500' : 'text-purple-500'}`} />
+            {t.staking.title}
+          </h1>
+          <p className="text-sm md:text-base text-muted-foreground mt-1">
+            {isBsc ? 'BSC (Four.meme)' : 'Solana (pump.fun)'} Multi-Asset Staking
+          </p>
+        </div>
+        <ChainSwitcher 
+          onChainChange={(chain) => setActiveChain(chain)} 
+          defaultChain={activeChain}
+        />
+      </div>
+
+      {/* 网络切换提示 - BSC */}
+      {isBsc && evmConnected && !isBscNetwork && (
         <Alert className="bg-yellow-500/10 border-yellow-500/30">
           <AlertCircle className="h-4 w-4 text-yellow-500" />
           <AlertDescription className="flex items-center justify-between flex-wrap gap-2">
@@ -126,85 +170,93 @@ export default function StakingPage() {
         </Alert>
       )}
 
-      {/* 页面标题 - 响应式 */}
-      <div className="flex flex-col gap-3">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold tracking-tight flex items-center gap-2">
-              <Coins className="h-6 w-6 md:h-7 md:w-7 text-yellow-500" />
-              {t.staking.title}
-            </h1>
-            <p className="text-sm md:text-base text-muted-foreground mt-1">
-              BSC (Four.meme) Multi-Asset Staking
-            </p>
-          </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <Badge className="bg-yellow-500/20 text-yellow-500 border-yellow-500/30 text-[10px] md:text-xs">
-              <Zap className="h-3 w-3 mr-1" />
-              BSC Network
-            </Badge>
-            {earlyBirdBonus > 0 && (
-              <Badge className="bg-gradient-to-r from-orange-500 to-pink-500 text-white border-0 text-[10px] md:text-xs">
-                <Sparkles className="h-3 w-3 mr-1" />
-                +{earlyBirdBonus}% Bonus
-              </Badge>
-            )}
-            <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/30 text-[10px] md:text-xs">
-              <Shield className="h-3 w-3 mr-1" />
-              Audited
-            </Badge>
-          </div>
-        </div>
+      {/* 网络提示 - Solana */}
+      {isSolana && !solanaConnected && (
+        <Alert className="bg-purple-500/10 border-purple-500/30">
+          <AlertCircle className="h-4 w-4 text-purple-500" />
+          <AlertDescription className="text-sm">
+            请连接 Solana 钱包 (Phantom/Solflare) 以使用质押功能
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* 徽章区域 */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <Badge className={`${isBsc ? 'bg-yellow-500/20 text-yellow-500 border-yellow-500/30' : 'bg-purple-500/20 text-purple-500 border-purple-500/30'} text-[10px] md:text-xs`}>
+          <Zap className="h-3 w-3 mr-1" />
+          {isBsc ? 'BSC Network' : 'Solana Network'}
+        </Badge>
+        {isBsc && earlyBirdBonus > 0 && (
+          <Badge className="bg-gradient-to-r from-orange-500 to-pink-500 text-white border-0 text-[10px] md:text-xs">
+            <Sparkles className="h-3 w-3 mr-1" />
+            +{earlyBirdBonus}% Bonus
+          </Badge>
+        )}
+        {isSolana && solanaStaking.earlyBirdBonus > 0 && (
+          <Badge className="bg-gradient-to-r from-purple-500 to-pink-500 text-white border-0 text-[10px] md:text-xs">
+            <Sparkles className="h-3 w-3 mr-1" />
+            +{solanaStaking.earlyBirdBonus}% Bonus
+          </Badge>
+        )}
+        <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/30 text-[10px] md:text-xs">
+          <Shield className="h-3 w-3 mr-1" />
+          {isBsc ? 'Audited' : 'Pyth Oracle'}
+        </Badge>
       </div>
 
-      {/* 全局统计 - 响应式网格 */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-        <Card>
-          <CardContent className="p-3 md:p-4">
-            <p className="text-[10px] md:text-xs text-muted-foreground font-medium">Total Staked</p>
-            <p className="text-lg md:text-2xl font-bold mt-1">
-              ${globalStats?.totalStakedUSDFormatted || '0'}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-3 md:p-4">
-            <p className="text-[10px] md:text-xs text-muted-foreground font-medium">Total Stakers</p>
-            <p className="text-lg md:text-2xl font-bold mt-1">
-              {globalStats?.totalStakers?.toString() || '0'}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-3 md:p-4">
-            <div className="flex items-center justify-between">
-              <p className="text-[10px] md:text-xs text-muted-foreground font-medium">
-                {selectedToken} Price
-              </p>
-              {priceFeedInfo?.isHealthy && (
-                <Badge variant="outline" className="text-[8px] bg-green-500/10 text-green-500 border-green-500/30">
-                  <CheckCircle className="h-2 w-2 mr-0.5" />
-                  Live
-                </Badge>
-              )}
-            </div>
-            <p className="text-lg md:text-2xl font-bold text-yellow-500 mt-1">
-              ${tokenPrice?.priceUSD?.toFixed(2) || '0'}
-            </p>
-            {oracleEnabled && (
-              <p className="text-[8px] text-muted-foreground mt-0.5">via Chainlink</p>
-            )}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-3 md:p-4">
-            <p className="text-[10px] md:text-xs text-muted-foreground font-medium">Base APY</p>
-            <p className="text-lg md:text-2xl font-bold text-green-500 mt-1">
-              {tokenConfig?.baseAPY || 10}%
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+      {/* ============================================ */}
+      {/* BSC 质押内容 */}
+      {/* ============================================ */}
+      {isBsc && (
+        <>
+          {/* 全局统计 - 响应式网格 */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+            <Card>
+              <CardContent className="p-3 md:p-4">
+                <p className="text-[10px] md:text-xs text-muted-foreground font-medium">Total Staked</p>
+                <p className="text-lg md:text-2xl font-bold mt-1">
+                  ${globalStats?.totalStakedUSDFormatted || '0'}
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-3 md:p-4">
+                <p className="text-[10px] md:text-xs text-muted-foreground font-medium">Total Stakers</p>
+                <p className="text-lg md:text-2xl font-bold mt-1">
+                  {globalStats?.totalStakers?.toString() || '0'}
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-3 md:p-4">
+                <div className="flex items-center justify-between">
+                  <p className="text-[10px] md:text-xs text-muted-foreground font-medium">
+                    {selectedToken} Price
+                  </p>
+                  {priceFeedInfo?.isHealthy && (
+                    <Badge variant="outline" className="text-[8px] bg-green-500/10 text-green-500 border-green-500/30">
+                      <CheckCircle className="h-2 w-2 mr-0.5" />
+                      Live
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-lg md:text-2xl font-bold text-yellow-500 mt-1">
+                  ${tokenPrice?.priceUSD?.toFixed(2) || '0'}
+                </p>
+                {oracleEnabled && (
+                  <p className="text-[8px] text-muted-foreground mt-0.5">via Chainlink</p>
+                )}
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-3 md:p-4">
+                <p className="text-[10px] md:text-xs text-muted-foreground font-medium">Base APY</p>
+                <p className="text-lg md:text-2xl font-bold text-green-500 mt-1">
+                  {tokenConfig?.baseAPY || 10}%
+                </p>
+              </CardContent>
+            </Card>
+          </div>
 
       {/* 主要内容 - 响应式布局 */}
       <div className="grid lg:grid-cols-3 gap-4 md:gap-6">
@@ -611,6 +663,250 @@ export default function StakingPage() {
           </Card>
         </div>
       </div>
+        </>
+      )}
+
+      {/* ============================================ */}
+      {/* Solana 质押内容 */}
+      {/* ============================================ */}
+      {isSolana && (
+        <>
+          {/* Solana 全局统计 */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+            <Card>
+              <CardContent className="p-3 md:p-4">
+                <p className="text-[10px] md:text-xs text-muted-foreground font-medium">Total Staked</p>
+                <p className="text-lg md:text-2xl font-bold mt-1">
+                  ${solanaStaking.poolInfo?.totalStakedValueUsd?.toLocaleString() || '0'}
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-3 md:p-4">
+                <p className="text-[10px] md:text-xs text-muted-foreground font-medium">SOL Price</p>
+                <p className="text-lg md:text-2xl font-bold text-purple-500 mt-1">
+                  ${solanaStaking.solPrice?.toFixed(2) || '150'}
+                </p>
+                <p className="text-[8px] text-muted-foreground mt-0.5">via Pyth</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-3 md:p-4">
+                <p className="text-[10px] md:text-xs text-muted-foreground font-medium">Your Staked</p>
+                <p className="text-lg md:text-2xl font-bold mt-1">
+                  ${solanaStaking.stakeInfo?.stakedValueUsd?.toFixed(2) || '0'}
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-3 md:p-4">
+                <p className="text-[10px] md:text-xs text-muted-foreground font-medium">Pending Rewards</p>
+                <p className="text-lg md:text-2xl font-bold text-green-500 mt-1">
+                  {solanaStaking.stakeInfo?.pendingRewards?.toFixed(4) || '0'}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Solana 主要内容 */}
+          <div className="grid lg:grid-cols-3 gap-4 md:gap-6">
+            {/* Solana 质押卡片 */}
+            <div className="lg:col-span-2">
+              <Card>
+                <CardHeader className="pb-3 md:pb-4">
+                  <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
+                    <Coins className="h-5 w-5 text-purple-500" />
+                    Stake SOL
+                  </CardTitle>
+                  <CardDescription className="text-xs md:text-sm">
+                    Stake SOL on Solana (pump.fun) for rewards
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4 md:space-y-6">
+                  {/* 锁定期选择 */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs md:text-sm font-medium">Lock Period</label>
+                    <Select
+                      value={solanaLockPeriod.toString()}
+                      onValueChange={(v) => setSolanaLockPeriod(Number(v) as SolanaLockPeriod)}
+                    >
+                      <SelectTrigger className="h-10 md:h-11 text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(SOLANA_LOCK_LABELS).map(([value, label]) => (
+                          <SelectItem key={value} value={value} className="text-sm">
+                            {label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* 金额输入 */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs md:text-sm font-medium">Amount (SOL)</label>
+                    <div className="flex gap-2">
+                      <Input
+                        type="number"
+                        placeholder="0.0"
+                        value={solanaStakeAmount}
+                        onChange={(e) => setSolanaStakeAmount(e.target.value)}
+                        className="flex-1 h-10 md:h-11 text-sm"
+                        disabled={!solanaConnected}
+                      />
+                      <Button
+                        onClick={handleSolanaStake}
+                        disabled={!solanaConnected || solanaStaking.stakeSol.isPending || !solanaStakeAmount}
+                        className="bg-purple-500 hover:bg-purple-600 h-10 md:h-11 px-4 md:px-6"
+                      >
+                        {solanaStaking.stakeSol.isPending ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <>
+                            Stake
+                            <ArrowRight className="h-4 w-4 ml-1 hidden sm:inline" />
+                          </>
+                        )}
+                      </Button>
+                    </div>
+
+                    {/* 快捷金额 */}
+                    <div className="flex gap-1.5 mt-2">
+                      {['0.5', '1', '2', '5'].map((val) => (
+                        <Button
+                          key={val}
+                          variant="outline"
+                          size="sm"
+                          className="flex-1 h-8 text-xs"
+                          onClick={() => setSolanaStakeAmount(val)}
+                          disabled={!solanaConnected}
+                        >
+                          {val} SOL
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {solanaStaking.stakeSol.isSuccess && (
+                    <p className="text-xs md:text-sm text-green-500 flex items-center gap-1">
+                      <CheckCircle className="h-4 w-4" />
+                      Stake successful!
+                    </p>
+                  )}
+
+                  {/* 未连接钱包 */}
+                  {!solanaConnected && (
+                    <div className="text-center py-6 md:py-8 border rounded-lg">
+                      <p className="text-sm text-muted-foreground">Connect Solana wallet to start staking</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Solana 侧边信息 */}
+            <div className="space-y-3 md:space-y-4">
+              {/* 锁定期倍数 */}
+              <Card>
+                <CardHeader className="pb-2 md:pb-3">
+                  <CardTitle className="text-sm md:text-base flex items-center gap-2">
+                    <Lock className="h-4 w-4 text-purple-500" />
+                    Lock Multipliers
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pb-3 md:pb-4">
+                  <div className="space-y-1.5 md:space-y-2 text-xs md:text-sm">
+                    {Object.entries(SOLANA_LOCK_LABELS).map(([_, label]) => {
+                      const [period, multiplier] = label.split(' (');
+                      return (
+                        <div key={label} className="flex justify-between items-center py-1">
+                          <span className="text-muted-foreground">{period}</span>
+                          <Badge variant="outline" className="text-[10px] md:text-xs font-bold">
+                            {multiplier?.replace(')', '')}
+                          </Badge>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Pyth 价格预言机 */}
+              <Card className="border-purple-500/30 bg-gradient-to-br from-purple-500/5 to-pink-500/5">
+                <CardContent className="p-3 md:p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <TrendingUp className="h-4 w-4 text-purple-500" />
+                      <span className="text-sm font-medium">Pyth Oracle</span>
+                    </div>
+                    <Badge className="bg-green-500/20 text-green-500 border-0 text-[8px]">
+                      <CheckCircle className="h-2 w-2 mr-0.5" />
+                      Active
+                    </Badge>
+                  </div>
+                  <div className="space-y-1.5 text-[10px] md:text-xs">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">SOL Price</span>
+                      <span className="font-mono">${solanaStaking.solPrice?.toFixed(2) || '150'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Oracle</span>
+                      <span className="font-mono">Pyth Network</span>
+                    </div>
+                  </div>
+                  <p className="text-[8px] text-muted-foreground mt-2">
+                    Real-time prices from Pyth Network
+                  </p>
+                </CardContent>
+              </Card>
+
+              {/* pump.fun 信息 */}
+              <Card className="border-purple-500/30 bg-gradient-to-br from-purple-500/5 to-pink-500/5">
+                <CardContent className="p-3 md:p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Sparkles className="h-4 w-4 text-purple-500" />
+                    <span className="text-sm font-medium">pump.fun</span>
+                  </div>
+                  <p className="text-[10px] md:text-xs text-muted-foreground mb-2">
+                    Solana Meme Launchpad
+                  </p>
+                  <div className="flex flex-wrap gap-1 mb-3">
+                    <Badge variant="outline" className="text-[8px] border-purple-500/30">Fair Launch</Badge>
+                    <Badge variant="outline" className="text-[8px] border-purple-500/30">Bonding Curve</Badge>
+                    <Badge variant="outline" className="text-[8px] border-purple-500/30">SPL Token</Badge>
+                  </div>
+                  <Link href="https://pump.fun" target="_blank">
+                    <Button size="sm" variant="outline" className="w-full h-8 text-xs border-purple-500/30 text-purple-500 hover:bg-purple-500/10">
+                      <ExternalLink className="h-3 w-3 mr-1.5" />
+                      Visit pump.fun
+                    </Button>
+                  </Link>
+                </CardContent>
+              </Card>
+
+              {/* 合约信息 */}
+              <Card className="bg-secondary/30">
+                <CardContent className="p-3 md:p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Shield className="h-4 w-4 text-green-500" />
+                    <p className="text-xs md:text-sm font-medium">Program Verified</p>
+                  </div>
+                  <p className="text-[10px] md:text-xs text-muted-foreground mb-3">
+                    multi-asset-staking (Solana)
+                  </p>
+                  <Link href="https://solscan.io" target="_blank">
+                    <Button size="sm" variant="outline" className="w-full h-8 text-xs">
+                      <ExternalLink className="h-3 w-3 mr-1.5" />
+                      Solscan
+                    </Button>
+                  </Link>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
