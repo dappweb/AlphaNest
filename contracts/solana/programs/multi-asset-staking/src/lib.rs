@@ -720,6 +720,119 @@ pub mod multi_asset_staking {
         msg!("Token removed from stakeable list");
         Ok(())
     }
+
+    // ============================================
+    // 推荐返佣系统
+    // ============================================
+
+    /// 注册推荐关系（被推荐人调用）
+    pub fn register_referral(ctx: Context<RegisterReferral>) -> Result<()> {
+        let referral_account = &mut ctx.accounts.referral_account;
+        let referrer_info = &mut ctx.accounts.referrer_info;
+        
+        require!(
+            ctx.accounts.referrer.key() != ctx.accounts.user.key(),
+            ErrorCode::CannotReferSelf
+        );
+        
+        // 初始化被推荐人的推荐账户
+        referral_account.user = ctx.accounts.user.key();
+        referral_account.referrer = ctx.accounts.referrer.key();
+        referral_account.registered_at = Clock::get()?.unix_timestamp;
+        referral_account.bump = ctx.bumps.referral_account;
+        
+        // 更新推荐人信息
+        referrer_info.total_referred += 1;
+        
+        msg!("Referral registered: {} -> {}", 
+             ctx.accounts.user.key(), ctx.accounts.referrer.key());
+        Ok(())
+    }
+
+    /// 初始化推荐人信息账户
+    pub fn initialize_referrer_info(ctx: Context<InitializeReferrerInfo>) -> Result<()> {
+        let referrer_info = &mut ctx.accounts.referrer_info;
+        
+        referrer_info.referrer = ctx.accounts.user.key();
+        referrer_info.total_referred = 0;
+        referrer_info.total_earned = 0;
+        referrer_info.pending_rewards = 0;
+        referrer_info.referee_staked_usd = 0;
+        referrer_info.bump = ctx.bumps.referrer_info;
+        
+        msg!("Referrer info initialized for {}", ctx.accounts.user.key());
+        Ok(())
+    }
+
+    /// 领取推荐返佣
+    pub fn claim_referral_rewards(ctx: Context<ClaimReferralRewards>) -> Result<()> {
+        let referrer_info = &mut ctx.accounts.referrer_info;
+        let rewards = referrer_info.pending_rewards;
+        
+        require!(rewards > 0, ErrorCode::NoReferralRewards);
+        
+        // 转移奖励
+        let pool_bump = ctx.accounts.pool.bump;
+        let seeds = &[
+            b"multi_asset_pool".as_ref(),
+            &[pool_bump],
+        ];
+        let signer = &[&seeds[..]];
+
+        token::transfer(
+            CpiContext::new_with_signer(
+                ctx.accounts.token_program.to_account_info(),
+                Transfer {
+                    from: ctx.accounts.reward_vault.to_account_info(),
+                    to: ctx.accounts.user_reward_token.to_account_info(),
+                    authority: ctx.accounts.pool.to_account_info(),
+                },
+                signer,
+            ),
+            rewards,
+        )?;
+
+        referrer_info.pending_rewards = 0;
+        
+        msg!("Claimed {} referral rewards", rewards);
+        Ok(())
+    }
+
+    /// 更新推荐返佣配置（仅限管理员）
+    pub fn update_referral_config(
+        ctx: Context<UpdateReferralConfig>,
+        rates: [u16; 5],
+        tiers: [u16; 5],
+        invitee_bonus: u16,
+        enabled: bool,
+    ) -> Result<()> {
+        let config = &mut ctx.accounts.referral_config;
+        
+        config.referral_rates = rates;
+        config.referral_tiers = tiers;
+        config.invitee_bonus = invitee_bonus;
+        config.enabled = enabled;
+        
+        msg!("Referral config updated");
+        Ok(())
+    }
+
+    /// 初始化推荐系统配置
+    pub fn initialize_referral_config(ctx: Context<InitializeReferralConfig>) -> Result<()> {
+        let config = &mut ctx.accounts.referral_config;
+        
+        // 默认返佣比例: 5%, 8%, 10%, 12%, 15%
+        config.referral_rates = [500, 800, 1000, 1200, 1500];
+        // 对应人数门槛: 1, 5, 10, 25, 50
+        config.referral_tiers = [1, 5, 10, 25, 50];
+        // 被推荐人奖励: 5%
+        config.invitee_bonus = 500;
+        config.enabled = true;
+        config.bump = ctx.bumps.referral_config;
+        
+        msg!("Referral config initialized");
+        Ok(())
+    }
 }
 
 // ============== 辅助函数 ==============
@@ -824,6 +937,37 @@ fn get_early_bird_bonus(days_since_launch: u8) -> u8 {
     } else {
         0
     }
+}
+
+/// 获取推荐人返佣比例
+fn get_referral_rate(total_referred: u32, config: &ReferralConfig) -> u16 {
+    // 从高到低匹配等级
+    for i in (0..5).rev() {
+        if total_referred >= config.referral_tiers[i] as u32 {
+            return config.referral_rates[i];
+        }
+    }
+    config.referral_rates[0]
+}
+
+/// 获取推荐人等级 (1-5)
+fn get_referral_tier(total_referred: u32, config: &ReferralConfig) -> u8 {
+    for i in (0..5).rev() {
+        if total_referred >= config.referral_tiers[i] as u32 {
+            return (i + 1) as u8;
+        }
+    }
+    1
+}
+
+/// 计算推荐返佣金额
+fn calculate_referral_reward(stake_value_usd: u64, rate: u16) -> u64 {
+    // rate 是基点 (500 = 5%)
+    (stake_value_usd as u128)
+        .checked_mul(rate as u128)
+        .unwrap()
+        .checked_div(10000)
+        .unwrap() as u64
 }
 
 // 价格获取函数（简化版，实际应从 Pyth Network 读取）
@@ -1359,6 +1503,127 @@ pub struct RemoveStakeableToken<'info> {
     pub token_config: Account<'info, TokenConfig>,
 }
 
+// ============== 推荐返佣账户结构 ==============
+
+#[derive(Accounts)]
+pub struct RegisterReferral<'info> {
+    #[account(mut)]
+    pub user: Signer<'info>,
+
+    /// CHECK: 推荐人账户
+    pub referrer: AccountInfo<'info>,
+
+    #[account(
+        init,
+        payer = user,
+        space = 8 + ReferralAccount::INIT_SPACE,
+        seeds = [b"referral", user.key().as_ref()],
+        bump
+    )]
+    pub referral_account: Account<'info, ReferralAccount>,
+
+    #[account(
+        mut,
+        seeds = [b"referrer_info", referrer.key().as_ref()],
+        bump = referrer_info.bump
+    )]
+    pub referrer_info: Account<'info, ReferrerInfo>,
+
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct InitializeReferrerInfo<'info> {
+    #[account(mut)]
+    pub user: Signer<'info>,
+
+    #[account(
+        init,
+        payer = user,
+        space = 8 + ReferrerInfo::INIT_SPACE,
+        seeds = [b"referrer_info", user.key().as_ref()],
+        bump
+    )]
+    pub referrer_info: Account<'info, ReferrerInfo>,
+
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct ClaimReferralRewards<'info> {
+    #[account(mut)]
+    pub user: Signer<'info>,
+
+    #[account(
+        seeds = [b"multi_asset_pool"],
+        bump = pool.bump
+    )]
+    pub pool: Account<'info, MultiAssetStakingPool>,
+
+    #[account(
+        mut,
+        seeds = [b"referrer_info", user.key().as_ref()],
+        bump = referrer_info.bump,
+        constraint = referrer_info.referrer == user.key() @ ErrorCode::Unauthorized
+    )]
+    pub referrer_info: Account<'info, ReferrerInfo>,
+
+    #[account(mut)]
+    pub user_reward_token: Account<'info, TokenAccount>,
+
+    #[account(
+        mut,
+        seeds = [b"reward_vault"],
+        bump
+    )]
+    pub reward_vault: Account<'info, TokenAccount>,
+
+    pub token_program: Program<'info, Token>,
+}
+
+#[derive(Accounts)]
+pub struct InitializeReferralConfig<'info> {
+    #[account(mut)]
+    pub authority: Signer<'info>,
+
+    #[account(
+        seeds = [b"multi_asset_pool"],
+        bump = pool.bump,
+        constraint = pool.authority == authority.key() @ ErrorCode::Unauthorized
+    )]
+    pub pool: Account<'info, MultiAssetStakingPool>,
+
+    #[account(
+        init,
+        payer = authority,
+        space = 8 + ReferralConfig::INIT_SPACE,
+        seeds = [b"referral_config"],
+        bump
+    )]
+    pub referral_config: Account<'info, ReferralConfig>,
+
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct UpdateReferralConfig<'info> {
+    pub authority: Signer<'info>,
+
+    #[account(
+        seeds = [b"multi_asset_pool"],
+        bump = pool.bump,
+        constraint = pool.authority == authority.key() @ ErrorCode::Unauthorized
+    )]
+    pub pool: Account<'info, MultiAssetStakingPool>,
+
+    #[account(
+        mut,
+        seeds = [b"referral_config"],
+        bump = referral_config.bump
+    )]
+    pub referral_config: Account<'info, ReferralConfig>,
+}
+
 // ============== 数据结构 ==============
 
 #[account]
@@ -1419,6 +1684,38 @@ pub struct TokenConfig {
     pub bump: u8,
 }
 
+// ============== 推荐返佣数据结构 ==============
+
+#[account]
+#[derive(InitSpace)]
+pub struct ReferralAccount {
+    pub user: Pubkey,            // 被推荐人
+    pub referrer: Pubkey,        // 推荐人
+    pub registered_at: i64,      // 注册时间
+    pub bump: u8,
+}
+
+#[account]
+#[derive(InitSpace)]
+pub struct ReferrerInfo {
+    pub referrer: Pubkey,           // 推荐人地址
+    pub total_referred: u32,        // 推荐人数
+    pub total_earned: u64,          // 累计获得返佣
+    pub pending_rewards: u64,       // 待领取返佣
+    pub referee_staked_usd: u64,    // 被推荐人质押总额
+    pub bump: u8,
+}
+
+#[account]
+#[derive(InitSpace)]
+pub struct ReferralConfig {
+    pub referral_rates: [u16; 5],   // 返佣比例 (基点)
+    pub referral_tiers: [u16; 5],   // 人数门槛
+    pub invitee_bonus: u16,         // 被推荐人奖励 (基点)
+    pub enabled: bool,              // 是否启用
+    pub bump: u8,
+}
+
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq, InitSpace, Debug)]
 pub enum AssetType {
@@ -1458,4 +1755,10 @@ pub enum ErrorCode {
     TokenNotActive,
     #[msg("Token has active stakes")]
     TokenHasActiveStakes,
+    #[msg("Cannot refer self")]
+    CannotReferSelf,
+    #[msg("No referral rewards to claim")]
+    NoReferralRewards,
+    #[msg("Referral system disabled")]
+    ReferralDisabled,
 }

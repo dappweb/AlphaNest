@@ -144,6 +144,37 @@ contract MultiAssetStaking is AccessControl, ReentrancyGuard, Pausable {
     address public constant ETH_ADDRESS = address(0);
 
     // ============================================
+    // 推荐返佣系统
+    // ============================================
+    
+    struct ReferralInfo {
+        address referrer;           // 推荐人地址
+        uint256 totalReferred;      // 推荐人数
+        uint256 totalEarned;        // 累计获得返佣
+        uint256 pendingRewards;     // 待领取返佣
+        uint256 refereeStakedUSD;   // 被推荐人质押总额
+    }
+    
+    // 推荐关系 (被推荐人 => 推荐人)
+    mapping(address => address) public referrers;
+    // 推荐人信息
+    mapping(address => ReferralInfo) public referralInfo;
+    // 被推荐人列表
+    mapping(address => address[]) public referees;
+    // 是否已绑定推荐人
+    mapping(address => bool) public hasReferrer;
+    
+    // 返佣比例配置 (基点，10000 = 100%)
+    uint16[5] public referralRates = [500, 800, 1000, 1200, 1500]; // 5%, 8%, 10%, 12%, 15%
+    uint16[5] public referralTiers = [1, 5, 10, 25, 50]; // 对应人数门槛
+    
+    // 被推荐人首次质押奖励 (基点)
+    uint16 public inviteeBonus = 500; // 5%
+    
+    // 推荐系统开关
+    bool public referralEnabled = true;
+
+    // ============================================
     // 事件
     // ============================================
 
@@ -188,6 +219,13 @@ contract MultiAssetStaking is AccessControl, ReentrancyGuard, Pausable {
     event RewardRateUpdated(uint256 newRate);
     event PriceFeedUpdated(address indexed token, address indexed feed);
     event OracleSettingsUpdated(bool useChainlink, uint256 stalenessThreshold);
+    
+    // 推荐返佣事件
+    event ReferralRegistered(address indexed referee, address indexed referrer);
+    event ReferralRewardEarned(address indexed referrer, address indexed referee, uint256 amount, uint256 stakeValueUSD);
+    event ReferralRewardClaimed(address indexed referrer, uint256 amount);
+    event InviteeBonusEarned(address indexed invitee, uint256 bonusAmount);
+    event ReferralRatesUpdated(uint16[5] rates, uint16[5] tiers);
 
     // ============================================
     // 构造函数
@@ -811,6 +849,9 @@ contract MultiAssetStaking is AccessControl, ReentrancyGuard, Pausable {
             userStakedTokens[user].push(tokenAddress);
         }
         
+        // 处理推荐返佣（基于质押 USD 价值）
+        _processReferralReward(user, valueUSD);
+        
         emit Staked(user, tokenAddress, amount, valueUSD, lockPeriod, totalMultiplier);
     }
 
@@ -860,6 +901,150 @@ contract MultiAssetStaking is AccessControl, ReentrancyGuard, Pausable {
         uint256 finalReward = (multipliedReward * (100 + stakeInfo.earlyBirdBonus)) / 100;
         
         return stakeInfo.pendingRewards + finalReward;
+    }
+
+    // ============================================
+    // 推荐返佣功能
+    // ============================================
+
+    /**
+     * @notice 注册推荐关系（被推荐人调用）
+     * @param referrer 推荐人地址
+     */
+    function registerReferral(address referrer) external {
+        require(referralEnabled, "Referral disabled");
+        require(referrer != address(0), "Invalid referrer");
+        require(referrer != msg.sender, "Cannot refer self");
+        require(!hasReferrer[msg.sender], "Already has referrer");
+        require(referrers[referrer] != msg.sender, "Circular referral");
+        
+        // 绑定推荐关系
+        referrers[msg.sender] = referrer;
+        hasReferrer[msg.sender] = true;
+        referees[referrer].push(msg.sender);
+        referralInfo[referrer].totalReferred += 1;
+        
+        emit ReferralRegistered(msg.sender, referrer);
+    }
+
+    /**
+     * @notice 领取推荐返佣
+     */
+    function claimReferralRewards() external nonReentrant {
+        ReferralInfo storage info = referralInfo[msg.sender];
+        uint256 rewards = info.pendingRewards;
+        require(rewards > 0, "No referral rewards");
+        
+        info.pendingRewards = 0;
+        
+        // 发放返佣（使用奖励代币）
+        rewardToken.safeTransfer(msg.sender, rewards);
+        
+        emit ReferralRewardClaimed(msg.sender, rewards);
+    }
+
+    /**
+     * @notice 获取推荐人的返佣比例
+     */
+    function getReferralRate(address referrer) public view returns (uint16) {
+        uint256 referredCount = referralInfo[referrer].totalReferred;
+        
+        // 从高到低匹配等级
+        for (uint256 i = 4; i >= 0; i--) {
+            if (referredCount >= referralTiers[i]) {
+                return referralRates[i];
+            }
+            if (i == 0) break;
+        }
+        return referralRates[0];
+    }
+
+    /**
+     * @notice 获取推荐人等级 (1-5)
+     */
+    function getReferralTier(address referrer) public view returns (uint8) {
+        uint256 referredCount = referralInfo[referrer].totalReferred;
+        
+        for (uint256 i = 4; i >= 0; i--) {
+            if (referredCount >= referralTiers[i]) {
+                return uint8(i + 1);
+            }
+            if (i == 0) break;
+        }
+        return 1;
+    }
+
+    /**
+     * @notice 获取推荐统计信息
+     */
+    function getReferralStats(address user) external view returns (
+        address referrer,
+        uint256 totalReferred,
+        uint256 totalEarned,
+        uint256 pendingRewards,
+        uint256 refereeStakedUSD,
+        uint8 tier,
+        uint16 currentRate
+    ) {
+        ReferralInfo storage info = referralInfo[user];
+        return (
+            referrers[user],
+            info.totalReferred,
+            info.totalEarned,
+            info.pendingRewards,
+            info.refereeStakedUSD,
+            getReferralTier(user),
+            getReferralRate(user)
+        );
+    }
+
+    /**
+     * @notice 获取推荐人的被推荐人列表
+     */
+    function getReferees(address referrer) external view returns (address[] memory) {
+        return referees[referrer];
+    }
+
+    /**
+     * @notice 更新推荐返佣配置（仅管理员）
+     */
+    function updateReferralConfig(
+        uint16[5] calldata rates,
+        uint16[5] calldata tiers,
+        uint16 _inviteeBonus,
+        bool _enabled
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(rates[0] <= 2000, "Rate too high"); // max 20%
+        
+        referralRates = rates;
+        referralTiers = tiers;
+        inviteeBonus = _inviteeBonus;
+        referralEnabled = _enabled;
+        
+        emit ReferralRatesUpdated(rates, tiers);
+    }
+
+    /**
+     * @notice 内部函数：处理推荐返佣
+     * @dev 在质押时调用
+     */
+    function _processReferralReward(address staker, uint256 stakeValueUSD) internal {
+        if (!referralEnabled) return;
+        
+        address referrer = referrers[staker];
+        if (referrer == address(0)) return;
+        
+        // 计算推荐人返佣
+        uint16 rate = getReferralRate(referrer);
+        uint256 referrerReward = (stakeValueUSD * rate) / BASIS_POINTS;
+        
+        if (referrerReward > 0) {
+            referralInfo[referrer].pendingRewards += referrerReward;
+            referralInfo[referrer].totalEarned += referrerReward;
+            referralInfo[referrer].refereeStakedUSD += stakeValueUSD;
+            
+            emit ReferralRewardEarned(referrer, staker, referrerReward, stakeValueUSD);
+        }
     }
 
     // 接收 ETH
