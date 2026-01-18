@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
-import { Bell, Search, X, Menu, Globe, Sun, Moon, Monitor } from 'lucide-react';
+import { Bell, Search, X, Menu, Sun, Moon, Monitor } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { NotificationCenter } from '@/components/notifications';
 import Image from 'next/image';
@@ -16,7 +16,7 @@ export function Header() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const { isCollapsed, toggleMobileOpen } = useSidebarStore();
-  const { t, language, toggleLanguage } = useTranslation();
+  const { t } = useTranslation();
   const { theme, cycleTheme } = useTheme();
 
   // Theme icon based on current theme
@@ -186,17 +186,6 @@ export function Header() {
             title={`当前主题: ${theme === 'dark' ? '深色' : theme === 'light' ? '浅色' : '跟随系统'}`}
           >
             <ThemeIcon className="h-4 w-4" />
-          </Button>
-
-          {/* Language Switcher */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={toggleLanguage}
-            className="gap-1.5 px-2"
-          >
-            <Globe className="h-4 w-4" />
-            <span className="text-xs font-medium">{language === 'en' ? 'EN' : '中'}</span>
           </Button>
 
           <ConnectButton
