@@ -4,7 +4,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { useState, useEffect } from 'react';
 
-export type Language = 'en' | 'zh';
+export type Language = 'en';
 
 interface LanguageState {
   language: Language;
@@ -22,13 +22,13 @@ export const useLanguageStore = create<LanguageState>()(
           document.documentElement.lang = lang;
         }
       },
-      toggleLanguage: () => set((state) => {
-        const newLang = state.language === 'en' ? 'zh' : 'en';
+      toggleLanguage: () => {
+        // English only, no toggle needed
+        set({ language: 'en' });
         if (typeof document !== 'undefined') {
-          document.documentElement.lang = newLang;
+          document.documentElement.lang = 'en';
         }
-        return { language: newLang };
-      }),
+      },
     }),
     {
       name: 'language-state',

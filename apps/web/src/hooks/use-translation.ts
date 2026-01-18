@@ -6,11 +6,12 @@ import { translations } from '@/lib/i18n/translations';
 export function useTranslation() {
   const { language, setLanguage, toggleLanguage, isHydrated } = useLanguage();
   
-  const t = translations[language];
+  // Always use English translations
+  const t = translations.en;
   
   return {
     t,
-    language,
+    language: 'en' as const,
     setLanguage,
     toggleLanguage,
     isHydrated,
@@ -18,6 +19,6 @@ export function useTranslation() {
 }
 
 export function useT() {
-  const { language } = useLanguage();
-  return translations[language];
+  // Always return English translations
+  return translations.en;
 }

@@ -43,44 +43,44 @@ import {
   type FundAllocation,
 } from '@/hooks/use-admin-contract';
 
-// 管理功能模块 (移除了推荐和信誉)
+// Admin modules
 const ADMIN_MODULES = [
   {
     id: 'tokens',
-    name: '代币管理',
+    name: 'Token Management',
     icon: Coins,
-    description: '添加、更新、移除质押代币',
+    description: 'Add, update, remove staking tokens',
     color: 'text-yellow-500',
   },
   {
     id: 'insurance',
-    name: '保险管理',
+    name: 'Insurance Management',
     icon: Shield,
-    description: '创建保险产品、处理理赔',
+    description: 'Create insurance products, process claims',
     color: 'text-blue-500',
   },
   {
     id: 'funds',
-    name: '资金分配',
+    name: 'Fund Allocation',
     icon: TrendingUp,
-    description: '管理资金分配比例',
+    description: 'Manage fund allocation ratios',
     color: 'text-green-500',
   },
   {
     id: 'system',
-    name: '系统控制',
+    name: 'System Control',
     icon: Settings,
-    description: '暂停/恢复合约',
+    description: 'Pause/resume contracts',
     color: 'text-purple-500',
   },
 ];
 
-// 保险类型
+// Insurance types
 const INSURANCE_TYPES = [
-  { value: 0, label: 'Rug Pull 保护', icon: '🚨' },
-  { value: 1, label: '价格下跌保护', icon: '📉' },
-  { value: 2, label: '智能合约保障', icon: '🔒' },
-  { value: 3, label: '综合保障', icon: '🛡️' },
+  { value: 0, label: 'Rug Pull Protection', icon: '🚨' },
+  { value: 1, label: 'Price Drop Protection', icon: '📉' },
+  { value: 2, label: 'Smart Contract Coverage', icon: '🔒' },
+  { value: 3, label: 'Comprehensive Coverage', icon: '🛡️' },
 ];
 
 export default function AdminPage() {
@@ -103,7 +103,7 @@ export default function AdminPage() {
   const [error, setError] = useState<string | null>(null);
   const [walletType, setWalletType] = useState<'solana' | 'evm'>('evm');
 
-  // 表单状态
+  // Form state
   const [newToken, setNewToken] = useState<Partial<TokenConfig>>({
     tokenName: '',
     decimals: 18,
@@ -128,13 +128,13 @@ export default function AdminPage() {
     reserveRatio: 1000,
   });
 
-  // 检查管理员登录状态
+  // Check admin login status
   useEffect(() => {
     const checkAdminStatus = async () => {
       setIsLoading(true);
       setError(null);
 
-      // 检查是否有有效的管理员token
+      // Check if there is a valid admin token
       const info = getAdminInfo();
       if (info && !isAdminTokenExpired()) {
         try {
@@ -162,13 +162,13 @@ export default function AdminPage() {
     checkAdminStatus();
   }, []);
 
-  // 检查合约 Owner 权限
+  // Check contract Owner permissions
   const isContractAdmin = adminContract.isAdmin;
 
-  // 处理 EVM 管理员登录
+  // Handle EVM admin login
   const handleEvmLogin = useCallback(async () => {
     if (!evmConnected || !evmAddress) {
-      setError('请先连接 EVM 钱包');
+      setError('Please connect EVM wallet first');
       return;
     }
 
@@ -177,12 +177,12 @@ export default function AdminPage() {
 
     try {
       const timestamp = Date.now();
-      const message = `PopCowDefi Admin Login\n\nWallet: ${evmAddress}\nTimestamp: ${timestamp}\n\n请签名以验证您的管理员身份`;
+      const message = `PopCowDefi Admin Login\n\nWallet: ${evmAddress}\nTimestamp: ${timestamp}\n\nPlease sign to verify your admin identity`;
 
-      // 签名消息
+      // Sign message
       const signature = await evmSignMessage({ message });
 
-      // 调用登录API
+      // Call login API
       const adminInfo = await adminLogin(
         evmAddress,
         'bnb', // BSC chain
@@ -193,7 +193,7 @@ export default function AdminPage() {
       setAdminInfo(adminInfo);
       setIsAdmin(true);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : '登录失败';
+      const errorMessage = err instanceof Error ? err.message : 'Login failed';
       setError(errorMessage);
       setIsAdmin(false);
       setAdminInfo(null);
@@ -202,10 +202,10 @@ export default function AdminPage() {
     }
   }, [evmConnected, evmAddress, evmSignMessage]);
 
-  // 处理 Solana 管理员登录
+  // Handle Solana admin login
   const handleSolanaLogin = useCallback(async () => {
     if (!solanaConnected || !solanaPublicKey || !solanaSignMessage) {
-      setError('请先连接 Solana 钱包');
+      setError('Please connect Solana wallet first');
       return;
     }
 
@@ -215,14 +215,14 @@ export default function AdminPage() {
     try {
       const walletAddress = solanaPublicKey.toBase58();
       const timestamp = Date.now();
-      const message = `PopCowDefi Admin Login\n\nWallet: ${walletAddress}\nTimestamp: ${timestamp}\n\n请签名以验证您的管理员身份`;
+      const message = `PopCowDefi Admin Login\n\nWallet: ${walletAddress}\nTimestamp: ${timestamp}\n\nPlease sign to verify your admin identity`;
 
-      // 签名消息
+      // Sign message
       const encodedMessage = new TextEncoder().encode(message);
       const signatureBytes = await solanaSignMessage(encodedMessage);
       const signature = Buffer.from(signatureBytes).toString('base64');
 
-      // 调用登录API
+      // Call login API
       const adminInfo = await adminLogin(
         walletAddress,
         'solana',
@@ -233,7 +233,7 @@ export default function AdminPage() {
       setAdminInfo(adminInfo);
       setIsAdmin(true);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : '登录失败';
+      const errorMessage = err instanceof Error ? err.message : 'Login failed';
       setError(errorMessage);
       setIsAdmin(false);
       setAdminInfo(null);
@@ -242,7 +242,7 @@ export default function AdminPage() {
     }
   }, [solanaConnected, solanaPublicKey, solanaSignMessage]);
 
-  // 处理登出
+  // Handle logout
   const handleLogout = useCallback(async () => {
     try {
       await adminLogout();
@@ -253,10 +253,10 @@ export default function AdminPage() {
     }
   }, []);
 
-  // 添加代币
+  // Add token
   const handleAddToken = async () => {
     if (!newToken.address || !newToken.tokenName || !newToken.priceFeed) {
-      setError('请填写所有必填字段');
+      setError('Please fill in all required fields');
       return;
     }
 
@@ -272,14 +272,14 @@ export default function AdminPage() {
         minStakeAmount: '100',
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : '添加代币失败');
+      setError(err instanceof Error ? err.message : 'Failed to add token');
     }
   };
 
-  // 创建保险产品
+  // Create insurance product
   const handleCreateProduct = async () => {
     if (!newProduct.minCoverage || !newProduct.maxCoverage) {
-      setError('请填写所有必填字段');
+      setError('Please fill in all required fields');
       return;
     }
 
@@ -296,38 +296,38 @@ export default function AdminPage() {
         durationDays: 30,
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : '创建产品失败');
+      setError(err instanceof Error ? err.message : 'Failed to create product');
     }
   };
 
-  // 更新资金分配
+  // Update fund allocation
   const handleUpdateFunds = async () => {
     try {
       await adminContract.updateFunds.updateAllocation(fundAllocation);
       setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : '更新失败');
+      setError(err instanceof Error ? err.message : 'Update failed');
     }
   };
 
-  // 加载状态
+  // Loading state
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
         <Loader2 className="h-12 w-12 text-primary animate-spin" />
-        <p className="text-muted-foreground">正在验证管理员权限...</p>
+        <p className="text-muted-foreground">Verifying admin permissions...</p>
       </div>
     );
   }
 
-  // 未连接钱包
+  // Wallet not connected
   if (!evmConnected && !solanaConnected) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-6">
         <AlertTriangle className="h-12 w-12 text-muted-foreground" />
-        <h2 className="text-2xl font-bold">管理员登录</h2>
+        <h2 className="text-2xl font-bold">Admin Login</h2>
         <p className="text-muted-foreground text-center max-w-md">
-          请连接钱包以访问管理系统。支持 BSC (EVM) 和 Solana 钱包。
+          Please connect your wallet to access the admin system. Supports BSC (EVM) and Solana wallets.
         </p>
         
         <div className="flex flex-col sm:flex-row gap-4">
@@ -348,14 +348,14 @@ export default function AdminPage() {
     );
   }
 
-  // 未登录或没有管理员权限 - 显示登录界面
+  // Not logged in or no admin permissions - show login interface
   if (!isAdmin || !adminInfo) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-6">
         <Shield className="h-12 w-12 text-primary" />
-        <h2 className="text-2xl font-bold">管理员登录</h2>
+        <h2 className="text-2xl font-bold">Admin Login</h2>
         <p className="text-muted-foreground text-center max-w-md">
-          请使用管理员钱包签名登录。如果您是合约 Owner，将自动获得管理权限。
+          Please sign in with your admin wallet. If you are the contract Owner, you will automatically get admin permissions.
         </p>
 
         {error && (
@@ -364,16 +364,16 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* 合约 Owner 快速登录提示 */}
+        {/* Contract Owner quick login hint */}
         {isContractAdmin && (
           <div className="bg-green-500/10 text-green-500 px-4 py-3 rounded-md text-sm flex items-center gap-2">
             <CheckCircle className="h-4 w-4" />
-            检测到您是合约 Owner，可直接登录
+            Detected as contract Owner, you can login directly
           </div>
         )}
 
         <div className="flex flex-col gap-4">
-          {/* EVM 登录 */}
+          {/* EVM login */}
           {evmConnected && (
             <div className="flex flex-col items-center gap-2">
               <p className="text-sm text-muted-foreground font-mono">
@@ -387,19 +387,19 @@ export default function AdminPage() {
                 {isLoggingIn ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    登录中...
+                    Logging in...
                   </>
                 ) : (
                   <>
                     <Shield className="h-4 w-4 mr-2" />
-                    BSC 管理员登录
+                    BSC Admin Login
                   </>
                 )}
               </Button>
             </div>
           )}
 
-          {/* Solana 登录 */}
+          {/* Solana login */}
           {solanaConnected && (
             <div className="flex flex-col items-center gap-2">
               <p className="text-sm text-muted-foreground font-mono">
@@ -414,12 +414,12 @@ export default function AdminPage() {
                 {isLoggingIn ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    登录中...
+                    Logging in...
                   </>
                 ) : (
                   <>
                     <Shield className="h-4 w-4 mr-2" />
-                    Solana 管理员登录
+                    Solana Admin Login
                   </>
                 )}
               </Button>
@@ -442,21 +442,21 @@ export default function AdminPage() {
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight flex items-center gap-2">
             <Settings className="h-7 w-7 sm:h-8 sm:w-8 text-primary" />
-            管理员控制台
+            Admin Console
           </h1>
           <p className="text-muted-foreground mt-1 text-sm sm:text-base">
-            管理 PopCowDefi 平台配置
+            Manage PopCowDefi platform configuration
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <Badge variant="outline" className="bg-green-500/10 text-green-500">
             <CheckCircle className="h-3 w-3 mr-1" />
-            {adminInfo.role === 'super_admin' ? '超级管理员' : 
-             adminInfo.role === 'admin' ? '管理员' : '操作员'}
+            {adminInfo.role === 'super_admin' ? 'Super Admin' : 
+             adminInfo.role === 'admin' ? 'Admin' : 'Operator'}
           </Badge>
           {isContractAdmin && (
             <Badge variant="outline" className="bg-yellow-500/10 text-yellow-500">
-              合约 Owner
+              Contract Owner
             </Badge>
           )}
           <Button
@@ -466,7 +466,7 @@ export default function AdminPage() {
             className="flex items-center gap-2"
           >
             <LogOut className="h-4 w-4" />
-            登出
+            Logout
           </Button>
         </div>
       </div>
@@ -489,22 +489,22 @@ export default function AdminPage() {
           ))}
         </TabsList>
 
-        {/* 代币管理 */}
+        {/* Token management */}
         <TabsContent value="tokens" className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Coins className="h-5 w-5 text-yellow-500" />
-                添加可质押代币
+                Add Stakable Token
               </CardTitle>
               <CardDescription>
-                添加新的代币到质押池
+                Add a new token to the staking pool
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label>代币地址</Label>
+                  <Label>Token Address</Label>
                   <Input
                     placeholder="0x..."
                     value={newToken.address || ''}
@@ -512,7 +512,7 @@ export default function AdminPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>代币名称</Label>
+                  <Label>Token Name</Label>
                   <Input
                     placeholder="Four.meme Token"
                     value={newToken.tokenName || ''}
@@ -520,7 +520,7 @@ export default function AdminPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>小数位</Label>
+                  <Label>Decimals</Label>
                   <Input
                     type="number"
                     value={newToken.decimals || 18}
@@ -528,7 +528,7 @@ export default function AdminPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>基础 APY (基点, 1000 = 10%)</Label>
+                  <Label>Base APY (basis points, 1000 = 10%)</Label>
                   <Input
                     type="number"
                     value={newToken.baseApy || 1000}
@@ -536,7 +536,7 @@ export default function AdminPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>奖励倍数 (100 = 1x)</Label>
+                  <Label>Reward Multiplier (100 = 1x)</Label>
                   <Input
                     type="number"
                     value={newToken.rewardMultiplier || 100}
@@ -544,14 +544,14 @@ export default function AdminPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>最小质押数量</Label>
+                  <Label>Min Stake Amount</Label>
                   <Input
                     value={newToken.minStakeAmount || '100'}
                     onChange={(e) => setNewToken({ ...newToken, minStakeAmount: e.target.value })}
                   />
                 </div>
                 <div className="space-y-2 sm:col-span-2">
-                  <Label>Chainlink 价格喂价地址</Label>
+                  <Label>Chainlink Price Feed Address</Label>
                   <Input
                     placeholder="0x..."
                     value={newToken.priceFeed || ''}
@@ -569,28 +569,28 @@ export default function AdminPage() {
                 ) : (
                   <Plus className="h-4 w-4 mr-2" />
                 )}
-                添加代币
+                Add Token
               </Button>
             </CardContent>
           </Card>
         </TabsContent>
 
-        {/* 保险管理 */}
+        {/* Insurance management */}
         <TabsContent value="insurance" className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Shield className="h-5 w-5 text-blue-500" />
-                创建保险产品
+                Create Insurance Product
               </CardTitle>
               <CardDescription>
-                创建新的保险产品类型
+                Create a new insurance product type
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label>产品类型</Label>
+                  <Label>Product Type</Label>
                   <select
                     className="w-full p-2 rounded-md border bg-background"
                     value={newProduct.productType}
@@ -604,7 +604,7 @@ export default function AdminPage() {
                   </select>
                 </div>
                 <div className="space-y-2">
-                  <Label>有效期 (天)</Label>
+                  <Label>Duration (days)</Label>
                   <Input
                     type="number"
                     value={newProduct.durationDays || 30}
@@ -612,7 +612,7 @@ export default function AdminPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>保费率 (基点, 500 = 5%)</Label>
+                  <Label>Premium Rate (basis points, 500 = 5%)</Label>
                   <Input
                     type="number"
                     value={newProduct.premiumRate || 500}
@@ -620,7 +620,7 @@ export default function AdminPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>赔付率 (基点, 8000 = 80%)</Label>
+                  <Label>Coverage Rate (basis points, 8000 = 80%)</Label>
                   <Input
                     type="number"
                     value={newProduct.coverageRate || 8000}
@@ -628,14 +628,14 @@ export default function AdminPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>最小保额 (USD)</Label>
+                  <Label>Min Coverage (USD)</Label>
                   <Input
                     value={newProduct.minCoverage || '100'}
                     onChange={(e) => setNewProduct({ ...newProduct, minCoverage: e.target.value })}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>最大保额 (USD)</Label>
+                  <Label>Max Coverage (USD)</Label>
                   <Input
                     value={newProduct.maxCoverage || '10000'}
                     onChange={(e) => setNewProduct({ ...newProduct, maxCoverage: e.target.value })}
@@ -652,29 +652,29 @@ export default function AdminPage() {
                 ) : (
                   <Plus className="h-4 w-4 mr-2" />
                 )}
-                创建产品
+                Create Product
               </Button>
             </CardContent>
           </Card>
         </TabsContent>
 
-        {/* 资金分配管理 */}
+        {/* Fund allocation management */}
         <TabsContent value="funds" className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <TrendingUp className="h-5 w-5 text-green-500" />
-                资金分配比例
+                Fund Allocation Ratio
               </CardTitle>
               <CardDescription>
-                调整质押资金的分配比例 (总和必须为 100%)
+                Adjust the allocation ratio of staking funds (total must be 100%)
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <Card className="bg-blue-500/5 border-blue-500/20">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-sm text-blue-500">开发资金</CardTitle>
+                    <CardTitle className="text-sm text-blue-500">Dev Fund</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <Input
@@ -691,7 +691,7 @@ export default function AdminPage() {
                 </Card>
                 <Card className="bg-green-500/5 border-green-500/20">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-sm text-green-500">流动性资金</CardTitle>
+                    <CardTitle className="text-sm text-green-500">Liquidity Fund</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <Input
@@ -708,7 +708,7 @@ export default function AdminPage() {
                 </Card>
                 <Card className="bg-yellow-500/5 border-yellow-500/20">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-sm text-yellow-500">奖励资金</CardTitle>
+                    <CardTitle className="text-sm text-yellow-500">Reward Fund</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <Input
@@ -725,7 +725,7 @@ export default function AdminPage() {
                 </Card>
                 <Card className="bg-purple-500/5 border-purple-500/20">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-sm text-purple-500">储备资金</CardTitle>
+                    <CardTitle className="text-sm text-purple-500">Reserve Fund</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <Input
@@ -743,7 +743,7 @@ export default function AdminPage() {
               </div>
               <div className="flex items-center justify-between">
                 <p className="text-sm text-muted-foreground">
-                  总计: {(fundAllocation.devFundRatio + fundAllocation.liquidityRatio + 
+                  Total: {(fundAllocation.devFundRatio + fundAllocation.liquidityRatio + 
                          fundAllocation.rewardRatio + fundAllocation.reserveRatio) / 100}%
                 </p>
                 <Button 
@@ -756,29 +756,29 @@ export default function AdminPage() {
                   ) : (
                     <RefreshCw className="h-4 w-4 mr-2" />
                   )}
-                  更新分配
+                  Update Allocation
                 </Button>
               </div>
             </CardContent>
           </Card>
         </TabsContent>
 
-        {/* 系统控制 */}
+        {/* System control */}
         <TabsContent value="system" className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
-            {/* 质押合约控制 */}
+            {/* Staking contract control */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Coins className="h-5 w-5 text-yellow-500" />
-                  质押合约
+                  Staking Contract
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm">合约状态</span>
+                  <span className="text-sm">Contract Status</span>
                   <Badge variant={adminContract.stakingPaused ? 'destructive' : 'default'}>
-                    {adminContract.stakingPaused ? '已暂停' : '运行中'}
+                    {adminContract.stakingPaused ? 'Paused' : 'Running'}
                   </Badge>
                 </div>
                 <Button
@@ -794,24 +794,24 @@ export default function AdminPage() {
                   ) : (
                     <Pause className="h-4 w-4 mr-2" />
                   )}
-                  {adminContract.stakingPaused ? '恢复合约' : '暂停合约'}
+                  {adminContract.stakingPaused ? 'Resume Contract' : 'Pause Contract'}
                 </Button>
               </CardContent>
             </Card>
 
-            {/* 保险合约控制 */}
+            {/* Insurance contract control */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Shield className="h-5 w-5 text-blue-500" />
-                  保险合约
+                  Insurance Contract
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm">合约状态</span>
+                  <span className="text-sm">Contract Status</span>
                   <Badge variant={adminContract.insurancePaused ? 'destructive' : 'default'}>
-                    {adminContract.insurancePaused ? '已暂停' : '运行中'}
+                    {adminContract.insurancePaused ? 'Paused' : 'Running'}
                   </Badge>
                 </div>
                 <Button
@@ -827,41 +827,41 @@ export default function AdminPage() {
                   ) : (
                     <Pause className="h-4 w-4 mr-2" />
                   )}
-                  {adminContract.insurancePaused ? '恢复合约' : '暂停合约'}
+                  {adminContract.insurancePaused ? 'Resume Contract' : 'Pause Contract'}
                 </Button>
               </CardContent>
             </Card>
           </div>
 
-          {/* 系统状态 */}
+          {/* System status */}
           <Card>
             <CardHeader>
-              <CardTitle>系统状态总览</CardTitle>
+              <CardTitle>System Status Overview</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-                  <span className="text-sm text-muted-foreground">BSC 质押池</span>
+                  <span className="text-sm text-muted-foreground">BSC Staking Pool</span>
                   <Badge variant="outline" className={adminContract.stakingPaused ? 'bg-red-500/10 text-red-500' : 'bg-green-500/10 text-green-500'}>
-                    {adminContract.stakingPaused ? '暂停' : '运行中'}
+                    {adminContract.stakingPaused ? 'Paused' : 'Running'}
                   </Badge>
                 </div>
                 <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-                  <span className="text-sm text-muted-foreground">BSC 保险</span>
+                  <span className="text-sm text-muted-foreground">BSC Insurance</span>
                   <Badge variant="outline" className={adminContract.insurancePaused ? 'bg-red-500/10 text-red-500' : 'bg-green-500/10 text-green-500'}>
-                    {adminContract.insurancePaused ? '暂停' : '运行中'}
+                    {adminContract.insurancePaused ? 'Paused' : 'Running'}
                   </Badge>
                 </div>
                 <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
                   <span className="text-sm text-muted-foreground">Chainlink</span>
                   <Badge variant="outline" className="bg-blue-500/10 text-blue-500">
-                    已集成
+                    Integrated
                   </Badge>
                 </div>
                 <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
                   <span className="text-sm text-muted-foreground">Pyth (Solana)</span>
                   <Badge variant="outline" className="bg-purple-500/10 text-purple-500">
-                    已集成
+                    Integrated
                   </Badge>
                 </div>
               </div>
