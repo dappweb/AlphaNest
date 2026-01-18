@@ -24,26 +24,15 @@ const footerLinks = [
   {
     title: 'Product',
     links: [
-      { name: 'Trade', href: '/trade' },
+      { name: 'Staking', href: '/staking' },
       { name: 'Insurance', href: '/insurance' },
-      { name: 'Points', href: '/points' },
-      { name: 'Bots', href: '/bots' },
-    ],
-  },
-  {
-    title: 'Resources',
-    links: [
-      { name: 'Docs', href: 'https://app.popcow.xyz/docs', external: true },
-      { name: 'API', href: 'https://alphanest-api.dappweb.workers.dev', external: true },
-      { name: 'Whitepaper', href: '/PopCow-Whitepaper.pdf', external: true },
     ],
   },
   {
     title: 'Community',
     links: [
       { name: 'Referral', href: '/referral' },
-      { name: 'Dev Rankings', href: '/devs' },
-      { name: 'Leaderboard', href: '/points' },
+      { name: 'Docs', href: 'https://docs.popcow.xyz', external: true },
     ],
   },
   {
@@ -51,12 +40,11 @@ const footerLinks = [
     links: [
       { name: 'Terms', href: '/terms' },
       { name: 'Privacy', href: '/privacy' },
-      { name: 'Risk', href: '/risk' },
     ],
   },
 ];
 
-const chains = ['Base', 'Solana', 'Ethereum'];
+const chains = ['BSC', 'Solana'];
 
 function FooterLink({ href, name, external }: { href: string; name: string; external?: boolean }) {
   const className = "text-sm text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-1";
@@ -77,7 +65,7 @@ export function Footer({ className }: { className?: string }) {
   return (
     <footer className={`border-t bg-background/50 backdrop-blur-sm ${className || ''}`}>
       <div className="mx-auto max-w-7xl px-6 py-10">
-        <div className="grid grid-cols-2 gap-8 md:grid-cols-5">
+        <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
           {/* Brand */}
           <div className="col-span-2 md:col-span-1">
             <div className="flex items-center gap-2 mb-3">
