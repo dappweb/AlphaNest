@@ -207,20 +207,12 @@ export function Sidebar() {
                     'hover:scale-[1.02] active:scale-[0.98]'
                   )}
                   onClick={(e) => {
-                    // Ensure navigation works even if tooltip interferes
                     e.stopPropagation();
                   }}
                 >
                   <item.icon className="h-5 w-5 flex-shrink-0" />
                   {!collapsed && (
-                    <>
-                      <span className="flex-1 truncate">{item.name}</span>
-                      {item.badge && (
-                        <Badge variant={item.badge.variant} className="text-xs">
-                          {item.badge.text}
-                        </Badge>
-                      )}
-                    </>
+                    <span className="flex-1 truncate">{item.name}</span>
                   )}
                 </Link>
               );

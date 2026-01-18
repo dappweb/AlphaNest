@@ -109,6 +109,7 @@ export const chainConfigs = {
       staking: true,
       insurance: true,
       memeTokens: true,
+      memeLaunch: true,
       smartMoney: false,
     },
     dataSources: [
@@ -163,6 +164,7 @@ export const chainConfigs = {
       staking: false,
       insurance: false,
       memeTokens: true,
+      memeLaunch: false,
       smartMoney: true,
     },
     dataSources: [

@@ -741,5 +741,3 @@ export function useAdminContract() {
     },
   };
 }
-
-export type { TokenConfig, InsuranceProduct, FundAllocation };

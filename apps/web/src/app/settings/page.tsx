@@ -248,7 +248,7 @@ export default function SettingsPage() {
           <div className="space-y-2">
             <Label>Default Lock Period</Label>
             <div className="flex flex-wrap gap-2">
-              {[
+              {([
                 { value: 'flexible', label: 'Flexible (1x)', color: '' },
                 { value: '30', label: '30 Days (1.5x)', color: '' },
                 { value: '90', label: '90 Days (2x)', color: '' },
