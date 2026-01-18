@@ -2,14 +2,15 @@
  * Solana Multi-Asset Staking Hooks
  * Solana (pump.fun) 多资产质押 - 支持 SOL 和 pump.fun 代币
  * 
- * 使用 @solana/web3.js + @coral-xyz/anchor
+ * 使用 @solana/web3.js + @coral-xyz/anchor + Helius API
  */
 
 import { useCallback, useMemo, useState, useEffect } from 'react';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 import { PublicKey, LAMPORTS_PER_SOL, SystemProgram, Connection } from '@solana/web3.js';
 import { Program, AnchorProvider, BN, Idl } from '@coral-xyz/anchor';
-import { PUMP_FUN_CONFIG } from '@/config/solana';
+import { PUMP_FUN_CONFIG, SOLANA_TOKENS } from '@/config/solana';
+import { useHeliusTokenBalances, useHeliusTokenPrice, useHeliusPumpFunTokens } from './use-helius';
 
 // Program ID - 对应 Solana 合约
 const PROGRAM_ID = new PublicKey('7qpcKQQuDYhN51PTXebV8dpWY8MxqUKeFMwwVQ1eFQ75');
@@ -257,23 +258,31 @@ export function useSolanaStakeInfo() {
 }
 
 /**
- * 获取 SOL 价格 (from Pyth Network)
- * 使用 use-pyth-price hook 获取实时价格
+ * 获取 SOL 价格 (通过 Helius/Jupiter API)
+ * 优先使用 Helius API, 回退到 Pyth Network
  */
 export function useSolPrice() {
-  // 导入 Pyth price hook
-  // 注意: 实际使用时需要确保 SolanaProvider 已包装应用
-  const [price, setPrice] = useState<number>(150); // 默认回退价格
+  const heliusPrice = useHeliusTokenPrice(SOLANA_TOKENS.SOL);
+  const [price, setPrice] = useState<number>(150);
   const [isLoading, setIsLoading] = useState(false);
   const [isStale, setIsStale] = useState(false);
   const { connection } = useConnection();
 
-  const fetchPrice = useCallback(async () => {
+  // 优先使用 Helius 价格
+  useEffect(() => {
+    if (heliusPrice.price && heliusPrice.price.price > 0) {
+      setPrice(heliusPrice.price.price);
+      setIsStale(false);
+      return;
+    }
+    
+    // 回退到 Pyth
+    fetchPythPrice();
+  }, [heliusPrice.price]);
+
+  const fetchPythPrice = useCallback(async () => {
     setIsLoading(true);
     try {
-      // 从 Pyth Network 获取价格
-      // Pyth SOL/USD Price Feed: H6ARHf6YXhGYeQfUzQNGk6rDNnLBQKrenN712K4AQJEG (Mainnet)
-      // Pyth SOL/USD Price Feed: J83w4HKfqxwcq3BEMMkPFSppX3gqekLyLJBexebFVkix (Devnet)
       const { getCurrentPriceFeeds } = await import('@/config/solana');
       const priceFeeds = getCurrentPriceFeeds();
       const priceFeedAccount = new PublicKey(priceFeeds.SOL_USD);
@@ -281,7 +290,6 @@ export function useSolPrice() {
       const accountInfo = await connection.getAccountInfo(priceFeedAccount);
       
       if (accountInfo && accountInfo.data.length >= 200) {
-        // 简化的价格解析 - 实际建议使用 @pythnetwork/client
         const view = new DataView(accountInfo.data.buffer, accountInfo.data.byteOffset);
         const expo = view.getInt32(20, true);
         const priceRaw = view.getBigInt64(208, true);
@@ -290,7 +298,6 @@ export function useSolPrice() {
         const scale = Math.pow(10, expo);
         const priceUsd = Number(priceRaw) * scale;
         
-        // 检查价格是否过期 (>60秒)
         const now = Date.now() / 1000;
         const isOld = now - Number(publishTime) > 60;
         
@@ -301,26 +308,28 @@ export function useSolPrice() {
         }
       }
       
-      // 回退到默认价格
       setPrice(150);
       setIsStale(true);
     } catch (err) {
       console.error('Failed to fetch SOL price from Pyth:', err);
-      setPrice(150); // fallback
+      setPrice(150);
       setIsStale(true);
     } finally {
       setIsLoading(false);
     }
   }, [connection]);
 
-  useEffect(() => {
-    fetchPrice();
-    // 每 30 秒更新价格
-    const interval = setInterval(fetchPrice, 30000);
-    return () => clearInterval(interval);
-  }, [fetchPrice]);
+  const refetch = useCallback(() => {
+    heliusPrice.refetch();
+  }, [heliusPrice.refetch]);
 
-  return { price, isLoading, isStale, refetch: fetchPrice };
+  return { 
+    price, 
+    isLoading: isLoading || heliusPrice.isLoading, 
+    isStale, 
+    priceChange24h: heliusPrice.price?.priceChange24h,
+    refetch 
+  };
 }
 
 /**
@@ -550,13 +559,18 @@ export function useSolanaEarlyBirdBonus() {
 
 /**
  * 组合 Hook - Solana (pump.fun) 完整多资产质押管理
+ * 集成 Helius API 获取实时余额和价格
  */
 export function useSolanaStaking() {
   const { isSolanaConnected, publicKey } = useSolanaWallet();
   const { poolInfo, isLoading: loadingPool, refetch: refetchPool } = useSolanaPoolInfo();
   const { stakeInfo, isLoading: loadingStake, refetch: refetchStake } = useSolanaStakeInfo();
-  const { price: solPrice, isLoading: loadingPrice, refetch: refetchPrice } = useSolPrice();
+  const { price: solPrice, isLoading: loadingPrice, priceChange24h, refetch: refetchPrice } = useSolPrice();
   const { bonus: earlyBirdBonus } = useSolanaEarlyBirdBonus();
+
+  // Helius API 集成
+  const heliusBalances = useHeliusTokenBalances(publicKey?.toBase58());
+  const pumpFunTokens = useHeliusPumpFunTokens(publicKey?.toBase58());
 
   const stakeSolAction = useStakeSol();
   const stakeTokenAction = useStakeToken();
@@ -567,7 +581,15 @@ export function useSolanaStaking() {
     refetchPool();
     refetchStake();
     refetchPrice();
-  }, [refetchPool, refetchStake, refetchPrice]);
+    heliusBalances.refetch();
+    pumpFunTokens.refetch();
+  }, [refetchPool, refetchStake, refetchPrice, heliusBalances.refetch, pumpFunTokens.refetch]);
+
+  // 计算总质押价值 (SOL + pump.fun 代币)
+  const totalStakedValueUsd = useMemo(() => {
+    const solValue = (stakeInfo?.stakedValueUsd || 0);
+    return solValue;
+  }, [stakeInfo]);
 
   return {
     // User state
@@ -578,10 +600,18 @@ export function useSolanaStaking() {
     // Pool state
     poolInfo,
     solPrice,
+    solPriceChange24h: priceChange24h,
     earlyBirdBonus,
+    totalStakedValueUsd,
+    
+    // Helius 数据
+    balances: heliusBalances.balances,
+    solBalance: heliusBalances.solBalance,
+    getBalance: heliusBalances.getBalance,
+    pumpFunTokens: pumpFunTokens.tokens,
     
     // Loading states
-    isLoading: loadingPool || loadingStake || loadingPrice,
+    isLoading: loadingPool || loadingStake || loadingPrice || heliusBalances.isLoading,
 
     // Actions
     stakeSol: stakeSolAction,

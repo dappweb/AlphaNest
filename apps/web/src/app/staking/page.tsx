@@ -675,26 +675,36 @@ export default function StakingPage() {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
             <Card>
               <CardContent className="p-3 md:p-4">
-                <p className="text-[10px] md:text-xs text-muted-foreground font-medium">Total Staked</p>
+                <p className="text-[10px] md:text-xs text-muted-foreground font-medium">Your SOL Balance</p>
                 <p className="text-lg md:text-2xl font-bold mt-1">
-                  ${solanaStaking.poolInfo?.totalStakedValueUsd?.toLocaleString() || '0'}
+                  {solanaStaking.solBalance?.toFixed(4) || '0'} SOL
+                </p>
+                <p className="text-[10px] text-muted-foreground">
+                  ≈ ${((solanaStaking.solBalance || 0) * (solanaStaking.solPrice || 0)).toFixed(2)}
                 </p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="p-3 md:p-4">
-                <p className="text-[10px] md:text-xs text-muted-foreground font-medium">SOL Price</p>
+                <div className="flex items-center justify-between">
+                  <p className="text-[10px] md:text-xs text-muted-foreground font-medium">SOL Price</p>
+                  {solanaStaking.solPriceChange24h && (
+                    <Badge className={`text-[8px] ${solanaStaking.solPriceChange24h >= 0 ? 'bg-green-500/20 text-green-500' : 'bg-red-500/20 text-red-500'}`}>
+                      {solanaStaking.solPriceChange24h >= 0 ? '+' : ''}{solanaStaking.solPriceChange24h.toFixed(2)}%
+                    </Badge>
+                  )}
+                </div>
                 <p className="text-lg md:text-2xl font-bold text-purple-500 mt-1">
                   ${solanaStaking.solPrice?.toFixed(2) || '150'}
                 </p>
-                <p className="text-[8px] text-muted-foreground mt-0.5">via Pyth</p>
+                <p className="text-[8px] text-muted-foreground mt-0.5">via Helius/Jupiter</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="p-3 md:p-4">
                 <p className="text-[10px] md:text-xs text-muted-foreground font-medium">Your Staked</p>
                 <p className="text-lg md:text-2xl font-bold mt-1">
-                  ${solanaStaking.stakeInfo?.stakedValueUsd?.toFixed(2) || '0'}
+                  ${solanaStaking.totalStakedValueUsd?.toFixed(2) || '0'}
                 </p>
               </CardContent>
             </Card>
@@ -832,17 +842,17 @@ export default function StakingPage() {
                 </CardContent>
               </Card>
 
-              {/* Pyth 价格预言机 */}
+              {/* Helius API 状态 */}
               <Card className="border-purple-500/30 bg-gradient-to-br from-purple-500/5 to-pink-500/5">
                 <CardContent className="p-3 md:p-4">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
                       <TrendingUp className="h-4 w-4 text-purple-500" />
-                      <span className="text-sm font-medium">Pyth Oracle</span>
+                      <span className="text-sm font-medium">Helius API</span>
                     </div>
                     <Badge className="bg-green-500/20 text-green-500 border-0 text-[8px]">
                       <CheckCircle className="h-2 w-2 mr-0.5" />
-                      Active
+                      Connected
                     </Badge>
                   </div>
                   <div className="space-y-1.5 text-[10px] md:text-xs">
@@ -850,16 +860,59 @@ export default function StakingPage() {
                       <span className="text-muted-foreground">SOL Price</span>
                       <span className="font-mono">${solanaStaking.solPrice?.toFixed(2) || '150'}</span>
                     </div>
+                    {solanaStaking.solPriceChange24h && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">24h Change</span>
+                        <span className={`font-mono ${solanaStaking.solPriceChange24h >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                          {solanaStaking.solPriceChange24h >= 0 ? '+' : ''}{solanaStaking.solPriceChange24h.toFixed(2)}%
+                        </span>
+                      </div>
+                    )}
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Oracle</span>
-                      <span className="font-mono">Pyth Network</span>
+                      <span className="text-muted-foreground">Source</span>
+                      <span className="font-mono">Jupiter/Pyth</span>
                     </div>
                   </div>
                   <p className="text-[8px] text-muted-foreground mt-2">
-                    Real-time prices from Pyth Network
+                    Real-time prices via Helius API
                   </p>
                 </CardContent>
               </Card>
+
+              {/* pump.fun 代币列表 */}
+              {solanaStaking.pumpFunTokens && solanaStaking.pumpFunTokens.length > 0 && (
+                <Card>
+                  <CardHeader className="pb-2 md:pb-3">
+                    <CardTitle className="text-sm md:text-base flex items-center gap-2">
+                      <Sparkles className="h-4 w-4 text-purple-500" />
+                      Your pump.fun Tokens
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pb-3 md:pb-4">
+                    <div className="space-y-2 max-h-40 overflow-y-auto">
+                      {solanaStaking.pumpFunTokens.slice(0, 5).map((token, idx) => (
+                        <div key={idx} className="flex items-center justify-between py-1.5 border-b border-border/50 last:border-0">
+                          <div className="flex items-center gap-2">
+                            {token.image ? (
+                              <img src={token.image} alt={token.symbol} className="w-5 h-5 rounded-full" />
+                            ) : (
+                              <div className="w-5 h-5 rounded-full bg-purple-500/20 flex items-center justify-center text-[8px]">
+                                {token.symbol?.charAt(0)}
+                              </div>
+                            )}
+                            <span className="text-xs font-medium truncate max-w-[80px]">{token.symbol}</span>
+                          </div>
+                          {token.price && (
+                            <span className="text-[10px] text-muted-foreground">
+                              ${token.price.toFixed(6)}
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
               {/* pump.fun 信息 */}
               <Card className="border-purple-500/30 bg-gradient-to-br from-purple-500/5 to-pink-500/5">

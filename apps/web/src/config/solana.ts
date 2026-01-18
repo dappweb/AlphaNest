@@ -13,12 +13,17 @@ export const SOLANA_NETWORK =
     ? WalletAdapterNetwork.Devnet // soldev 使用 devnet 配置
     : WalletAdapterNetwork.Devnet;
 
-// RPC 端点
+// Helius API Key
+const HELIUS_API_KEY = process.env.NEXT_PUBLIC_HELIUS_API_KEY || '46193d76-9830-41e9-ae1a-69bc2519fa53';
+
+// RPC 端点 (优先使用 Helius)
 export const SOLANA_RPC_ENDPOINT = 
   process.env.NEXT_PUBLIC_SOLANA_RPC_URL || 
-  (process.env.NEXT_PUBLIC_SOLANA_NETWORK === 'soldev' 
-    ? 'https://api.devnet.solana.com' // 默认 soldev RPC，可通过环境变量覆盖
-    : clusterApiUrl(SOLANA_NETWORK));
+  (HELIUS_API_KEY 
+    ? `https://devnet.helius-rpc.com/?api-key=${HELIUS_API_KEY}`
+    : (process.env.NEXT_PUBLIC_SOLANA_NETWORK === 'soldev' 
+        ? 'https://api.devnet.solana.com'
+        : clusterApiUrl(SOLANA_NETWORK)));
 
 // Jupiter API 端点
 export const JUPITER_API_URL = 'https://quote-api.jup.ag/v6';
