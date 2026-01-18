@@ -1,40 +1,10 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useAccount, useReadContract, useChainId, useBalance } from 'wagmi';
-import { formatUnits } from 'viem';
+import { useWallet, useConnection } from '@solana/wallet-adapter-react';
+import { LAMPORTS_PER_SOL } from '@solana/web3.js';
 
-// ERC20 ABI
-const ERC20_ABI = [
-  {
-    name: 'balanceOf',
-    type: 'function',
-    stateMutability: 'view',
-    inputs: [{ name: 'account', type: 'address' }],
-    outputs: [{ name: '', type: 'uint256' }],
-  },
-  {
-    name: 'decimals',
-    type: 'function',
-    stateMutability: 'view',
-    inputs: [],
-    outputs: [{ name: '', type: 'uint8' }],
-  },
-  {
-    name: 'symbol',
-    type: 'function',
-    stateMutability: 'view',
-    inputs: [],
-    outputs: [{ name: '', type: 'string' }],
-  },
-  {
-    name: 'name',
-    type: 'function',
-    stateMutability: 'view',
-    inputs: [],
-    outputs: [{ name: '', type: 'string' }],
-  },
-] as const;
+// Solana 使用 SPL Token 标准，不需要 ABI
 
 export interface TokenBalance {
   address: string;
@@ -50,31 +20,16 @@ export interface TokenBalance {
   change24h?: number;
 }
 
-// Common tokens by chain
+// Common tokens on Solana
 const COMMON_TOKENS: Record<number, Array<{ address: string; symbol: string; name: string; decimals: number }>> = {
-  1: [
-    { address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', symbol: 'USDC', name: 'USD Coin', decimals: 6 },
-    { address: '0xdAC17F958D2ee523a2206206994597C13D831ec7', symbol: 'USDT', name: 'Tether', decimals: 6 },
-    { address: '0x6982508145454Ce325dDbE47a25d4ec3d2311933', symbol: 'PEPE', name: 'Pepe', decimals: 18 },
-  ],
-  8453: [
-    { address: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', symbol: 'USDC', name: 'USD Coin', decimals: 6 },
-    { address: '0x4ed4E862860beD51a9570b96d89aF5E1B0Efefed', symbol: 'DEGEN', name: 'Degen', decimals: 18 },
-    { address: '0x532f27101965dd16442E59d40670FaF5eBB142E4', symbol: 'BRETT', name: 'Brett', decimals: 18 },
-  ],
-  11155111: [
-    { address: '0xceCC6D1dA322b6AC060D3998CA58e077CB679F79', symbol: 'USDC', name: 'Mock USDC', decimals: 6 },
-  ],
-  56: [
-    { address: '0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d', symbol: 'USDC', name: 'USD Coin', decimals: 18 },
+  101: [
+    { address: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', symbol: 'USDC', name: 'USD Coin', decimals: 6 },
+    { address: 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB', symbol: 'USDT', name: 'Tether', decimals: 6 },
   ],
 };
 
 const CHAIN_NAMES: Record<number, string> = {
-  1: 'Ethereum',
-  8453: 'Base',
-  56: 'BNB Chain',
-  11155111: 'Sepolia',
+  101: 'Solana',
 };
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://alphanest-api.dappweb.workers.dev';
@@ -83,9 +38,11 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://alphanest-api.dappwe
  * Hook to fetch token balances from blockchain
  */
 export function useTokenBalances() {
-  const { address, isConnected } = useAccount();
-  const chainId = useChainId();
-  const { data: nativeBalance } = useBalance({ address });
+  const { publicKey, connected } = useWallet();
+  const { connection } = useConnection();
+  const address = publicKey?.toBase58() || null;
+  const isConnected = connected;
+  const chainId = 101; // Solana chain ID
   const [balances, setBalances] = useState<TokenBalance[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -95,7 +52,7 @@ export function useTokenBalances() {
       if (!address) return null;
 
       try {
-        // Read balance from API
+        // Read balance from API (Solana)
         const balanceResponse = await fetch(
           `${API_URL}/api/v1/blockchain/balance?address=${address}&token=${token.address}&chainId=${chainId}`
         );
@@ -104,7 +61,9 @@ export function useTokenBalances() {
           const data = await balanceResponse.json();
           if (data.success && data.data.balance) {
             const balanceBigInt = BigInt(data.data.balance);
-            const balanceFormatted = formatUnits(balanceBigInt, token.decimals);
+            // Solana tokens typically use 6-9 decimals
+            const divisor = BigInt(10 ** token.decimals);
+            const balanceFormatted = (Number(balanceBigInt) / Number(divisor)).toFixed(token.decimals);
             
             // Only return if balance > 0
             if (parseFloat(balanceFormatted) > 0) {
@@ -115,7 +74,7 @@ export function useTokenBalances() {
                 balance: balanceFormatted,
                 balanceRaw: balanceBigInt,
                 decimals: token.decimals,
-                chain: CHAIN_NAMES[chainId] || 'Unknown',
+                chain: 'Solana',
                 chainId,
               };
             }
@@ -171,19 +130,27 @@ export function useTokenBalances() {
           .filter((b): b is TokenBalance => b !== null)
           .map((b) => ({ ...b }));
 
-        // Add native token balance (ETH/BNB)
-        if (nativeBalance && parseFloat(nativeBalance.formatted) > 0) {
-          const nativeToken: TokenBalance = {
-            address: '0x0000000000000000000000000000000000000000',
-            symbol: nativeBalance.symbol,
-            name: CHAIN_NAMES[chainId] || 'Native',
-            balance: nativeBalance.formatted,
-            balanceRaw: nativeBalance.value,
-            decimals: 18,
-            chain: CHAIN_NAMES[chainId] || 'Unknown',
-            chainId,
-          };
-          validBalances = [nativeToken, ...validBalances];
+        // Add native token balance (SOL)
+        try {
+          if (publicKey) {
+            const solBalance = await connection.getBalance(publicKey);
+            const solBalanceFormatted = (solBalance / LAMPORTS_PER_SOL).toFixed(9);
+            if (parseFloat(solBalanceFormatted) > 0) {
+              const nativeToken: TokenBalance = {
+                address: 'So11111111111111111111111111111111111111112', // SOL mint address
+                symbol: 'SOL',
+                name: 'Solana',
+                balance: solBalanceFormatted,
+                balanceRaw: BigInt(solBalance),
+                decimals: 9,
+                chain: 'Solana',
+                chainId,
+              };
+              validBalances = [nativeToken, ...validBalances];
+            }
+          }
+        } catch (err) {
+          console.error('Error fetching SOL balance:', err);
         }
 
         // Fetch prices
@@ -221,7 +188,7 @@ export function useTokenBalances() {
     // Refresh every 30 seconds
     const interval = setInterval(loadBalances, 30000);
     return () => clearInterval(interval);
-  }, [isConnected, address, chainId, nativeBalance, fetchTokenBalance, fetchTokenPrices]);
+  }, [isConnected, address, chainId, publicKey, connection, fetchTokenBalance, fetchTokenPrices]);
 
   return {
     balances,

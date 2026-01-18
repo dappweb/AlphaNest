@@ -5,37 +5,31 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ReferralCodeCard, ReferralStats, TierList, ReferralRecords } from '@/components/referral';
-import { ChainSwitcher, useActiveChain } from '@/components/ui/chain-switcher';
+import { useActiveChain } from '@/components/ui/chain-switcher';
 import { useReferral, REFERRAL_CONFIG } from '@/hooks/use-referral';
 
 export default function ReferralPage() {
-  const { activeChain, setActiveChain, isBsc, isSolana } = useActiveChain();
+  const { isSolana } = useActiveChain();
   const { isConnected } = useReferral();
 
   return (
     <div className="space-y-4 md:space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight flex items-center gap-2">
-            <Gift className={`h-6 w-6 md:h-7 md:w-7 ${isBsc ? 'text-yellow-500' : 'text-purple-500'}`} />
-            Invite & Earn
-          </h1>
-          <p className="text-sm md:text-base text-muted-foreground mt-1">
-            Share PopCowDefi with friends and earn up to 15% commission
-          </p>
-        </div>
-        <ChainSwitcher 
-          onChainChange={(chain) => setActiveChain(chain)} 
-          defaultChain={activeChain}
-        />
+      <div>
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tight flex items-center gap-2">
+          <Gift className="h-6 w-6 md:h-7 md:w-7 text-purple-500" />
+          Invite & Earn
+        </h1>
+        <p className="text-sm md:text-base text-muted-foreground mt-1">
+          Share PopCowDefi with friends and earn up to 15% commission
+        </p>
       </div>
 
       {/* 徽章 */}
       <div className="flex items-center gap-2 flex-wrap">
-        <Badge className={`${isBsc ? 'bg-yellow-500/20 text-yellow-500 border-yellow-500/30' : 'bg-purple-500/20 text-purple-500 border-purple-500/30'} text-[10px] md:text-xs`}>
+        <Badge className="bg-purple-500/20 text-purple-500 border-purple-500/30 text-[10px] md:text-xs">
           <Zap className="h-3 w-3 mr-1" />
-          {isBsc ? 'BSC (Four.meme)' : 'Solana (pump.fun)'}
+          Solana (pump.fun)
         </Badge>
         <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/30 text-[10px] md:text-xs">
           <Shield className="h-3 w-3 mr-1" />
@@ -135,21 +129,14 @@ export default function ReferralPage() {
             </CardContent>
           </Card>
 
-          {/* 跨链支持 */}
+          {/* Solana 支持 */}
           <Card className="bg-secondary/30">
             <CardContent className="p-4">
               <div className="flex items-center gap-2 mb-3">
                 <Zap className="h-4 w-4 text-blue-500" />
-                <span className="text-sm font-medium">Multi-Chain Support</span>
+                <span className="text-sm font-medium">Solana Support</span>
               </div>
               <div className="space-y-2">
-                <div className="flex items-center gap-2 p-2 rounded bg-yellow-500/10 border border-yellow-500/20">
-                  <span className="text-base">🟡</span>
-                  <div className="flex-1">
-                    <p className="text-xs font-medium">BSC - Four.meme</p>
-                    <p className="text-[10px] text-muted-foreground">BNB, FOUR tokens</p>
-                  </div>
-                </div>
                 <div className="flex items-center gap-2 p-2 rounded bg-purple-500/10 border border-purple-500/20">
                   <span className="text-base">🟣</span>
                   <div className="flex-1">
@@ -159,7 +146,7 @@ export default function ReferralPage() {
                 </div>
               </div>
               <p className="text-[10px] text-muted-foreground mt-3">
-                Same referral code works across all supported chains
+                Referral code works on Solana network
               </p>
             </CardContent>
           </Card>

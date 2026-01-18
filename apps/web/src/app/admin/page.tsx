@@ -3,8 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
-import { useAccount, useSignMessage } from 'wagmi';
-import { ConnectButton } from '@rainbow-me/rainbowkit';
+// 项目仅支持 Solana，已移除 wagmi 和 RainbowKit
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -77,19 +76,20 @@ const ADMIN_MODULES = [
 
 // Insurance types
 const INSURANCE_TYPES = [
-  { value: 0, label: 'Rug Pull Protection', icon: '🚨' },
-  { value: 1, label: 'Price Drop Protection', icon: '📉' },
-  { value: 2, label: 'Smart Contract Coverage', icon: '🔒' },
-  { value: 3, label: 'Comprehensive Coverage', icon: '🛡️' },
+  { value: 'rug_pull', label: 'Rug Pull Protection', icon: '🚨' },
+  { value: 'price_drop', label: 'Price Drop Protection', icon: '📉' },
+  { value: 'smart_contract', label: 'Smart Contract Coverage', icon: '🔒' },
+  { value: 'comprehensive', label: 'Comprehensive Coverage', icon: '🛡️' },
 ];
 
 export default function AdminPage() {
   // Solana wallet
   const { connected: solanaConnected, publicKey: solanaPublicKey, signMessage: solanaSignMessage } = useWallet();
   
-  // EVM wallet (BSC)
-  const { address: evmAddress, isConnected: evmConnected } = useAccount();
-  const { signMessageAsync: evmSignMessage } = useSignMessage();
+  // 项目仅支持 Solana，已移除 EVM 钱包
+  const evmAddress = null;
+  const evmConnected = false;
+  const evmSignMessage = async () => { throw new Error('EVM not supported'); };
   
   // Admin contract hooks
   const adminContract = useAdminContract();
@@ -101,7 +101,7 @@ export default function AdminPage() {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [adminInfo, setAdminInfo] = useState<AdminInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [walletType, setWalletType] = useState<'solana' | 'evm'>('evm');
+  const [walletType, setWalletType] = useState<'solana' | 'evm'>('solana');
 
   // Form state
   const [newToken, setNewToken] = useState<Partial<TokenConfig>>({
@@ -113,7 +113,7 @@ export default function AdminPage() {
   });
   
   const [newProduct, setNewProduct] = useState<Partial<InsuranceProduct>>({
-    productType: 0,
+    productType: 'rug_pull', // 默认类型
     premiumRate: 500, // 5%
     coverageRate: 8000, // 80%
     minCoverage: '100',
@@ -163,44 +163,9 @@ export default function AdminPage() {
   }, []);
 
   // Check contract Owner permissions
-  const isContractAdmin = adminContract.isAdmin;
+  const isContractAdmin = adminContract.stakingOwner.isOwner || adminContract.insuranceOwner.isOwner;
 
-  // Handle EVM admin login
-  const handleEvmLogin = useCallback(async () => {
-    if (!evmConnected || !evmAddress) {
-      setError('Please connect EVM wallet first');
-      return;
-    }
-
-    setIsLoggingIn(true);
-    setError(null);
-
-    try {
-      const timestamp = Date.now();
-      const message = `PopCowDefi Admin Login\n\nWallet: ${evmAddress}\nTimestamp: ${timestamp}\n\nPlease sign to verify your admin identity`;
-
-      // Sign message
-      const signature = await evmSignMessage({ message });
-
-      // Call login API
-      const adminInfo = await adminLogin(
-        evmAddress,
-        'bnb', // BSC chain
-        signature,
-        message
-      );
-
-      setAdminInfo(adminInfo);
-      setIsAdmin(true);
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Login failed';
-      setError(errorMessage);
-      setIsAdmin(false);
-      setAdminInfo(null);
-    } finally {
-      setIsLoggingIn(false);
-    }
-  }, [evmConnected, evmAddress, evmSignMessage]);
+  // 项目仅支持 Solana，已移除 EVM 登录
 
   // Handle Solana admin login
   const handleSolanaLogin = useCallback(async () => {
@@ -288,7 +253,7 @@ export default function AdminPage() {
       setError(null);
       // Reset form
       setNewProduct({
-        productType: 0,
+        productType: 'rug_pull',
         premiumRate: 500,
         coverageRate: 8000,
         minCoverage: '100',
@@ -303,7 +268,7 @@ export default function AdminPage() {
   // Update fund allocation
   const handleUpdateFunds = async () => {
     try {
-      await adminContract.updateFunds.updateAllocation(fundAllocation);
+      await adminContract.updateAllocation.updateAllocation(fundAllocation);
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Update failed');
@@ -321,28 +286,20 @@ export default function AdminPage() {
   }
 
   // Wallet not connected
-  if (!evmConnected && !solanaConnected) {
+  if (!solanaConnected) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-6">
         <AlertTriangle className="h-12 w-12 text-muted-foreground" />
         <h2 className="text-2xl font-bold">Admin Login</h2>
         <p className="text-muted-foreground text-center max-w-md">
-          Please connect your wallet to access the admin system. Supports BSC (EVM) and Solana wallets.
+          Please connect your Solana wallet to access the admin system.
         </p>
         
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex flex-col items-center gap-2">
-            <Badge variant="outline" className="bg-yellow-500/10 text-yellow-500">
-              BSC / EVM
-            </Badge>
-            <ConnectButton />
-          </div>
-          <div className="flex flex-col items-center gap-2">
-            <Badge variant="outline" className="bg-purple-500/10 text-purple-500">
-              Solana
-            </Badge>
-            <WalletMultiButton />
-          </div>
+        <div className="flex flex-col items-center gap-2">
+          <Badge variant="outline" className="bg-purple-500/10 text-purple-500">
+            Solana
+          </Badge>
+          <WalletMultiButton />
         </div>
       </div>
     );
@@ -373,32 +330,6 @@ export default function AdminPage() {
         )}
 
         <div className="flex flex-col gap-4">
-          {/* EVM login */}
-          {evmConnected && (
-            <div className="flex flex-col items-center gap-2">
-              <p className="text-sm text-muted-foreground font-mono">
-                BSC: {evmAddress?.slice(0, 8)}...{evmAddress?.slice(-6)}
-              </p>
-              <Button 
-                onClick={handleEvmLogin} 
-                disabled={isLoggingIn}
-                className="bg-yellow-500 hover:bg-yellow-600"
-              >
-                {isLoggingIn ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Logging in...
-                  </>
-                ) : (
-                  <>
-                    <Shield className="h-4 w-4 mr-2" />
-                    BSC Admin Login
-                  </>
-                )}
-              </Button>
-            </div>
-          )}
-
           {/* Solana login */}
           {solanaConnected && (
             <div className="flex flex-col items-center gap-2">
@@ -428,7 +359,6 @@ export default function AdminPage() {
         </div>
 
         <div className="flex gap-2">
-          <ConnectButton />
           <WalletMultiButton />
         </div>
       </div>
@@ -594,7 +524,7 @@ export default function AdminPage() {
                   <select
                     className="w-full p-2 rounded-md border bg-background"
                     value={newProduct.productType}
-                    onChange={(e) => setNewProduct({ ...newProduct, productType: parseInt(e.target.value) })}
+                    onChange={(e) => setNewProduct({ ...newProduct, productType: e.target.value })}
                   >
                     {INSURANCE_TYPES.map((type) => (
                       <option key={type.value} value={type.value}>
@@ -748,10 +678,10 @@ export default function AdminPage() {
                 </p>
                 <Button 
                   onClick={handleUpdateFunds}
-                  disabled={adminContract.updateFunds.isPending}
+                  disabled={adminContract.updateAllocation.isPending}
                   className="bg-green-500 hover:bg-green-600"
                 >
-                  {adminContract.updateFunds.isPending ? (
+                  {adminContract.updateAllocation.isPending ? (
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   ) : (
                     <RefreshCw className="h-4 w-4 mr-2" />
@@ -841,13 +771,13 @@ export default function AdminPage() {
             <CardContent>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-                  <span className="text-sm text-muted-foreground">BSC Staking Pool</span>
+                  <span className="text-sm text-muted-foreground">Solana Staking Pool</span>
                   <Badge variant="outline" className={adminContract.stakingPaused ? 'bg-red-500/10 text-red-500' : 'bg-green-500/10 text-green-500'}>
                     {adminContract.stakingPaused ? 'Paused' : 'Running'}
                   </Badge>
                 </div>
                 <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-                  <span className="text-sm text-muted-foreground">BSC Insurance</span>
+                  <span className="text-sm text-muted-foreground">Solana Insurance</span>
                   <Badge variant="outline" className={adminContract.insurancePaused ? 'bg-red-500/10 text-red-500' : 'bg-green-500/10 text-green-500'}>
                     {adminContract.insurancePaused ? 'Paused' : 'Running'}
                   </Badge>

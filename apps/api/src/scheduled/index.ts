@@ -160,20 +160,25 @@ export async function updateDevScores(env: Env): Promise<void> {
 // Rug Pull 检测任务 (每小时)
 // ============================================
 
+/**
+ * pump.fun 代币 Rug Pull 检测任务 (每小时)
+ * 本项目仅支持 Solana 链上的 pump.fun 代币
+ */
 export async function detectRugPulls(env: Env): Promise<void> {
-  console.log('[Cron] Starting rug pull detection...');
+  console.log('[Cron] Starting pump.fun rug pull detection...');
   
   try {
-    // 获取活跃代币
+    // 仅获取 Solana 链上的活跃代币（pump.fun）
     const tokens = await env.DB.prepare(`
       SELECT id, address, chain, liquidity, price_usd, creator_dev_id
       FROM tokens 
       WHERE status = 'active'
+      AND chain = 'solana'
       AND created_at > ?
     `).bind(Math.floor(Date.now() / 1000) - 86400 * 7).all(); // 7天内创建
 
     if (!tokens.results?.length) {
-      console.log('[Cron] No tokens to check');
+      console.log('[Cron] No pump.fun tokens to check');
       return;
     }
 
@@ -181,24 +186,15 @@ export async function detectRugPulls(env: Env): Promise<void> {
 
     for (const token of tokens.results as any[]) {
       try {
-        // 获取当前流动性
-        const response = await fetch(
-          `https://api.dexscreener.com/latest/dex/tokens/${token.address}`
+        // 本项目仅支持 pump.fun 代币，直接检测
+        const { checkRugStatus } = await import('../services/blockchain');
+        const rugResult = await checkRugStatus(
+          { tokenAddress: token.address },
+          env
         );
         
-        if (!response.ok) continue;
-        
-        const data = await response.json() as any;
-        const pair = data.pairs?.[0];
-        
-        if (!pair) continue;
-
-        const currentLiquidity = parseFloat(pair.liquidity?.usd || '0');
-        const previousLiquidity = parseFloat(token.liquidity || '0');
-
-        // 检测流动性撤走 > 80%
-        if (previousLiquidity > 1000 && currentLiquidity < previousLiquidity * 0.2) {
-          console.log(`[Cron] Potential rug detected: ${token.address}`);
+        if (rugResult.isRugged) {
+          console.log(`[Cron] Pump.fun rug detected: ${token.address}`);
           
           // 标记为 rugged
           await env.DB.prepare(`
@@ -222,13 +218,13 @@ export async function detectRugPulls(env: Env): Promise<void> {
         }
 
       } catch (error) {
-        console.error(`[Cron] Failed to check token ${token.address}:`, error);
+        console.error(`[Cron] Failed to check pump.fun token ${token.address}:`, error);
       }
     }
 
-    console.log(`[Cron] Detected ${rugCount} potential rug pulls`);
+    console.log(`[Cron] Detected ${rugCount} pump.fun rug pulls`);
   } catch (error) {
-    console.error('[Cron] Rug detection failed:', error);
+    console.error('[Cron] Pump.fun rug detection failed:', error);
   }
 }
 

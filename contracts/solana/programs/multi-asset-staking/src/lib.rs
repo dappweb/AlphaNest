@@ -152,6 +152,33 @@ pub mod multi_asset_staking {
             stake_account.early_bird_bonus = get_early_bird_bonus(days_since_launch as u8);
         }
 
+        // 更新推荐返佣（如果用户有推荐人）
+        if let Some(ref referral_account) = ctx.accounts.referral_account {
+            // 验证推荐账户属于当前用户
+            require!(
+                referral_account.user == ctx.accounts.user.key(),
+                ErrorCode::InvalidReferralAccount
+            );
+            
+            if let Some(ref mut referrer_info) = ctx.accounts.referrer_info {
+                // 验证推荐人信息账户属于推荐人
+                require!(
+                    referrer_info.referrer == referral_account.referrer,
+                    ErrorCode::InvalidReferralAccount
+                );
+                
+                if let Some(ref referral_config) = ctx.accounts.referral_config {
+                    update_referral_rewards_on_stake(
+                        &ctx.accounts.user.key(),
+                        stake_value_usd,
+                        Some(referral_account),
+                        Some(referrer_info),
+                        Some(referral_config),
+                    )?;
+                }
+            }
+        }
+
         msg!("Staked {} USDC (${} USD), lock period: {:?}", 
              amount / 1_000_000, stake_value_usd, lock_period);
         Ok(())
@@ -764,14 +791,27 @@ pub mod multi_asset_staking {
         Ok(())
     }
 
-    /// 领取推荐返佣
+    /// 领取推荐返佣（使用 PopCowDefi 代币）
     pub fn claim_referral_rewards(ctx: Context<ClaimReferralRewards>) -> Result<()> {
         let referrer_info = &mut ctx.accounts.referrer_info;
-        let rewards = referrer_info.pending_rewards;
+        let rewards_usd = referrer_info.pending_rewards; // USD 金额（6位小数）
         
-        require!(rewards > 0, ErrorCode::NoReferralRewards);
+        require!(rewards_usd > 0, ErrorCode::NoReferralRewards);
         
-        // 转移奖励
+        // 获取 PopCowDefi 代币价格（USD，6位小数）
+        let popcowdefi_price = get_popcowdefi_price_usd(&ctx.accounts.price_oracle)?;
+        
+        // 将 USD 金额转换为等价的 PopCowDefi 代币数量
+        // rewards_usd: USD 金额（6位小数，例如 10_000_000 = $10.000000）
+        // popcowdefi_price: PopCowDefi 价格（6位小数，例如 10_000 = $0.010000）
+        // PopCowDefi 代币有 6 位小数
+        let popcowdefi_amount = (rewards_usd as u128)
+            .checked_mul(1_000_000) // 转换为最小单位（考虑代币小数位）
+            .unwrap()
+            .checked_div(popcowdefi_price as u128)
+            .unwrap();
+        
+        // 转移 PopCowDefi 代币奖励
         let pool_bump = ctx.accounts.pool.bump;
         let seeds = &[
             b"multi_asset_pool".as_ref(),
@@ -783,18 +823,18 @@ pub mod multi_asset_staking {
             CpiContext::new_with_signer(
                 ctx.accounts.token_program.to_account_info(),
                 Transfer {
-                    from: ctx.accounts.reward_vault.to_account_info(),
-                    to: ctx.accounts.user_reward_token.to_account_info(),
+                    from: ctx.accounts.popcowdefi_vault.to_account_info(),
+                    to: ctx.accounts.user_popcowdefi_token.to_account_info(),
                     authority: ctx.accounts.pool.to_account_info(),
                 },
                 signer,
             ),
-            rewards,
+            popcowdefi_amount as u64,
         )?;
 
         referrer_info.pending_rewards = 0;
         
-        msg!("Claimed {} referral rewards", rewards);
+        msg!("Claimed {} PopCowDefi tokens (${} USD)", popcowdefi_amount, rewards_usd);
         Ok(())
     }
 
@@ -970,6 +1010,65 @@ fn calculate_referral_reward(stake_value_usd: u64, rate: u16) -> u64 {
         .unwrap() as u64
 }
 
+/// 更新推荐返佣（在质押时调用）
+/// 检查用户是否有推荐人，如果有则计算并分配返佣
+fn update_referral_rewards_on_stake(
+    user: &Pubkey,
+    stake_value_usd: u64,
+    referral_account: Option<&Account<ReferralAccount>>,
+    referrer_info: Option<&mut Account<ReferrerInfo>>,
+    referral_config: Option<&Account<ReferralConfig>>,
+) -> Result<()> {
+    // 如果推荐系统未启用或用户没有推荐人，直接返回
+    let Some(referral_account) = referral_account else {
+        return Ok(());
+    };
+    
+    let Some(referrer_info) = referrer_info else {
+        return Ok(());
+    };
+    
+    let Some(config) = referral_config else {
+        return Ok(());
+    };
+    
+    // 检查推荐系统是否启用
+    if !config.enabled {
+        return Ok(());
+    }
+    
+    // 验证推荐关系
+    require!(
+        referral_account.user == *user,
+        ErrorCode::InvalidReferralAccount
+    );
+    
+    // 获取推荐人的返佣比例
+    let referral_rate = get_referral_rate(referrer_info.total_referred, config);
+    
+    // 计算返佣金额（USD，6位小数）
+    let referral_reward = calculate_referral_reward(stake_value_usd, referral_rate);
+    
+    // 更新推荐人信息
+    referrer_info.pending_rewards = referrer_info
+        .pending_rewards
+        .checked_add(referral_reward)
+        .unwrap();
+    referrer_info.total_earned = referrer_info
+        .total_earned
+        .checked_add(referral_reward)
+        .unwrap();
+    referrer_info.referee_staked_usd = referrer_info
+        .referee_staked_usd
+        .checked_add(stake_value_usd)
+        .unwrap();
+    
+    msg!("Referral reward calculated: {} USD (rate: {}%)", 
+         referral_reward, referral_rate);
+    
+    Ok(())
+}
+
 // 价格获取函数（简化版，实际应从 Pyth Network 读取）
 fn get_sol_price_usd(_oracle: &AccountInfo) -> Result<u64> {
     // 实际实现应从 Pyth Network 价格预言机读取
@@ -981,6 +1080,13 @@ fn get_popcow_price_usd(_oracle: &AccountInfo) -> Result<u64> {
     // 实际实现应从 Pyth Network 或 DEX 价格读取
     // 这里返回模拟价格（$0.001 USD，保留 6 位小数）
     Ok(1_000) // $0.001000
+}
+
+fn get_popcowdefi_price_usd(_oracle: &AccountInfo) -> Result<u64> {
+    // 实际实现应从 Pyth Network 或 DEX 价格读取 PopCowDefi 代币价格
+    // 这里返回模拟价格（$0.01 USD，保留 6 位小数）
+    // 实际应该从价格预言机读取
+    Ok(10_000) // $0.010000
 }
 
 fn get_token_price_usd(
@@ -1069,6 +1175,16 @@ pub struct InitializePool<'info> {
     #[account(
         init,
         payer = authority,
+        token::mint = popcowdefi_mint,
+        token::authority = pool,
+        seeds = [b"popcowdefi_vault"],
+        bump
+    )]
+    pub popcowdefi_vault: Account<'info, TokenAccount>,
+
+    #[account(
+        init,
+        payer = authority,
         token::mint = reward_mint,
         token::authority = pool,
         seeds = [b"reward_vault"],
@@ -1079,6 +1195,7 @@ pub struct InitializePool<'info> {
     pub usdc_mint: Account<'info, Mint>,
     pub usdt_mint: Account<'info, Mint>,
     pub popcow_mint: Account<'info, Mint>,
+    pub popcowdefi_mint: Account<'info, Mint>,
 
     /// CHECK: Price oracle (Pyth Network)
     pub price_oracle: AccountInfo<'info>,
@@ -1152,6 +1269,17 @@ pub struct StakeUSDC<'info> {
 
     /// CHECK: Price oracle
     pub price_oracle: AccountInfo<'info>,
+
+    // 可选的推荐账户（如果用户有推荐人，客户端需要提供这些账户）
+    /// CHECK: Optional referral account - 如果提供，必须匹配用户的推荐账户
+    pub referral_account: Option<Account<'info, ReferralAccount>>,
+
+    /// CHECK: Optional referrer info - 如果提供，必须匹配推荐人的信息账户
+    #[account(mut)]
+    pub referrer_info: Option<Account<'info, ReferrerInfo>>,
+
+    /// CHECK: Optional referral config - 推荐系统配置
+    pub referral_config: Option<Account<'info, ReferralConfig>>,
 
     pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
@@ -1569,14 +1697,17 @@ pub struct ClaimReferralRewards<'info> {
     pub referrer_info: Account<'info, ReferrerInfo>,
 
     #[account(mut)]
-    pub user_reward_token: Account<'info, TokenAccount>,
+    pub user_popcowdefi_token: Account<'info, TokenAccount>,
 
     #[account(
         mut,
-        seeds = [b"reward_vault"],
+        seeds = [b"popcowdefi_vault"],
         bump
     )]
-    pub reward_vault: Account<'info, TokenAccount>,
+    pub popcowdefi_vault: Account<'info, TokenAccount>,
+
+    /// CHECK: Price oracle
+    pub price_oracle: AccountInfo<'info>,
 
     pub token_program: Program<'info, Token>,
 }
@@ -1761,4 +1892,6 @@ pub enum ErrorCode {
     NoReferralRewards,
     #[msg("Referral system disabled")]
     ReferralDisabled,
+    #[msg("Invalid referral account")]
+    InvalidReferralAccount,
 }

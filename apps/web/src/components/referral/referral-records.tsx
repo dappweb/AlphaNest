@@ -49,10 +49,11 @@ function getStatusBadge(status: ReferralRecord['status']) {
 }
 
 function getChainBadge(chain: ReferralRecord['chain']) {
-  if (chain === 'bsc') {
+  // 项目仅支持 Solana，已移除 BSC
+  if (chain === 'solana') {
     return (
-      <Badge variant="outline" className="bg-yellow-500/10 text-yellow-500 border-yellow-500/30 text-[8px]">
-        BSC
+      <Badge variant="outline" className="bg-purple-500/10 text-purple-500 border-purple-500/30 text-[8px]">
+        Solana
       </Badge>
     );
   }

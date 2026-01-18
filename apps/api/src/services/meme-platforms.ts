@@ -235,7 +235,8 @@ function calculatePumpFunPrice(token: PumpFunToken): number {
   
   // Bonding curve 价格 = SOL 储备 / 代币储备
   // 假设 SOL 价格 ~$100 (需要实时获取)
-  const SOL_PRICE_USD = 100; // TODO: 从 API 获取实时价格
+  // 使用回退价格（150），实际应该从环境变量或缓存中获取
+  const SOL_PRICE_USD = 150; // 回退价格，实际应该从 getSolPriceUsd 获取
   const priceInSol = token.virtual_sol_reserves / token.virtual_token_reserves;
   return priceInSol * SOL_PRICE_USD;
 }

@@ -4,15 +4,23 @@
  */
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useAccount } from 'wagmi';
+import { useSolanaReferrerInfo } from './use-solana-referral';
+// 项目仅支持 Solana，已移除 wagmi
 
 // Safe Solana wallet hook - returns null if provider not available
 function useSolanaWalletSafe() {
   try {
     // Dynamic import to avoid SSR issues
     const { useWallet } = require('@solana/wallet-adapter-react');
-    return useWallet();
-  } catch {
+    const wallet = useWallet();
+    // 检查 WalletProvider 是否已初始化
+    if (!wallet || typeof wallet.publicKey === 'undefined') {
+      return { publicKey: null, connected: false };
+    }
+    return wallet;
+  } catch (error) {
+    // 如果 WalletProvider 未初始化，返回默认值
+    console.debug('WalletProvider not available:', error);
     return { publicKey: null, connected: false };
   }
 }
@@ -59,18 +67,22 @@ export const TIER_CONFIG: Record<ReferralTier, { name: string; icon: string; min
 export interface ReferralStats {
   totalReferred: number;
   activeStakers: number;
-  totalEarned: number;
-  pendingRewards: number;
+  totalEarned: number; // USD 金额
+  pendingRewards: number; // USD 金额
   currentTier: ReferralTier;
   currentRate: number;
   nextTier: ReferralTier | null;
   referralsToNextTier: number;
+  // PopCowDefi 代币相关信息
+  totalEarnedPopCowDefi?: number; // PopCowDefi 代币数量
+  pendingRewardsPopCowDefi?: number; // PopCowDefi 代币数量
+  popCowDefiPrice?: number; // PopCowDefi 代币价格（USD）
 }
 
 export interface ReferralRecord {
   id: string;
   address: string;
-  chain: 'bsc' | 'solana';
+  chain: 'solana'; // 仅支持 Solana
   joinedAt: Date;
   totalStaked: number;
   totalInsured: number;
@@ -132,15 +144,16 @@ function getReferralsToNextTier(currentCount: number, nextTier: ReferralTier | n
 
 /**
  * 推荐码管理 Hook
+ * 使用钱包地址作为邀请码
  */
 export function useReferralCode() {
-  const { address: evmAddress } = useAccount();
+  // 项目仅支持 Solana，移除 EVM 钱包
   const { publicKey: solanaPublicKey } = useSolanaWalletSafe();
   
   const [referralCode, setReferralCode] = useState<ReferralCode | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const address = evmAddress || solanaPublicKey?.toBase58();
+  const address = solanaPublicKey?.toBase58(); // 仅使用 Solana 地址
 
   useEffect(() => {
     if (!address) {
@@ -148,40 +161,18 @@ export function useReferralCode() {
       return;
     }
 
-    // 从 localStorage 获取或生成推荐码
-    const storageKey = `popcow-referral-${address}`;
-    const saved = localStorage.getItem(storageKey);
+    // 直接使用钱包地址作为推荐码
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://app.popcow.xyz';
+    const referralLink = `${baseUrl}/staking?ref=${address}`;
     
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        setReferralCode({
-          ...parsed,
-          createdAt: new Date(parsed.createdAt),
-        });
-      } catch {
-        // 生成新的
-        const newCode = generateReferralCode(address);
-        const newReferral: ReferralCode = {
-          code: newCode,
-          link: getReferralLink(newCode),
-          createdAt: new Date(),
-          usageCount: 0,
-        };
-        localStorage.setItem(storageKey, JSON.stringify(newReferral));
-        setReferralCode(newReferral);
-      }
-    } else {
-      const newCode = generateReferralCode(address);
-      const newReferral: ReferralCode = {
-        code: newCode,
-        link: getReferralLink(newCode),
-        createdAt: new Date(),
-        usageCount: 0,
-      };
-      localStorage.setItem(storageKey, JSON.stringify(newReferral));
-      setReferralCode(newReferral);
-    }
+    const referral: ReferralCode = {
+      code: address, // 使用钱包地址作为推荐码
+      link: referralLink,
+      createdAt: new Date(),
+      usageCount: 0,
+    };
+    
+    setReferralCode(referral);
   }, [address]);
 
   const copyCode = useCallback(async () => {
@@ -206,12 +197,14 @@ export function useReferralCode() {
 
   const shareToTwitter = useCallback(() => {
     if (!referralCode) return;
+    const shortAddress = `${referralCode.code.slice(0, 4)}...${referralCode.code.slice(-4)}`;
     const text = encodeURIComponent(
       `🦙 I'm earning passive income with PopCowDefi!\n\n` +
-      `✅ Stake Meme tokens (Four.meme & pump.fun)\n` +
+      `✅ Stake Meme tokens on Solana (pump.fun)\n` +
       `✅ Get insurance protection\n` +
       `✅ Earn up to 25% APY\n\n` +
-      `Join with my code and get 5% bonus! 🎁\n\n` +
+      `Join with my referral code and get 5% bonus! 🎁\n\n` +
+      `Code: ${shortAddress}\n` +
       `${referralCode.link}`
     );
     window.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank');
@@ -219,9 +212,10 @@ export function useReferralCode() {
 
   const shareToTelegram = useCallback(() => {
     if (!referralCode) return;
+    const shortAddress = `${referralCode.code.slice(0, 4)}...${referralCode.code.slice(-4)}`;
     const text = encodeURIComponent(
-      `🦙 PopCowDefi - Meme Token Staking & Insurance\n\n` +
-      `Join with my code: ${referralCode.code}\n` +
+      `🦙 PopCowDefi - Solana Meme Token Staking & Insurance\n\n` +
+      `Join with my referral code: ${shortAddress}\n` +
       `Get 5% bonus on your first stake!\n\n` +
       `${referralCode.link}`
     );
@@ -242,67 +236,49 @@ export function useReferralCode() {
  * 推荐统计 Hook
  */
 export function useReferralStats() {
-  const { address: evmAddress } = useAccount();
-  const { publicKey: solanaPublicKey } = useSolanaWalletSafe();
+  // 使用 Solana 推荐系统的真实数据
+  const { referrerInfo, isLoading: isLoadingSolana } = useSolanaReferrerInfo();
   
   const [stats, setStats] = useState<ReferralStats | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const address = evmAddress || solanaPublicKey?.toBase58();
-
   useEffect(() => {
-    if (!address) {
-      setStats(null);
+    if (isLoadingSolana) {
+      setIsLoading(true);
       return;
     }
 
-    // 模拟从 API 获取统计数据
-    // 实际项目中应该调用后端 API
-    setIsLoading(true);
-    
-    // 从 localStorage 获取模拟数据
-    const storageKey = `popcow-referral-stats-${address}`;
-    const saved = localStorage.getItem(storageKey);
-    
-    let mockStats: ReferralStats;
-    
-    if (saved) {
-      try {
-        mockStats = JSON.parse(saved);
-      } catch {
-        mockStats = createDefaultStats();
-      }
-    } else {
-      mockStats = createDefaultStats();
+    if (!referrerInfo) {
+      setStats(createDefaultStats());
+      setIsLoading(false);
+      return;
     }
+
+    // 从 Solana 推荐系统数据构建统计
+    const solanaStats: ReferralStats = {
+      totalReferred: referrerInfo.totalReferred,
+      activeStakers: referrerInfo.totalReferred, // 简化：假设所有推荐人都是活跃的
+      totalEarned: referrerInfo.totalEarned,
+      pendingRewards: referrerInfo.pendingRewards,
+      currentTier: referrerInfo.currentTier.name.toLowerCase() as ReferralTier,
+      currentRate: referrerInfo.currentRate,
+      nextTier: getNextTier(referrerInfo.currentTier.name.toLowerCase() as ReferralTier),
+      referralsToNextTier: getReferralsToNextTier(
+        referrerInfo.totalReferred,
+        getNextTier(referrerInfo.currentTier.name.toLowerCase() as ReferralTier)
+      ),
+      totalEarnedPopCowDefi: referrerInfo.totalEarnedPopCowDefi,
+      pendingRewardsPopCowDefi: referrerInfo.pendingRewardsPopCowDefi,
+      popCowDefiPrice: referrerInfo.popCowDefiPrice,
+    };
     
-    // 计算等级相关
-    mockStats.currentTier = calculateTier(mockStats.totalReferred);
-    mockStats.currentRate = calculateRewardRate(mockStats.totalReferred);
-    mockStats.nextTier = getNextTier(mockStats.currentTier);
-    mockStats.referralsToNextTier = getReferralsToNextTier(mockStats.totalReferred, mockStats.nextTier);
-    
-    setStats(mockStats);
+    setStats(solanaStats);
     setIsLoading(false);
-  }, [address]);
+  }, [referrerInfo, isLoadingSolana]);
 
   const refetch = useCallback(() => {
-    // 重新获取数据
-    if (address) {
-      const storageKey = `popcow-referral-stats-${address}`;
-      const saved = localStorage.getItem(storageKey);
-      if (saved) {
-        try {
-          const mockStats = JSON.parse(saved);
-          mockStats.currentTier = calculateTier(mockStats.totalReferred);
-          mockStats.currentRate = calculateRewardRate(mockStats.totalReferred);
-          mockStats.nextTier = getNextTier(mockStats.currentTier);
-          mockStats.referralsToNextTier = getReferralsToNextTier(mockStats.totalReferred, mockStats.nextTier);
-          setStats(mockStats);
-        } catch {}
-      }
-    }
-  }, [address]);
+    // 重新获取数据会由 useSolanaReferrerInfo 处理
+  }, []);
 
   return { stats, isLoading, refetch };
 }
@@ -324,13 +300,13 @@ function createDefaultStats(): ReferralStats {
  * 推荐记录 Hook
  */
 export function useReferralRecords() {
-  const { address: evmAddress } = useAccount();
+  // 项目仅支持 Solana，移除 EVM 钱包
   const { publicKey: solanaPublicKey } = useSolanaWalletSafe();
   
   const [records, setRecords] = useState<ReferralRecord[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  const address = evmAddress || solanaPublicKey?.toBase58();
+  const address = solanaPublicKey?.toBase58(); // 仅使用 Solana 地址
 
   useEffect(() => {
     if (!address) {
@@ -442,7 +418,9 @@ export function useCheckReferralCode() {
  * 组合 Hook - 完整推荐系统
  */
 export function useReferral() {
-  const { address: evmAddress, isConnected: evmConnected } = useAccount();
+  // 项目仅支持 Solana，移除 EVM 钱包
+  const evmAddress = null;
+  const evmConnected = false;
   const { publicKey: solanaPublicKey, connected: solanaConnected } = useSolanaWalletSafe();
 
   const code = useReferralCode();
@@ -451,8 +429,8 @@ export function useReferral() {
   const claim = useClaimReferralRewards();
   const check = useCheckReferralCode();
 
-  const isConnected = evmConnected || solanaConnected;
-  const address = evmAddress || solanaPublicKey?.toBase58();
+  const isConnected = solanaConnected; // 仅支持 Solana
+  const address = solanaPublicKey?.toBase58(); // 仅使用 Solana 地址
 
   // 获取当前等级配置
   const tierConfig = useMemo(() => {

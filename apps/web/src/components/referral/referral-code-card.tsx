@@ -80,15 +80,16 @@ export function ReferralCodeCard({ className }: ReferralCodeCardProps) {
       </CardHeader>
 
       <CardContent className="relative space-y-4">
-        {/* 推荐码 */}
+        {/* Referral Code (Wallet Address) */}
         <div className="space-y-2">
-          <label className="text-xs font-medium text-muted-foreground">Your Referral Code</label>
+          <label className="text-xs font-medium text-muted-foreground">Your Referral Code (Wallet Address)</label>
           <div className="flex gap-2">
             <div className="flex-1 relative">
               <Input
                 value={referralCode.code}
                 readOnly
-                className="font-mono text-lg font-bold text-center bg-secondary/50 border-yellow-500/30 pr-10"
+                className="font-mono text-sm font-bold text-center bg-secondary/50 border-yellow-500/30 pr-10 break-all"
+                title={referralCode.code}
               />
               <Sparkles className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-yellow-500" />
             </div>
@@ -97,7 +98,7 @@ export function ReferralCodeCard({ className }: ReferralCodeCardProps) {
               size="icon"
               onClick={handleCopyCode}
               className={cn(
-                'transition-colors',
+                'transition-colors shrink-0',
                 codeCopied && 'bg-green-500/20 border-green-500/50 text-green-500'
               )}
             >
@@ -108,9 +109,12 @@ export function ReferralCodeCard({ className }: ReferralCodeCardProps) {
               )}
             </Button>
           </div>
+          <p className="text-[10px] text-muted-foreground">
+            Your wallet address is your referral code. Share it with friends!
+          </p>
         </div>
 
-        {/* 推荐链接 */}
+        {/* Referral Link */}
         <div className="space-y-2">
           <label className="text-xs font-medium text-muted-foreground">Referral Link</label>
           <div className="flex gap-2">
@@ -119,6 +123,7 @@ export function ReferralCodeCard({ className }: ReferralCodeCardProps) {
                 value={referralCode.link}
                 readOnly
                 className="font-mono text-xs bg-secondary/50 border-muted pr-10 truncate"
+                title={referralCode.link}
               />
               <Link2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             </div>
@@ -127,9 +132,10 @@ export function ReferralCodeCard({ className }: ReferralCodeCardProps) {
               size="icon"
               onClick={handleCopyLink}
               className={cn(
-                'transition-colors',
+                'transition-colors shrink-0',
                 linkCopied && 'bg-green-500/20 border-green-500/50 text-green-500'
               )}
+              title="Copy referral link"
             >
               {linkCopied ? (
                 <CheckCircle className="h-4 w-4" />
@@ -138,6 +144,29 @@ export function ReferralCodeCard({ className }: ReferralCodeCardProps) {
               )}
             </Button>
           </div>
+          {/* Copy Link Button - More Prominent */}
+          <Button
+            onClick={handleCopyLink}
+            className={cn(
+              'w-full transition-all',
+              linkCopied 
+                ? 'bg-green-500 hover:bg-green-600 text-white' 
+                : 'bg-yellow-500 hover:bg-yellow-600 text-white'
+            )}
+            size="sm"
+          >
+            {linkCopied ? (
+              <>
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Link Copied!
+              </>
+            ) : (
+              <>
+                <Copy className="h-4 w-4 mr-2" />
+                Copy Referral Link
+              </>
+            )}
+          </Button>
         </div>
 
         {/* 分享按钮 */}
@@ -168,10 +197,10 @@ export function ReferralCodeCard({ className }: ReferralCodeCardProps) {
           <div className="flex items-start gap-2">
             <Gift className="h-4 w-4 text-yellow-500 mt-0.5" />
             <div className="text-xs">
-              <p className="font-medium text-yellow-500">双向奖励!</p>
+              <p className="font-medium text-yellow-500">Double Rewards!</p>
               <p className="text-muted-foreground mt-0.5">
-                您的好友首次质押获得 <span className="text-yellow-500 font-bold">5% 奖励</span>，
-                您获得他们质押/投保金额的 <span className="text-yellow-500 font-bold">5-15% 佣金</span>
+                Your friend gets <span className="text-yellow-500 font-bold">5% bonus</span> on first stake,
+                you earn <span className="text-yellow-500 font-bold">5-15% commission</span> on their staking/insurance
               </p>
             </div>
           </div>

@@ -8,21 +8,30 @@ import {
   Shield,
   Gift,
   MoreHorizontal,
+  Settings,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSidebarStore } from '@/stores/sidebar-store';
+import { useIsAdmin } from '@/hooks/use-is-admin';
 
-const mobileNavItems = [
+const baseMobileNavItems = [
   { name: 'Home', href: '/', icon: LayoutDashboard },
   { name: 'Stake', href: '/staking', icon: Coins, highlight: true },
   { name: 'Insure', href: '/insurance', icon: Shield },
   { name: 'Invite', href: '/referral', icon: Gift, highlight: true },
-  { name: 'More', href: '#more', icon: MoreHorizontal, isMore: true },
 ];
 
 export function MobileNav() {
   const pathname = usePathname();
   const { toggleMobileOpen } = useSidebarStore();
+  const { isAdmin } = useIsAdmin();
+
+  // Build mobile nav items - add Admin if user is admin
+  const mobileNavItems = [
+    ...baseMobileNavItems,
+    ...(isAdmin ? [{ name: 'Admin', href: '/admin', icon: Settings }] : []),
+    { name: 'More', href: '#more', icon: MoreHorizontal, isMore: true },
+  ];
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 md:hidden">

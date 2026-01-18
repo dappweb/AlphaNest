@@ -1,98 +1,105 @@
 'use client';
 
-import { useState } from 'react';
-import { AlertTriangle, Shield, Loader2, Zap, Rocket, CheckCircle, ArrowRight } from 'lucide-react';
-import { useAccount } from 'wagmi';
+import React, { useState } from 'react';
+import { AlertTriangle, Shield, Loader2, Zap, Rocket, CheckCircle, ArrowRight, AlertCircle } from 'lucide-react';
+import { useWallet } from '@solana/wallet-adapter-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { formatUSD } from '@/lib/utils';
 import { 
-  useCowGuardInsurance, 
-  useProductInfo,
+  useSolanaInsurance,
+  useSolanaProductInfo,
   useCalculatePremium,
   InsuranceType, 
   INSURANCE_TYPE_LABELS,
   INSURANCE_TYPE_ICONS,
-} from '@/hooks/use-cowguard-insurance';
+} from '@/hooks/use-solana-insurance';
 
-// 预设的保险产品
+// 预设的保险产品 - 仅支持 pump.fun 代币
+// 根据 bonding curve 状态提供不同费率（确保盈利）
 const INSURANCE_PRODUCTS = [
   {
     id: 1,
-    platform: 'four.meme',
-    chain: 'BSC',
-    chainIcon: '🟡',
+    platform: 'pump.fun',
+    chain: 'Solana',
+    chainIcon: '🟣',
     type: InsuranceType.RugPull,
-    name: 'Rug Pull Protection',
-    description: 'Protect against Four.meme token rug pulls',
-    premiumRate: 5,
-    coverageRate: 80,
+    name: 'Rug Pull Protection (Bonding Curve)',
+    description: '保护 bonding curve 阶段的 pump.fun 代币免受 Rug Pull',
+    premiumRate: 7,  // 7% - bonding curve 阶段高风险，确保盈利
+    coverageRate: 100,
     minCoverage: 100,
     maxCoverage: 10000,
     duration: 30,
-    color: 'yellow',
+    color: 'purple',
+    bondingCurveStage: true,  // bonding curve 阶段标识
   },
   {
     id: 2,
-    platform: 'four.meme',
-    chain: 'BSC',
-    chainIcon: '🟡',
-    type: InsuranceType.PriceDrop,
-    name: 'Price Drop Protection',
-    description: 'Coverage for >50% price drops on Four.meme tokens',
-    premiumRate: 8,
-    coverageRate: 60,
+    platform: 'pump.fun',
+    chain: 'Solana',
+    chainIcon: '🟣',
+    type: InsuranceType.RugPull,
+    name: 'Rug Pull Protection (Completed)',
+    description: '保护已完成 bonding curve 的 pump.fun 代币',
+    premiumRate: 3,  // 3% - 完成状态相对稳定
+    coverageRate: 100,
     minCoverage: 100,
-    maxCoverage: 5000,
-    duration: 7,
-    color: 'yellow',
+    maxCoverage: 10000,
+    duration: 30,
+    color: 'purple',
+    bondingCurveStage: false,  // 已完成标识
   },
   {
     id: 3,
     platform: 'pump.fun',
     chain: 'Solana',
     chainIcon: '🟣',
-    type: InsuranceType.RugPull,
-    name: 'Rug Pull Protection',
-    description: 'Protect against pump.fun token rug pulls',
-    premiumRate: 5,
-    coverageRate: 80,
-    minCoverage: 100,
-    maxCoverage: 10000,
-    duration: 30,
+    type: InsuranceType.PriceDrop,
+    name: 'Price Drop Protection (Bonding Curve)',
+    description: '保护 bonding curve 阶段的 pump.fun 代币免受价格暴跌',
+    premiumRate: 8,  // 8% - bonding curve 阶段高风险
+    coverageRate: 100,
+    minCoverage: 500,
+    maxCoverage: 50000,
+    duration: 90,
     color: 'purple',
+    bondingCurveStage: true,
   },
   {
     id: 4,
     platform: 'pump.fun',
     chain: 'Solana',
     chainIcon: '🟣',
-    type: InsuranceType.SmartContract,
-    name: 'Smart Contract Coverage',
-    description: 'Coverage for pump.fun contract exploits',
-    premiumRate: 3,
-    coverageRate: 100,
-    minCoverage: 500,
-    maxCoverage: 50000,
-    duration: 90,
-    color: 'purple',
-  },
-  {
-    id: 5,
-    platform: 'both',
-    chain: 'Multi-Chain',
-    chainIcon: '🌐',
     type: InsuranceType.Comprehensive,
-    name: 'Comprehensive Coverage',
-    description: 'Full protection for all meme token risks',
-    premiumRate: 10,
+    name: 'Comprehensive Coverage (Bonding Curve)',
+    description: 'bonding curve 阶段全面保护',
+    premiumRate: 10,  // 10% - 综合保险，高风险
     coverageRate: 100,
     minCoverage: 1000,
     maxCoverage: 100000,
     duration: 365,
-    color: 'blue',
+    color: 'purple',
+    bondingCurveStage: true,
+  },
+  {
+    id: 5,
+    platform: 'pump.fun',
+    chain: 'Solana',
+    chainIcon: '🟣',
+    type: InsuranceType.Comprehensive,
+    name: 'Comprehensive Coverage (Completed)',
+    description: '已完成 bonding curve 的全面保护',
+    premiumRate: 6,  // 6% - 完成状态相对稳定
+    coverageRate: 100,
+    minCoverage: 1000,
+    maxCoverage: 100000,
+    duration: 365,
+    color: 'purple',
+    bondingCurveStage: false,
   },
 ];
 
@@ -102,27 +109,48 @@ interface PurchaseModalProps {
 }
 
 function PurchaseModal({ product, onClose }: PurchaseModalProps) {
-  const { isConnected } = useAccount();
-  const { purchase, usdcBalance } = useCowGuardInsurance();
+  const { connected } = useWallet();
+  const { purchase, usdcBalance } = useSolanaInsurance();
   const [coverageAmount, setCoverageAmount] = useState('1000');
   
-  const { premium, isLoading: calcLoading } = useCalculatePremium(
-    product?.id || 0, 
-    coverageAmount
+  const { premium } = useCalculatePremium(
+    product?.type || InsuranceType.RugPull, 
+    parseFloat(coverageAmount) || 0
   );
+  const calcLoading = false; // 保费计算是同步的
 
   if (!product) return null;
 
   const handlePurchase = async () => {
+    if (!connected) {
+      alert('Please connect your Solana wallet first');
+      return;
+    }
+    
+    const coverage = parseFloat(coverageAmount);
+    if (!coverage || coverage <= 0) {
+      alert('Please enter a valid coverage amount');
+      return;
+    }
+    
+    if (coverage < product.minCoverage || coverage > product.maxCoverage) {
+      alert(`Coverage amount must be between $${product.minCoverage} and $${product.maxCoverage}`);
+      return;
+    }
+    
     try {
-      await purchase.purchaseInsurance(product.id, coverageAmount);
-      onClose();
+      await purchase.purchaseInsurance(product.type, coverage);
+      // 延迟关闭，让用户看到成功消息
+      setTimeout(() => {
+        onClose();
+      }, 2000);
     } catch (error) {
       console.error('Purchase failed:', error);
+      alert(`Purchase failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
-  const isLoading = purchase.isApproving || purchase.isPurchasing;
+  const isLoading = purchase.isPending;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -135,7 +163,7 @@ function PurchaseModal({ product, onClose }: PurchaseModalProps) {
               <CardTitle className="text-lg">{product.name}</CardTitle>
               <CardDescription className="flex items-center gap-1">
                 <span>{product.chainIcon}</span>
-                {product.platform === 'both' ? 'Four.meme + pump.fun' : product.platform}
+                {product.platform} {product.bondingCurveStage ? '(Bonding Curve)' : '(Completed)'}
               </CardDescription>
             </div>
           </div>
@@ -201,7 +229,7 @@ function PurchaseModal({ product, onClose }: PurchaseModalProps) {
             <Button 
               className="flex-1 bg-blue-500 hover:bg-blue-600" 
               onClick={handlePurchase}
-              disabled={!isConnected || isLoading}
+              disabled={!connected || isLoading}
             >
               {isLoading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -215,10 +243,21 @@ function PurchaseModal({ product, onClose }: PurchaseModalProps) {
           </div>
 
           {purchase.isSuccess && (
-            <p className="text-sm text-green-500 flex items-center gap-1">
-              <CheckCircle className="h-4 w-4" />
-              Insurance purchased successfully!
-            </p>
+            <Alert className="bg-green-500/10 border-green-500/30">
+              <CheckCircle className="h-4 w-4 text-green-500" />
+              <AlertDescription className="text-sm text-green-500">
+                Insurance purchased successfully! Policy ID: {purchase.txHash?.slice(0, 8)}...
+              </AlertDescription>
+            </Alert>
+          )}
+          
+          {purchase.error && (
+            <Alert className="bg-red-500/10 border-red-500/30">
+              <AlertCircle className="h-4 w-4 text-red-500" />
+              <AlertDescription className="text-sm text-red-500">
+                {purchase.error.message || 'Purchase failed. Please try again.'}
+              </AlertDescription>
+            </Alert>
           )}
         </CardContent>
       </Card>
@@ -228,12 +267,13 @@ function PurchaseModal({ product, onClose }: PurchaseModalProps) {
 
 export function InsuranceProducts() {
   const [selectedProduct, setSelectedProduct] = useState<typeof INSURANCE_PRODUCTS[0] | null>(null);
-  const [activeTab, setActiveTab] = useState<'all' | 'four.meme' | 'pump.fun'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'bonding' | 'completed'>('all');
 
-const filteredProducts = INSURANCE_PRODUCTS.filter(p => {
+  // 仅显示 pump.fun 代币产品，根据 bonding curve 状态筛选
+  const filteredProducts = INSURANCE_PRODUCTS.filter(p => {
     if (activeTab === 'all') return true;
-    if (activeTab === 'four.meme') return p.platform === 'four.meme' || p.platform === 'both';
-    if (activeTab === 'pump.fun') return p.platform === 'pump.fun' || p.platform === 'both';
+    if (activeTab === 'bonding') return p.bondingCurveStage === true;
+    if (activeTab === 'completed') return p.bondingCurveStage === false;
     return true;
   });
 
@@ -252,7 +292,7 @@ const filteredProducts = INSURANCE_PRODUCTS.filter(p => {
               </CardDescription>
             </div>
             
-            {/* Platform Filter */}
+            {/* Bonding Curve Status Filter */}
             <div className="flex gap-1 bg-secondary/50 p-1 rounded-lg">
               <Button
                 size="sm"
@@ -264,21 +304,21 @@ const filteredProducts = INSURANCE_PRODUCTS.filter(p => {
               </Button>
               <Button
                 size="sm"
-                variant={activeTab === 'four.meme' ? 'default' : 'ghost'}
-                onClick={() => setActiveTab('four.meme')}
-                className={`text-xs ${activeTab === 'four.meme' ? 'bg-yellow-500 hover:bg-yellow-600' : ''}`}
+                variant={activeTab === 'bonding' ? 'default' : 'ghost'}
+                onClick={() => setActiveTab('bonding')}
+                className={`text-xs ${activeTab === 'bonding' ? 'bg-orange-500 hover:bg-orange-600' : ''}`}
               >
                 <Zap className="h-3 w-3 mr-1" />
-                Four.meme
+                Bonding Curve
               </Button>
               <Button
                 size="sm"
-                variant={activeTab === 'pump.fun' ? 'default' : 'ghost'}
-                onClick={() => setActiveTab('pump.fun')}
-                className={`text-xs ${activeTab === 'pump.fun' ? 'bg-purple-500 hover:bg-purple-600' : ''}`}
+                variant={activeTab === 'completed' ? 'default' : 'ghost'}
+                onClick={() => setActiveTab('completed')}
+                className={`text-xs ${activeTab === 'completed' ? 'bg-purple-500 hover:bg-purple-600' : ''}`}
               >
                 <Rocket className="h-3 w-3 mr-1" />
-                pump.fun
+                Completed
               </Button>
             </div>
           </div>

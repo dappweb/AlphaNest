@@ -1,12 +1,8 @@
 'use client';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { WagmiProvider } from 'wagmi';
-import { RainbowKitProvider, darkTheme } from '@rainbow-me/rainbowkit';
 import { useState, useEffect, type ReactNode } from 'react';
-import { wagmiConfig } from '@/config/wagmi';
 import { SolanaProvider } from './solana-provider';
-import '@rainbow-me/rainbowkit/styles.css';
 
 // Lightweight loading screen
 function LoadingScreen() {
@@ -62,21 +58,10 @@ export function Providers({ children }: ProvidersProps) {
   }
 
   return (
-    <WagmiProvider config={wagmiConfig}>
-      <QueryClientProvider client={queryClient}>
-        <RainbowKitProvider
-          theme={darkTheme({
-            accentColor: 'hsl(142, 76%, 36%)',
-            accentColorForeground: 'white',
-            borderRadius: 'medium',
-          })}
-          modalSize="compact"
-        >
-          <SolanaProvider>
-            {children}
-          </SolanaProvider>
-        </RainbowKitProvider>
-      </QueryClientProvider>
-    </WagmiProvider>
+    <QueryClientProvider client={queryClient}>
+      <SolanaProvider>
+        {children}
+      </SolanaProvider>
+    </QueryClientProvider>
   );
 }

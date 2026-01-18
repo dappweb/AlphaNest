@@ -27,8 +27,9 @@ import { referralRoutes } from './routes/referral';
 import { notificationRoutes } from './routes/notifications';
 import { botRoutes } from './routes/bots';
 import { memeRoutes } from './routes/meme';
-import { sniperRoutes } from './routes/sniper';
-import { whaleAlertRoutes } from './routes/whale-alert';
+// 项目已简化为仅支持 Solana/pump.fun，已移除 sniper 和 whale-alert 功能
+// import { sniperRoutes } from './routes/sniper';
+// import { whaleAlertRoutes } from './routes/whale-alert';
 import { adminRoutes } from './routes/admin';
 
 // 中间件
@@ -208,12 +209,12 @@ api.use('/copy-trades/*', authMiddleware());
 api.use('/referral/*', authMiddleware());
 api.use('/notifications/*', authMiddleware());
 api.use('/bots/*', authMiddleware());
-api.use('/sniper/*', authMiddleware());
-api.use('/whale-alert/*', authMiddleware());
+// api.use('/sniper/*', authMiddleware());
+// api.use('/whale-alert/*', authMiddleware());
 
 api.route('/trade', tradeRoutes);
-api.route('/sniper', sniperRoutes);
-api.route('/whale-alert', whaleAlertRoutes);
+// api.route('/sniper', sniperRoutes);
+// api.route('/whale-alert', whaleAlertRoutes);
 api.route('/referral', referralRoutes);
 api.route('/notifications', notificationRoutes);
 api.route('/bots', botRoutes);
@@ -347,35 +348,27 @@ export default {
             await checkRugStatus(payload, env);
             break;
 
-          case 'START_SNIPER':
-            // 启动狙击 Bot
-            await startSniperMonitor(payload, env);
-            break;
+          // 项目已简化为仅支持 Solana/pump.fun，已移除 sniper 和 whale-alert 功能
+          // case 'START_SNIPER':
+          //   await startSniperMonitor(payload, env);
+          //   break;
+          // case 'STOP_SNIPER':
+          //   await stopSniperMonitor(payload, env);
+          //   break;
+          // case 'START_WHALE_MONITOR':
+          //   await startWhaleMonitor(payload, env);
+          //   break;
+          // case 'STOP_WHALE_MONITOR':
+          //   await stopWhaleMonitor(payload, env);
+          //   break;
 
-          case 'STOP_SNIPER':
-            // 停止狙击 Bot
-            await stopSniperMonitor(payload, env);
-            break;
-
-          case 'START_WHALE_MONITOR':
-            // 启动鲸鱼监控
-            await startWhaleMonitor(payload, env);
-            break;
-
-          case 'STOP_WHALE_MONITOR':
-            // 停止鲸鱼监控
-            await stopWhaleMonitor(payload, env);
-            break;
-
-          case 'SEND_WHALE_ALERT':
-            // 发送鲸鱼警报
-            await sendWhaleAlert(payload, env);
-            break;
-
-          case 'SEND_SNIPER_NOTIFICATION':
-            // 发送狙击通知
-            await sendSniperNotification(payload, env);
-            break;
+          // 项目已简化为仅支持 Solana/pump.fun，已移除 sniper 和 whale-alert 功能
+          // case 'SEND_WHALE_ALERT':
+          //   await sendWhaleAlert(payload, env);
+          //   break;
+          // case 'SEND_SNIPER_NOTIFICATION':
+          //   await sendSniperNotification(payload, env);
+          //   break;
 
           default:
             console.warn(`Unknown task type: ${type}`);
@@ -552,5 +545,6 @@ import {
 } from './services/blockchain';
 
 import { sendNotification } from './services/notifications';
-import { startSniperMonitor, stopSniperMonitor, sendSniperNotification } from './services/sniper-tasks';
-import { startWhaleMonitor, stopWhaleMonitor, sendWhaleAlert } from './services/whale-tasks';
+// 项目已简化为仅支持 Solana/pump.fun，已移除 sniper 和 whale-alert 功能
+// import { startSniperMonitor, stopSniperMonitor, sendSniperNotification } from './services/sniper-tasks';
+// import { startWhaleMonitor, stopWhaleMonitor, sendWhaleAlert } from './services/whale-tasks';

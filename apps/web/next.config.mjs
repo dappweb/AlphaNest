@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'export',
+  // 仅在构建时使用 export，开发模式使用默认
+  ...(process.env.NODE_ENV === 'production' ? { output: 'export' } : {}),
   reactStrictMode: true,
   images: {
     unoptimized: true,
@@ -68,13 +69,11 @@ const nextConfig = {
       tls: false,
     };
     
-    // 解决 pino-pretty 警告
-    if (!isServer) {
-      config.resolve.alias = {
-        ...config.resolve.alias,
-        'pino-pretty': false,
-      };
-    }
+    // 解决 pino-pretty 警告（客户端和服务器端都需要）
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      'pino-pretty': false,
+    };
     
     // 优化分块策略
     config.optimization = {

@@ -1,6 +1,10 @@
+'use client';
+
 import Link from 'next/link';
 import Image from 'next/image';
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, Copy, Check } from 'lucide-react';
+import { SOLANA_TOKENS } from '@/config/solana';
+import { useState } from 'react';
 
 // SVG Icons
 const XIcon = () => (
@@ -35,16 +39,9 @@ const footerLinks = [
       { name: 'Docs', href: 'https://docs.popcow.xyz', external: true },
     ],
   },
-  {
-    title: 'Legal',
-    links: [
-      { name: 'Terms', href: '/terms' },
-      { name: 'Privacy', href: '/privacy' },
-    ],
-  },
 ];
 
-const chains = ['BSC', 'Solana'];
+const chains = ['Solana'];
 
 function FooterLink({ href, name, external }: { href: string; name: string; external?: boolean }) {
   const className = "text-sm text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-1";
@@ -61,6 +58,43 @@ function FooterLink({ href, name, external }: { href: string; name: string; exte
   return <Link href={href} className={className}>{name}</Link>;
 }
 
+function TokenAddress({ label, address }: { label: string; address: string }) {
+  const [copied, setCopied] = useState(false);
+  const shortAddress = `${address.slice(0, 4)}...${address.slice(-4)}`;
+  const solscanUrl = `https://solscan.io/token/${address}`;
+
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(address);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="flex items-center gap-2 text-xs">
+      <span className="text-muted-foreground">{label}:</span>
+      <a
+        href={solscanUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-muted-foreground hover:text-foreground transition-colors font-mono"
+      >
+        {shortAddress}
+      </a>
+      <button
+        onClick={handleCopy}
+        className="p-1 hover:bg-secondary rounded transition-colors text-muted-foreground hover:text-foreground"
+        aria-label="Copy address"
+      >
+        {copied ? (
+          <Check className="h-3 w-3 text-green-500" />
+        ) : (
+          <Copy className="h-3 w-3" />
+        )}
+      </button>
+    </div>
+  );
+}
+
 export function Footer({ className }: { className?: string }) {
   return (
     <footer className={`border-t bg-background/50 backdrop-blur-sm ${className || ''}`}>
@@ -73,7 +107,7 @@ export function Footer({ className }: { className?: string }) {
               <span className="font-bold">PopCowDefi</span>
             </div>
             <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
-              Cross-chain Meme asset platform with curated launches & CowGuard insurance.
+              Solana Meme asset platform with curated launches & CowGuard insurance.
             </p>
             <div className="flex gap-2">
               {socialLinks.map((link) => (
@@ -106,14 +140,47 @@ export function Footer({ className }: { className?: string }) {
           ))}
         </div>
 
+        {/* Token Addresses */}
+        <div className="mt-8 pt-6 border-t">
+          <div className="flex flex-col gap-2 text-xs">
+            <h4 className="font-medium text-sm mb-2">Token Addresses</h4>
+            <div className="flex flex-col sm:flex-row gap-4 flex-wrap">
+              <TokenAddress label="POPCOW_DEFI" address={SOLANA_TOKENS.POPCOW_DEFI} />
+            </div>
+          </div>
+        </div>
+
         {/* Bottom */}
-        <div className="mt-8 pt-6 border-t flex flex-col md:flex-row items-center justify-between gap-3 text-xs text-muted-foreground">
-          <p>© {new Date().getFullYear()} PopCowDefi</p>
-          <div className="flex items-center gap-2">
-            <span>Built on</span>
-            {chains.map((chain) => (
-              <span key={chain} className="px-2 py-0.5 rounded bg-secondary">{chain}</span>
-            ))}
+        <div className="mt-6 pt-6 border-t">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+            <p className="text-xs text-muted-foreground">© {new Date().getFullYear()} PopCowDefi</p>
+            
+            {/* Social Links */}
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-muted-foreground">Follow us:</span>
+              <div className="flex gap-2">
+                {socialLinks.map((link) => (
+                  <a
+                    key={link.name}
+                    href={link.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex h-9 w-9 items-center justify-center rounded-lg bg-secondary hover:bg-primary/10 transition-colors text-muted-foreground hover:text-foreground border border-border hover:border-primary/30"
+                    aria-label={link.name}
+                    title={link.name}
+                  >
+                    {link.icon}
+                  </a>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span>Built on</span>
+              {chains.map((chain) => (
+                <span key={chain} className="px-2 py-0.5 rounded bg-secondary">{chain}</span>
+              ))}
+            </div>
           </div>
         </div>
       </div>

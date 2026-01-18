@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { Bell, Search, X, Menu, Sun, Moon, Monitor } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { NotificationCenter } from '@/components/notifications';
@@ -10,6 +9,7 @@ import { useSidebarStore } from '@/stores/sidebar-store';
 import { useTheme } from '@/stores/theme-store';
 import { cn } from '@/lib/utils';
 import { useTranslation } from '@/hooks/use-translation';
+import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 
 export function Header() {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
@@ -36,10 +36,10 @@ export function Header() {
 
   // Search suggestions
   const suggestions = [
-    { label: 'PEPE Token', type: 'token', href: '/trade?token=PEPE' },
-    { label: 'Bitcoin Analysis', type: 'analysis', href: '/analytics?symbol=BTC' },
-    { label: 'Meme Coins', type: 'category', href: '/meme' },
-    { label: 'Trading Bots', type: 'feature', href: '/bots' },
+    { label: 'Staking', type: 'feature', href: '/staking' },
+    { label: 'Insurance', type: 'feature', href: '/insurance' },
+    { label: 'Referral', type: 'feature', href: '/referral' },
+    { label: 'Admin', type: 'feature', href: '/admin' },
   ].filter(s => 
     s.label.toLowerCase().includes(searchQuery.toLowerCase())
   ).slice(0, 3);
@@ -99,24 +99,29 @@ export function Header() {
             <input
               id="global-search"
               type="text"
-              placeholder={t.header.search}
+              placeholder="Search..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onFocus={() => setShowSuggestions(true)}
               onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
               className={cn(
-                "h-10 rounded-lg border bg-secondary pl-10 pr-4 text-sm outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-orange-500 transition-all duration-200",
-                "w-48 md:w-64 lg:w-80 focus:w-64 md:focus:w-80 lg:focus:w-96"
+                "h-10 rounded-lg border bg-background pl-10 pr-20 text-sm outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-primary transition-all duration-200",
+                "w-48 md:w-64 lg:w-80"
               )}
             />
-            {searchQuery && (
+            {searchQuery ? (
               <button
                 type="button"
                 onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                className="absolute right-12 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
               >
                 <X className="h-4 w-4" />
               </button>
+            ) : (
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-xs text-muted-foreground">
+                <kbd className="px-1.5 py-0.5 bg-muted rounded text-[10px] font-mono">⌘</kbd>
+                <kbd className="px-1.5 py-0.5 bg-muted rounded text-[10px] font-mono">K</kbd>
+              </div>
             )}
             {/* Search Suggestions Dropdown */}
             {showSuggestions && searchQuery && suggestions.length > 0 && (
@@ -188,14 +193,8 @@ export function Header() {
             <ThemeIcon className="h-4 w-4" />
           </Button>
 
-          <ConnectButton
-            chainStatus="icon"
-            showBalance={false}
-            accountStatus={{
-              smallScreen: 'avatar',
-              largeScreen: 'full',
-            }}
-          />
+          {/* Solana 钱包连接按钮 */}
+          <WalletMultiButton className="!bg-primary hover:!bg-primary/90 !text-primary-foreground" />
         </div>
       </header>
 

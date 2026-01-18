@@ -38,15 +38,13 @@ export const metadata: Metadata = {
     'Meme coins',
     'Rug Pull detector',
     'DeFi',
-    'Cross-chain',
     'Web3',
     'Crypto',
     'Solana',
-    'Base',
-    'Ethereum',
     'CowGuard',
     'Insurance',
     'Smart Trading',
+    'pump.fun',
   ],
   authors: [{ name: 'PopCowDefi Team' }],
   creator: 'PopCowDefi',
@@ -142,8 +140,10 @@ export default function RootLayout({
             <Sidebar />
             <div className="flex flex-1 flex-col">
               <Header />
-              <main className="flex-1 overflow-auto p-4 md:p-6 pb-20 md:pb-6">
-                <PageTransition>{children}</PageTransition>
+              <main className="flex-1 overflow-auto p-4 md:p-8 pb-20 md:pb-8 bg-background">
+                <div className="max-w-7xl mx-auto">
+                  <PageTransition>{children}</PageTransition>
+                </div>
               </main>
               <Footer className="hidden md:block" />
             </div>

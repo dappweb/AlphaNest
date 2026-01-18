@@ -1,6 +1,7 @@
 'use client';
 
-import { useAccount, useBalance } from 'wagmi';
+import { useWallet } from '@solana/wallet-adapter-react';
+import { useConnection } from '@solana/wallet-adapter-react';
 import { TrendingUp, Users, Shield, Coins, Wallet, RefreshCw } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,8 +11,12 @@ import { ApiService, type PlatformStats, type UserStats } from '@/lib/api-servic
 import { usePrivacySettings } from '@/hooks/use-settings';
 
 export function StatsOverview() {
-  const { isConnected, address } = useAccount();
-  const { data: balance } = useBalance({ address });
+  const { publicKey, connected } = useWallet();
+  const { connection } = useConnection();
+  const isConnected = connected;
+  const address = publicKey?.toBase58() || null;
+  // Solana 余额需要从链上获取，这里暂时设为 null
+  const balance = null;
   const { hideBalance } = usePrivacySettings();
   const [userStats, setUserStats] = useState<UserStats>({
     portfolioValue: 0,
@@ -122,7 +127,7 @@ export function StatsOverview() {
       console.error('Failed to fetch user stats:', err);
       // 设置默认数据
       setUserStats({
-        portfolioValue: balance ? parseFloat(balance.formatted) * 2000 : 0,
+        portfolioValue: 0, // Solana 余额需要从链上获取
         portfolioChange: 12.5,
         pointsBalance: 2450,
         activePolicies: 3,
@@ -133,8 +138,8 @@ export function StatsOverview() {
   };
 
   // 初始数据加载 - 静默加载，不显示骨架屏
-  // 使用 balance?.formatted 而不是 balance 对象，避免对象引用变化导致的无限循环
-  const balanceValue = balance?.formatted;
+  // Solana 余额需要从链上获取
+  const balanceValue = null;
 
   useEffect(() => {
     const loadData = async () => {

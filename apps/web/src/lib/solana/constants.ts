@@ -3,8 +3,8 @@ import { PublicKey } from '@solana/web3.js';
 // popcow 引流代币地址 (Pump.fun 发行)
 export const POPCOW_TOKEN_MINT = new PublicKey('8mrMRf8QwGh5bSrgzKsMmHPTTGqDcENU91SWuXEypump');
 
-// PopCowDefi 平台代币地址 (部署后更新)
-export const POPCOWDEFI_TOKEN_MINT = new PublicKey('11111111111111111111111111111111'); // TODO: 部署后替换
+// PopCowDefi 平台代币地址 (已上线 pump.fun)
+export const POPCOWDEFI_TOKEN_MINT = new PublicKey('4sCGHM2NL1nV6fYfWSoCTMwmJDCjfHub9pSpz128pump');
 
 // 质押合约程序 ID (devnet 网络 - 2026-01-17 部署)
 export const STAKING_PROGRAM_ID = new PublicKey('9tyVCiEHi97uMbzHHt1MUwprn1d7HEwCzDwUVpxdbYuj'); // PopCowDefi Staking Program ✅
@@ -74,6 +74,14 @@ export const MAINSTREAM_TOKENS = {
     icon: '🐄',
     coingeckoId: null,
   },
+  POPCOW_DEFI: {
+    mint: POPCOWDEFI_TOKEN_MINT,
+    symbol: 'POPCOW_DEFI',
+    name: 'PopCow DeFi',
+    decimals: 6,
+    icon: '🐄',
+    coingeckoId: null,
+  },
 };
 
 // 支持质押的代币列表
@@ -131,9 +139,9 @@ export const TOKEN_INFO = {
     mint: POPCOW_TOKEN_MINT,
   },
   popCowDefi: {
-    symbol: 'PopCowDefi',
-    name: 'PopCowDefi Token',
-    decimals: 9,
+    symbol: 'POPCOW_DEFI',
+    name: 'PopCow DeFi Token',
+    decimals: 6, // pump.fun 代币通常为 6 位小数
     mint: POPCOWDEFI_TOKEN_MINT,
     totalSupply: 100_000_000,
   },

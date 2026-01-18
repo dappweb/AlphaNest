@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useAccount, useChainId } from 'wagmi';
+import { useWallet } from '@solana/wallet-adapter-react';
 
 export interface Transaction {
   hash: string;
@@ -22,25 +22,21 @@ export interface Transaction {
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://alphanest-api.dappweb.workers.dev';
 
 const CHAIN_NAMES: Record<number, string> = {
-  1: 'Ethereum',
-  8453: 'Base',
-  56: 'BNB Chain',
-  11155111: 'Sepolia',
+  101: 'Solana',
 };
 
 const CHAIN_EXPLORERS: Record<number, string> = {
-  1: 'https://etherscan.io',
-  8453: 'https://basescan.org',
-  56: 'https://bscscan.com',
-  11155111: 'https://sepolia.etherscan.io',
+  101: 'https://solscan.io',
 };
 
 /**
  * Hook to fetch transaction history from blockchain
  */
 export function useTransactionHistory(limit: number = 20) {
-  const { address, isConnected } = useAccount();
-  const chainId = useChainId();
+  const { publicKey, connected } = useWallet();
+  const address = publicKey?.toBase58() || null;
+  const isConnected = connected;
+  const chainId = 101; // Solana chain ID
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -111,6 +107,6 @@ export function useTransactionHistory(limit: number = 20) {
     error,
     hasMore,
     refetch: fetchTransactions,
-    explorerUrl: (hash: string) => `${CHAIN_EXPLORERS[chainId] || CHAIN_EXPLORERS[1]}/tx/${hash}`,
+    explorerUrl: (hash: string) => `${CHAIN_EXPLORERS[chainId] || CHAIN_EXPLORERS[101]}/tx/${hash}`,
   };
 }

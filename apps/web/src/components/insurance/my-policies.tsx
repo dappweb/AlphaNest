@@ -2,23 +2,22 @@
 
 import { useState, useEffect } from 'react';
 import { FileText, Clock, CheckCircle, XCircle, Loader2, TrendingUp, TrendingDown, AlertCircle } from 'lucide-react';
-import { useAccount } from 'wagmi';
+import { useWallet } from '@solana/wallet-adapter-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { formatUSD } from '@/lib/utils';
 import { 
-  useUserPolicies, 
-  usePolicyInfo, 
-  useProductInfo,
-  useCancelPolicy,
-  useSubmitClaim,
-  PolicyStatus,
-  POLICY_STATUS_LABELS,
+  useSolanaPolicies, 
+  useSolanaProductInfo, 
+  useSolanaCancelPolicy,
+  useSolanaSubmitClaim,
+  useSolanaInsurance,
   InsuranceType,
   INSURANCE_TYPE_ICONS,
-  ClaimType,
-} from '@/hooks/use-cowguard-insurance';
+  PolicyStatus,
+  POLICY_STATUS_LABELS,
+} from '@/hooks/use-solana-insurance';
 
 interface PolicyDisplayData {
   policyId: number;
@@ -71,15 +70,31 @@ function getStatusBadge(status: PolicyStatus, isExpired: boolean) {
   }
 }
 
-function PolicyCard({ policyId }: { policyId: number }) {
-  const { policyInfo, isLoading: loadingPolicy } = usePolicyInfo(policyId);
-  const { productInfo, isLoading: loadingProduct } = useProductInfo(policyInfo ? Number(policyInfo.productId) : 0);
-  const { cancelPolicy, isPending: isCancelling, isSuccess: cancelSuccess } = useCancelPolicy();
-  const { submitClaim, isPending: isSubmitting, isSuccess: claimSuccess } = useSubmitClaim();
+function PolicyCard({ policyId, policy }: { policyId: number; policy: any }) {
+  // 使用 Solana hooks
+  const { cancel, submitClaim: submitClaimAction } = useSolanaInsurance();
+  
+  // 从 policy 对象获取信息（简化版）
+  const policyInfo = policy ? {
+    status: policy.status === 0 ? PolicyStatus.Active : PolicyStatus.Expired,
+    isExpired: policy.isExpired,
+    coverageFormatted: (policy.coverageAmount / 1e6).toFixed(2),
+    premiumFormatted: (policy.premiumPaid / 1e6).toFixed(2),
+    endTime: policy.endTime.toString(),
+    productId: policy.product,
+  } : null;
+  
+  const productInfo = policy ? {
+    productType: InsuranceType.RugPull, // 简化，实际需要从链上获取
+  } : null;
   
   const [showClaimModal, setShowClaimModal] = useState(false);
-
-  const isLoading = loadingPolicy || loadingProduct;
+  
+  const isLoading = false; // 简化（实际应该从链上加载）
+  const isCancelling = cancel.isPending;
+  const cancelSuccess = cancel.isSuccess;
+  const isSubmitting = submitClaimAction.isPending;
+  const claimSuccess = submitClaimAction.isSuccess;
 
   if (isLoading) {
     return (
@@ -98,7 +113,9 @@ function PolicyCard({ policyId }: { policyId: number }) {
 
   const handleCancel = async () => {
     try {
-      await cancelPolicy(policyId);
+      // cancelPolicy 只需要 policyPubkey (policyId)
+      const policyPubkey = policy.policyId?.toString() || policyId.toString();
+      await cancel.cancelPolicy(policyPubkey);
     } catch (error) {
       console.error('Cancel failed:', error);
     }
@@ -107,8 +124,14 @@ function PolicyCard({ policyId }: { policyId: number }) {
   const handleSubmitClaim = async () => {
     try {
       // 简化示例 - 实际需要收集理赔信息
-      const evidenceHash = '0x0000000000000000000000000000000000000000000000000000000000000000' as `0x${string}`;
-      await submitClaim(policyId, ClaimType.RugPull, policyInfo.coverageFormatted, evidenceHash);
+      const policyPubkey = policy.policyId?.toString() || policyId.toString();
+      const evidenceHash = '0x0000000000000000000000000000000000000000000000000000000000000000';
+      await submitClaimAction.submitClaim(
+        policyPubkey,
+        0, // ClaimType.RugPull
+        policy.coverageAmount || 0, // claimAmount
+        evidenceHash
+      );
     } catch (error) {
       console.error('Claim failed:', error);
     }
@@ -182,13 +205,27 @@ function PolicyCard({ policyId }: { policyId: number }) {
 }
 
 export function MyPolicies() {
-  const { isConnected } = useAccount();
-  const { policyIds, isLoading, refetch } = useUserPolicies();
+  const { connected } = useWallet();
+  const { policies, isLoading, refetch } = useSolanaPolicies();
+  
+  // 计算统计信息
+  const activePolicies = policies.filter(p => 
+    p.status === PolicyStatus.Active && !p.isExpired
+  ).length;
+  
+  const totalCoverage = policies
+    .filter(p => p.status === PolicyStatus.Active && !p.isExpired)
+    .reduce((sum, p) => sum + (p.coverageAmount || 0), 0);
+  
+  const claimsFiled = policies.filter(p => 
+    p.status === PolicyStatus.Claimed
+  ).length;
+  
+  const totalPaidOut = policies
+    .filter(p => p.status === PolicyStatus.Claimed)
+    .reduce((sum, p) => sum + (p.coverageAmount || 0), 0);
 
-  // 计算统计 (简化版 - 实际需要从合约获取更多数据)
-  const activePolicies = policyIds.length;
-
-  if (!isConnected) {
+  if (!connected) {
     return (
       <Card>
         <CardHeader>
@@ -232,15 +269,19 @@ export function MyPolicies() {
           </div>
           <div className="p-2 sm:p-3 rounded-lg bg-muted/50">
             <p className="text-xs text-muted-foreground">Total Coverage</p>
-            <p className="text-lg sm:text-xl font-bold text-blue-500">--</p>
+            <p className="text-lg sm:text-xl font-bold text-blue-500">
+              {formatUSD(totalCoverage / 1e6)}
+            </p>
           </div>
           <div className="p-2 sm:p-3 rounded-lg bg-muted/50">
             <p className="text-xs text-muted-foreground">Claims Filed</p>
-            <p className="text-lg sm:text-xl font-bold">--</p>
+            <p className="text-lg sm:text-xl font-bold">{claimsFiled}</p>
           </div>
           <div className="p-2 sm:p-3 rounded-lg bg-muted/50">
             <p className="text-xs text-muted-foreground">Total Paid Out</p>
-            <p className="text-lg sm:text-xl font-bold text-green-500">--</p>
+            <p className="text-lg sm:text-xl font-bold text-green-500">
+              {formatUSD(totalPaidOut / 1e6)}
+            </p>
           </div>
         </div>
 
@@ -249,7 +290,7 @@ export function MyPolicies() {
           <div className="flex items-center justify-center py-8">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
-        ) : policyIds.length === 0 ? (
+        ) : policies.length === 0 ? (
           <div className="py-6 sm:py-8 text-center text-muted-foreground">
             <FileText className="h-10 w-10 mx-auto mb-3 opacity-50" />
             <p className="text-sm">You don&apos;t have any insurance policies yet.</p>
@@ -257,19 +298,19 @@ export function MyPolicies() {
           </div>
         ) : (
           <div className="space-y-3">
-            {policyIds.map((policyId) => (
-              <PolicyCard key={policyId.toString()} policyId={Number(policyId)} />
+            {policies.map((policy, idx) => (
+              <PolicyCard key={idx} policyId={idx} policy={policy} />
             ))}
           </div>
         )}
 
-        {/* BSC/Solana 提示 */}
-        <div className="mt-4 p-3 rounded-lg bg-yellow-500/5 border border-yellow-500/20">
+        {/* Solana 提示 */}
+        <div className="mt-4 p-3 rounded-lg bg-blue-500/5 border border-blue-500/20">
           <div className="flex items-start gap-2">
-            <AlertCircle className="h-4 w-4 text-yellow-500 mt-0.5 flex-shrink-0" />
+            <AlertCircle className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
             <div className="text-xs text-muted-foreground">
-              <p className="font-medium text-yellow-500 mb-1">BSC Network</p>
-              <p>当前显示 BSC 链上的保单。Solana 保单请切换到 Solana 网络查看。</p>
+              <p className="font-medium text-blue-500 mb-1">Solana Network</p>
+              <p>Currently showing policies on Solana chain. All policy data comes from Solana blockchain.</p>
             </div>
           </div>
         </div>

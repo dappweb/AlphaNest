@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAccount } from 'wagmi';
+import { useWallet } from '@solana/wallet-adapter-react';
 import { 
   Bell, 
   X, 
@@ -24,6 +24,8 @@ import { Loading } from '@/components/ui/loading';
 import { EmptyState } from '@/components/ui/empty-state';
 import { getAuthHeaders } from '@/lib/auth';
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://alphanest-api.dappweb.workers.dev';
+
 type NotificationType = 'price_alert' | 'whale_alert' | 'insurance' | 'system' | 'trade' | 'points';
 type NotificationPriority = 'high' | 'medium' | 'low';
 
@@ -38,8 +40,6 @@ interface Notification {
   actionUrl?: string;
   actionLabel?: string;
 }
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://alphanest-api.dappweb.workers.dev';
 
 function getNotificationIcon(type: NotificationType) {
   switch (type) {
@@ -92,96 +92,158 @@ interface NotificationCenterProps {
 }
 
 export function NotificationCenter({ isOpen, onClose }: NotificationCenterProps) {
-  const { address, isConnected } = useAccount();
+  const { publicKey, connected } = useWallet();
+  const address = publicKey?.toBase58() || null;
+  const isConnected = connected;
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [filter, setFilter] = useState<'all' | 'unread'>('all');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Mock notifications for demo
-  const mockNotifications: Notification[] = [
-    {
-      id: '1',
-      type: 'price_alert',
-      priority: 'high',
-      title: '🚀 PEPE Pumping!',
-      message: 'PEPE is up 45% in the last hour. High volume detected.',
-      timestamp: '2 mins ago',
-      read: false,
-      actionUrl: '/trade?token=PEPE',
-      actionLabel: 'Trade Now'
-    },
-    {
-      id: '2',
-      type: 'whale_alert',
-      priority: 'medium',
-      title: '🐋 Whale Activity',
-      message: 'Large wallet moved 10M USDC to Binance',
-      timestamp: '15 mins ago',
-      read: false
-    },
-    {
-      id: '3',
-      type: 'insurance',
-      priority: 'low',
-      title: '🛡️ CowGuard Active',
-      message: 'Your insurance coverage is active for 5 positions',
-      timestamp: '1 hour ago',
-      read: true
-    },
-    {
-      id: '4',
-      type: 'points',
-      priority: 'medium',
-      title: '🎯 Points Earned!',
-      message: 'You earned 250 Cow Points from trading activity',
-      timestamp: '2 hours ago',
-      read: true,
-      actionUrl: '/points',
-      actionLabel: 'View Points'
-    },
-    {
-      id: '5',
-      type: 'system',
-      priority: 'low',
-      title: '🔔 System Update',
-      message: 'New features added to PopCowDefi',
-      timestamp: '3 hours ago',
-      read: true,
-      actionUrl: '/popcow',
-      actionLabel: 'Explore'
+  // 从 API 获取通知数据
+  const fetchNotifications = async () => {
+    if (!isConnected || !address) {
+      setNotifications([]);
+      return;
     }
-  ];
 
-  // Initialize with mock data
-  useEffect(() => {
-    if (isOpen) {
-      setNotifications(mockNotifications);
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch(
+        `${API_URL}/api/v1/notifications?unread=${filter === 'unread'}`,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            ...getAuthHeaders(),
+          },
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.data) {
+          setNotifications(data.data);
+        } else {
+          setNotifications([]);
+        }
+      } else {
+        throw new Error('Failed to fetch notifications');
+      }
+    } catch (err) {
+      console.error('Error fetching notifications:', err);
+      setError('Failed to load notifications');
+      setNotifications([]);
+    } finally {
       setIsLoading(false);
     }
-  }, [isOpen]);
+  };
+
+  // 获取通知数据
+  useEffect(() => {
+    if (isOpen && isConnected) {
+      fetchNotifications();
+    } else if (!isConnected) {
+      setNotifications([]);
+    }
+  }, [isOpen, isConnected, address, filter]);
 
   const unreadCount = notifications.filter(n => !n.read).length;
   const filteredNotifications = filter === 'all' 
     ? notifications 
     : notifications.filter(n => !n.read);
 
-  const markAsRead = (id: string) => {
+  const markAsRead = async (id: string) => {
+    // 乐观更新 UI
     setNotifications(prev => 
       prev.map(n => n.id === id ? { ...n, read: true } : n)
     );
+
+    // 调用 API 标记为已读
+    if (isConnected && address) {
+      try {
+        await fetch(`${API_URL}/api/v1/notifications/${id}/read`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            ...getAuthHeaders(),
+          },
+        });
+      } catch (err) {
+        console.error('Error marking notification as read:', err);
+        // 回滚 UI 更新
+        setNotifications(prev => 
+          prev.map(n => n.id === id ? { ...n, read: false } : n)
+        );
+      }
+    }
   };
 
-  const markAllAsRead = () => {
+  const markAllAsRead = async () => {
+    // 乐观更新 UI
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+
+    // 调用 API 标记所有为已读
+    if (isConnected && address) {
+      try {
+        await fetch(`${API_URL}/api/v1/notifications/read-all`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            ...getAuthHeaders(),
+          },
+        });
+      } catch (err) {
+        console.error('Error marking all notifications as read:', err);
+        // 重新获取通知以恢复状态
+        fetchNotifications();
+      }
+    }
   };
 
-  const deleteNotification = (id: string) => {
+  const deleteNotification = async (id: string) => {
+    // 乐观更新 UI
     setNotifications(prev => prev.filter(n => n.id !== id));
+
+    // 调用 API 删除通知
+    if (isConnected && address) {
+      try {
+        await fetch(`${API_URL}/api/v1/notifications/${id}`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            ...getAuthHeaders(),
+          },
+        });
+      } catch (err) {
+        console.error('Error deleting notification:', err);
+        // 重新获取通知以恢复状态
+        fetchNotifications();
+      }
+    }
   };
 
-  const clearAll = () => {
+  const clearAll = async () => {
+    // 乐观更新 UI
     setNotifications([]);
+
+    // 调用 API 清空所有通知
+    if (isConnected && address) {
+      try {
+        await fetch(`${API_URL}/api/v1/notifications`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            ...getAuthHeaders(),
+          },
+        });
+      } catch (err) {
+        console.error('Error clearing notifications:', err);
+        // 重新获取通知以恢复状态
+        fetchNotifications();
+      }
+    }
   };
 
   if (!isOpen) return null;

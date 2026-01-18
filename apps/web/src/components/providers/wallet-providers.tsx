@@ -1,31 +1,20 @@
 'use client';
 
-import { WagmiProvider } from 'wagmi';
-import { RainbowKitProvider, darkTheme } from '@rainbow-me/rainbowkit';
 import { type ReactNode } from 'react';
-import { wagmiConfig } from '@/config/wagmi';
 import { SolanaProvider } from './solana-provider';
-import '@rainbow-me/rainbowkit/styles.css';
 
 interface WalletProvidersProps {
   children: ReactNode;
 }
 
+/**
+ * 钱包提供者 - 仅支持 Solana
+ * 本项目仅支持 Solana 链上的 pump.fun 代币
+ */
 export default function WalletProviders({ children }: WalletProvidersProps) {
   return (
-    <WagmiProvider config={wagmiConfig}>
-      <RainbowKitProvider
-        theme={darkTheme({
-          accentColor: 'hsl(142, 76%, 36%)',
-          accentColorForeground: 'white',
-          borderRadius: 'medium',
-        })}
-        modalSize="compact"
-      >
-        <SolanaProvider>
-          {children}
-        </SolanaProvider>
-      </RainbowKitProvider>
-    </WagmiProvider>
+    <SolanaProvider>
+      {children}
+    </SolanaProvider>
   );
 }

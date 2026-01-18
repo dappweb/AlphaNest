@@ -48,8 +48,9 @@ export async function getInsuranceProducts(): Promise<InsuranceProduct[]> {
     return data.pools || [];
   } catch (error) {
     console.error('Failed to fetch insurance products:', error);
-    // 返回模拟数据作为后备
-    return getMockInsuranceProducts();
+    // API 失败时返回空数组，不使用 mock 数据
+    // 前端应该显示错误状态或空状态
+    return [];
   }
 }
 

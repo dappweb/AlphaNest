@@ -15,10 +15,9 @@ export function RoutePrefetch() {
     // 预取关键路由
     const criticalRoutes = [
       '/staking',
-      '/trade',
-      '/meme',
-      '/points',
+      '/insurance',
       '/referral',
+      '/admin',
     ];
 
     // 根据当前路径预取相关路由
@@ -28,9 +27,9 @@ export function RoutePrefetch() {
       // 在首页预取最常用的路由
       prefetchRoutes.push(...criticalRoutes.slice(0, 3));
     } else if (pathname === '/staking') {
-      prefetchRoutes.push('/trade', '/points');
-    } else if (pathname === '/trade') {
-      prefetchRoutes.push('/meme', '/tools/security-score');
+      prefetchRoutes.push('/insurance', '/referral');
+    } else if (pathname === '/insurance') {
+      prefetchRoutes.push('/staking', '/referral');
     }
 
     // 使用 Link 组件预取（Next.js 会自动处理）
@@ -55,7 +54,7 @@ export function RoutePrefetch() {
   // 使用隐藏的 Link 组件触发预取
   return (
     <div className="hidden">
-      {['/staking', '/trade', '/meme', '/points', '/referral'].map((route) => (
+      {['/staking', '/insurance', '/referral', '/admin'].map((route) => (
         <Link key={route} href={route} prefetch={true} />
       ))}
     </div>

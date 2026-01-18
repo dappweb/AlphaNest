@@ -37,10 +37,6 @@ export function InsuranceHero() {
         
         <div className="relative z-10">
           <div className="flex items-center gap-2 flex-wrap mb-3">
-            <Badge className="bg-yellow-400/30 text-white border-0 text-xs">
-              <Zap className="h-3 w-3 mr-1" />
-              Four.meme (BSC)
-            </Badge>
             <Badge className="bg-purple-400/30 text-white border-0 text-xs">
               <Rocket className="h-3 w-3 mr-1" />
               pump.fun (SOL)
@@ -51,15 +47,11 @@ export function InsuranceHero() {
             🛡️ Meme Token Insurance
           </h1>
           <p className="text-white/80 text-sm md:text-base max-w-xl">
-            Protect your Four.meme and pump.fun meme token investments from rug pulls, 
+            Protect your pump.fun meme token investments from rug pulls, 
             price crashes, and smart contract exploits.
           </p>
           
-          <div className="mt-4 pt-4 border-t border-white/20 grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div>
-              <p className="text-xl md:text-2xl font-bold">🟡 BSC</p>
-              <p className="text-white/70 text-xs">Four.meme Tokens</p>
-            </div>
+          <div className="mt-4 pt-4 border-t border-white/20 grid grid-cols-2 md:grid-cols-3 gap-4">
             <div>
               <p className="text-xl md:text-2xl font-bold">🟣 SOL</p>
               <p className="text-white/70 text-xs">pump.fun Tokens</p>

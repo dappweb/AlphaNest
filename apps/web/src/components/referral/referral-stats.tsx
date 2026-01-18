@@ -143,7 +143,17 @@ export function ReferralStats({ className }: ReferralStatsProps) {
               <DollarSign className="h-4 w-4 text-yellow-500" />
               <span className="text-[10px] md:text-xs text-muted-foreground">Total Earned</span>
             </div>
-            <p className="text-lg md:text-2xl font-bold">${stats.totalEarned.toFixed(2)}</p>
+            <p className="text-lg md:text-2xl font-bold">
+              {stats.totalEarnedPopCowDefi 
+                ? `${stats.totalEarnedPopCowDefi.toLocaleString(undefined, { maximumFractionDigits: 2 })} POPCOW_DEFI`
+                : `$${stats.totalEarned.toFixed(2)}`
+              }
+            </p>
+            {stats.totalEarnedPopCowDefi && (
+              <p className="text-[10px] text-muted-foreground mt-0.5">
+                ≈ ${stats.totalEarned.toFixed(2)} USD
+              </p>
+            )}
           </CardContent>
         </Card>
 
@@ -153,7 +163,17 @@ export function ReferralStats({ className }: ReferralStatsProps) {
               <Clock className="h-4 w-4 text-orange-500" />
               <span className="text-[10px] md:text-xs text-muted-foreground">Pending</span>
             </div>
-            <p className="text-lg md:text-2xl font-bold text-orange-500">${stats.pendingRewards.toFixed(2)}</p>
+            <p className="text-lg md:text-2xl font-bold text-orange-500">
+              {stats.pendingRewardsPopCowDefi 
+                ? `${stats.pendingRewardsPopCowDefi.toLocaleString(undefined, { maximumFractionDigits: 2 })} POPCOW_DEFI`
+                : `$${stats.pendingRewards.toFixed(2)}`
+              }
+            </p>
+            {stats.pendingRewardsPopCowDefi && (
+              <p className="text-[10px] text-muted-foreground mt-0.5">
+                ≈ ${stats.pendingRewards.toFixed(2)} USD
+              </p>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -169,7 +189,19 @@ export function ReferralStats({ className }: ReferralStatsProps) {
                   Pending Rewards
                 </h4>
                 <p className="text-sm text-muted-foreground mt-0.5">
-                  You have <span className="text-yellow-500 font-bold">${stats.pendingRewards.toFixed(2)}</span> USDC to claim
+                  You have{' '}
+                  <span className="text-yellow-500 font-bold">
+                    {stats.pendingRewardsPopCowDefi 
+                      ? `${stats.pendingRewardsPopCowDefi.toLocaleString(undefined, { maximumFractionDigits: 2 })} POPCOW_DEFI`
+                      : `$${stats.pendingRewards.toFixed(2)}`
+                    }
+                  </span>
+                  {' '}to claim
+                  {stats.pendingRewardsPopCowDefi && (
+                    <span className="text-xs text-muted-foreground ml-1">
+                      (≈ ${stats.pendingRewards.toFixed(2)} USD)
+                    </span>
+                  )}
                 </p>
                 {stats.pendingRewards < config.minClaimAmount && (
                   <p className="text-xs text-muted-foreground mt-1">

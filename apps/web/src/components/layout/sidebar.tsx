@@ -25,6 +25,7 @@ import {
 } from '@/components/ui/tooltip';
 import { useSidebarStore, useSidebarHydration } from '@/stores/sidebar-store';
 import { useTranslation } from '@/hooks/use-translation';
+import { useIsAdmin } from '@/hooks/use-is-admin';
 
 const getNavigation = (t: any) => [
   {
@@ -33,15 +34,15 @@ const getNavigation = (t: any) => [
     icon: LayoutDashboard,
     shortcut: 'Ctrl+D',
     badge: null,
-    description: null,
+    description: 'Platform overview and quick access',
   },
   {
     name: `🔥 ${t.nav.staking}`,
     href: '/staking',
     icon: Coins,
     shortcut: 'Ctrl+S',
-    badge: { text: 'BSC+SOL', variant: 'default' as const },
-    description: 'Stake MEME tokens to earn rewards. Support BSC & Solana, up to 25% APY with lock bonuses.',
+    badge: { text: 'Solana', variant: 'default' as const },
+    description: 'Stake MEME tokens to earn rewards on Solana, up to 25% APY with lock bonuses.',
   },
   {
     name: '🛡️ Insurance',
@@ -61,19 +62,14 @@ const getNavigation = (t: any) => [
   },
 ];
 
-const getUserNavigation = (t: any) => [
-  {
-    name: t.nav.settings,
-    href: '/settings',
-    icon: Settings,
-  },
-];
+const getUserNavigation = (t: any) => [];
 
 export function Sidebar() {
   const pathname = usePathname();
   const { isCollapsed, isMobileOpen, toggleCollapsed, setMobileOpen } = useSidebarStore();
   const hydrated = useSidebarHydration();
   const { t } = useTranslation();
+  const { isAdmin } = useIsAdmin();
 
   const navigation = getNavigation(t);
   const userNavigation = getUserNavigation(t);
@@ -123,7 +119,7 @@ export function Sidebar() {
         {/* Main Navigation */}
         <TooltipProvider delayDuration={collapsed ? 0 : 300}>
           <div className="space-y-1">
-            {navigation.map((item) => {
+            {navigation.filter(item => item.href !== '/admin').map((item) => {
               const isActive = pathname === item.href;
               const isSpecial = 'special' in item && item.special;
               const linkContent = (
@@ -202,58 +198,88 @@ export function Sidebar() {
           </div>
         </TooltipProvider>
 
-        {/* Divider */}
-        <div className={cn("my-4 border-t", collapsed && "mx-1")} />
-
-        {/* User Navigation */}
-        <TooltipProvider delayDuration={collapsed ? 0 : 300}>
-          <div className="space-y-1">
-            {!collapsed && (
-              <p className="px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-                Account
+        {/* Admin Section Separator - Only show if user is admin */}
+        {isAdmin && !collapsed && (
+          <>
+            <div className={cn("my-4 border-t", collapsed && "mx-1")} />
+            <div className="px-3 mb-2">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                Admin
               </p>
-            )}
-            {userNavigation.map((item) => {
-              const isActive = pathname === item.href;
-              const linkContent = (
-                <Link
-                  href={item.href}
-                  className={cn(
-                    'flex items-center rounded-lg text-sm font-medium transition-all duration-200',
-                    collapsed ? 'justify-center p-2' : 'gap-3 px-3 py-2',
-                    isActive
-                      ? 'bg-primary text-primary-foreground shadow-sm'
-                      : 'text-muted-foreground hover:bg-secondary hover:text-foreground',
-                    'hover:scale-[1.02] active:scale-[0.98]'
-                  )}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                  }}
-                >
-                  <item.icon className="h-5 w-5 flex-shrink-0" />
-                  {!collapsed && (
-                    <span className="flex-1 truncate">{item.name}</span>
-                  )}
-                </Link>
-              );
+            </div>
+          </>
+        )}
 
-              if (collapsed) {
+        {/* Admin Navigation - Only show if user is admin */}
+        {isAdmin && (
+          <TooltipProvider delayDuration={collapsed ? 0 : 300}>
+            <div className="space-y-1">
+              {navigation.filter(item => item.href === '/admin').map((item) => {
+                const isActive = pathname === item.href;
+                const linkContent = (
+                  <Link
+                    href={item.href}
+                    className={cn(
+                      'flex items-center rounded-lg text-sm font-medium transition-all duration-200',
+                      collapsed ? 'justify-center p-2' : 'gap-3 px-3 py-2',
+                      isActive
+                        ? 'bg-primary text-primary-foreground shadow-sm'
+                        : 'text-muted-foreground hover:bg-secondary hover:text-foreground',
+                      'hover:scale-[1.02] active:scale-[0.98]'
+                    )}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                    }}
+                  >
+                    <item.icon className={cn("flex-shrink-0", collapsed ? "h-5 w-5" : "h-5 w-5")} />
+                    {!collapsed && (
+                      <>
+                        <span className="flex-1 truncate">{item.name}</span>
+                        {item.badge && (
+                          <Badge variant={item.badge.variant} className="text-xs">
+                            {item.badge.text}
+                          </Badge>
+                        )}
+                      </>
+                    )}
+                  </Link>
+                );
+
+                if (collapsed) {
+                  return (
+                    <Tooltip key={item.name}>
+                      <TooltipTrigger asChild>
+                        {linkContent}
+                      </TooltipTrigger>
+                      <TooltipContent side="right" className="max-w-xs">
+                        <p className="font-medium">{item.name}</p>
+                        {item.description && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {item.description}
+                          </p>
+                        )}
+                      </TooltipContent>
+                    </Tooltip>
+                  );
+                }
+
                 return (
                   <Tooltip key={item.name}>
                     <TooltipTrigger asChild>
                       {linkContent}
                     </TooltipTrigger>
-                    <TooltipContent side="right" className="max-w-xs">
-                      <p className="font-medium">{item.name}</p>
-                    </TooltipContent>
+                    {item.description && (
+                      <TooltipContent side="right" className="max-w-xs">
+                        <p className="text-xs">{item.description}</p>
+                      </TooltipContent>
+                    )}
                   </Tooltip>
                 );
-              }
+              })}
+            </div>
+          </TooltipProvider>
+        )}
 
-              return <div key={item.name}>{linkContent}</div>;
-            })}
-          </div>
-        </TooltipProvider>
       </nav>
 
       {/* Collapse Toggle & Status */}

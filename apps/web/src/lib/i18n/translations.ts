@@ -156,16 +156,16 @@ export const translations = {
       },
       document: {
         title: 'PopCowDefi Whitepaper',
-        subtitle: 'Cross-chain Meme Asset Issuance and Traffic Aggregation Platform',
+        subtitle: 'Solana Meme Asset Issuance and Traffic Aggregation Platform',
       },
       highlights: {
         title: 'Key Highlights',
         items: [
           'Reputation-based Dev scoring system',
-          'Cross-chain asset aggregation',
+          'Solana asset aggregation',
           'Parameterized insurance protocol',
           'Dead coin resurrection mechanism',
-          'Multi-chain portfolio verification',
+          'Portfolio verification',
         ],
       },
       sections: {

@@ -4,6 +4,20 @@
 
 import { Env } from '../index';
 
+// 简单的日志工具（避免频繁的 console.log）
+const isDev = process.env.NODE_ENV === 'development';
+const log = {
+  info: (msg: string, ...args: any[]) => {
+    if (isDev) console.log(`[INFO] ${msg}`, ...args);
+  },
+  error: (msg: string, ...args: any[]) => {
+    console.error(`[ERROR] ${msg}`, ...args);
+  },
+  warn: (msg: string, ...args: any[]) => {
+    if (isDev) console.warn(`[WARN] ${msg}`, ...args);
+  },
+};
+
 // ============================================
 // Types
 // ============================================
@@ -62,14 +76,14 @@ export async function indexDevHistory(
 ): Promise<void> {
   const { devAddress, chainId } = payload;
   
-  console.log(`Indexing dev history for ${devAddress} on chain ${chainId || 'all'}`);
+  log.info(`Indexing dev history for ${devAddress} on chain ${chainId || 'all'}`);
   
   try {
     // Fetch data from Bitquery
     const historyData = await fetchDevHistoryFromBitquery(devAddress, chainId, env);
     
     if (!historyData) {
-      console.log(`No history found for dev ${devAddress}`);
+      log.info(`No history found for dev ${devAddress}`);
       return;
     }
     
@@ -87,9 +101,9 @@ export async function indexDevHistory(
       { expirationTtl: 300 } // 5 minutes
     );
     
-    console.log(`Dev history indexed successfully for ${devAddress}`);
+    log.info(`Dev history indexed successfully for ${devAddress}`);
   } catch (error) {
-    console.error(`Error indexing dev history for ${devAddress}:`, error);
+    log.error(`Error indexing dev history for ${devAddress}:`, error);
     throw error;
   }
 }
@@ -148,7 +162,7 @@ async function fetchDevHistoryFromBitquery(
     // Transform and return
     return transformBitqueryResponse(devAddress, chainId || 1, data);
   } catch (error) {
-    console.error('Bitquery fetch error:', error);
+    log.error('Bitquery fetch error:', error);
     return null;
   }
 }
@@ -250,6 +264,56 @@ function calculateDevScore(data: DevHistoryData): number {
   return Math.max(0, Math.min(100, Math.round(score)));
 }
 
+/**
+ * 获取 SOL 价格（USD）
+ * 使用 Jupiter Price API，带缓存和重试机制
+ */
+async function getSolPriceUsd(env: Env): Promise<number | null> {
+  const SOL_MINT = 'So11111111111111111111111111111111111111112';
+  const cacheKey = `sol_price_usd`;
+  
+  // 检查缓存（5分钟有效期）
+  const cached = await env.CACHE.get(cacheKey);
+  if (cached) {
+    try {
+      const cachedData = JSON.parse(cached);
+      if (Date.now() - cachedData.timestamp < 5 * 60 * 1000) {
+        return cachedData.price;
+      }
+    } catch (e) {
+      // 忽略解析错误
+    }
+  }
+  
+  // 从 Jupiter Price API 获取
+  try {
+    const response = await fetch(
+      `https://price.jup.ag/v6/price?ids=${SOL_MINT}&vsToken=USDC`,
+      { signal: AbortSignal.timeout(5000) }
+    );
+    
+    if (response.ok) {
+      const data = await response.json();
+      const price = data.data?.[SOL_MINT]?.price;
+      
+      if (price && price > 0) {
+        // 缓存价格
+        await env.CACHE.put(
+          cacheKey,
+          JSON.stringify({ price, timestamp: Date.now() }),
+          { expirationTtl: 300 } // 5分钟
+        );
+        return price;
+      }
+    }
+  } catch (error) {
+    // 静默失败，使用回退价格
+    if (isDev) log.warn('Failed to fetch SOL price from Jupiter, using fallback');
+  }
+  
+  return null; // 返回 null，让调用者使用回退值
+}
+
 async function updateDevScore(address: string, score: number, env: Env): Promise<void> {
   const tier = score >= 95 ? 'diamond' :
                score >= 80 ? 'platinum' :
@@ -265,52 +329,185 @@ async function updateDevScore(address: string, score: number, env: Env): Promise
 // Token Stats Update
 // ============================================
 
+/**
+ * 更新 pump.fun 代币统计信息
+ * 本项目仅支持 Solana 链上的 pump.fun 代币
+ */
+// 请求去重：防止同一代币的并发更新请求
+const pendingUpdates = new Map<string, Promise<void>>();
+
 export async function updateTokenStats(
-  payload: { tokenAddress: string; chainId: number },
+  payload: { tokenAddress: string; chainId?: number },
   env: Env
 ): Promise<void> {
-  const { tokenAddress, chainId } = payload;
+  const { tokenAddress } = payload;
   
-  console.log(`Updating token stats for ${tokenAddress} on chain ${chainId}`);
+  // 检查是否有正在进行的更新
+  const pendingKey = `update:${tokenAddress}`;
+  const pending = pendingUpdates.get(pendingKey);
+  if (pending) {
+    return pending; // 返回现有的 Promise
+  }
+  
+  // 创建新的更新 Promise
+  const updatePromise = (async () => {
+    try {
+      await performTokenStatsUpdate(tokenAddress, env);
+    } finally {
+      pendingUpdates.delete(pendingKey);
+    }
+  })();
+  
+  pendingUpdates.set(pendingKey, updatePromise);
+  return updatePromise;
+}
+
+async function performTokenStatsUpdate(
+  tokenAddress: string,
+  env: Env
+): Promise<void> {
+  // 检查缓存（避免频繁更新）
+  const cacheKey = `token_stats:101:${tokenAddress}`;
+  const cached = await env.CACHE.get(cacheKey);
+  if (cached) {
+    try {
+      const cachedStats = JSON.parse(cached);
+      // 如果缓存少于 10 秒，跳过更新
+      const cacheAge = Date.now() - (cachedStats._timestamp || 0);
+      if (cacheAge < 10000) {
+        return; // 缓存仍然新鲜
+      }
+    } catch (e) {
+      // 忽略解析错误
+    }
+  }
   
   try {
-    // Fetch from DexScreener
-    const stats = await fetchTokenStatsFromDexScreener(tokenAddress, chainId, env);
+    // 从 pump.fun API 获取代币详情（带重试机制）
+    let tokenData = null;
+    let lastError = null;
     
-    if (!stats) {
-      console.log(`No stats found for token ${tokenAddress}`);
+    for (let retry = 0; retry < 3; retry++) {
+      try {
+        const response = await fetch(`https://frontend-api.pump.fun/coins/${tokenAddress}`, {
+          signal: AbortSignal.timeout(10000), // 10秒超时
+          headers: {
+            'Accept': 'application/json',
+          },
+        });
+        
+        if (response.ok) {
+          tokenData = await response.json();
+          break;
+        } else if (response.status === 404) {
+          // 404 不重试
+          log.info(`Pump.fun token not found: ${tokenAddress}`);
+          return;
+        } else if (response.status >= 500 && retry < 2) {
+          // 服务器错误，等待后重试
+          await new Promise(resolve => setTimeout(resolve, 1000 * (retry + 1)));
+          continue;
+        } else {
+          lastError = new Error(`HTTP ${response.status}`);
+          break;
+        }
+      } catch (error) {
+        lastError = error;
+        if (retry < 2) {
+          await new Promise(resolve => setTimeout(resolve, 1000 * (retry + 1)));
+        }
+      }
+    }
+    
+    if (!tokenData) {
+      log.error(`Failed to fetch pump.fun token after retries: ${tokenAddress}`, lastError);
       return;
     }
+    
+    // 获取实时 SOL 价格（从 Jupiter Price API）
+    const SOL_PRICE_USD = await getSolPriceUsd(env) || 150; // 回退到 150 如果获取失败
+    const priceInSol = tokenData.virtual_sol_reserves / (tokenData.virtual_token_reserves || 1);
+    const priceUsd = priceInSol * SOL_PRICE_USD;
+    const marketCap = tokenData.usd_market_cap || (priceUsd * tokenData.total_supply / Math.pow(10, 6));
+    
+    // 计算流动性（bonding curve 阶段使用虚拟储备）
+    let liquidity = 0;
+    if (tokenData.complete && tokenData.raydium_pool) {
+      // 已完成 bonding curve，从 Raydium 池获取流动性
+      const raydiumStats = await fetchRaydiumPoolStats(tokenData.raydium_pool, env);
+      liquidity = raydiumStats ? parseFloat(raydiumStats.liquidity) : 0;
+    } else {
+      // bonding curve 阶段：使用虚拟储备估算流动性
+      liquidity = tokenData.virtual_sol_reserves * SOL_PRICE_USD * 2;
+    }
+
+    // 计算 24h 价格变化（从缓存中获取历史价格）
+    const cachedStats = await env.CACHE.get(`token_stats:101:${tokenAddress}`);
+    let priceChange24h = 0;
+    if (cachedStats) {
+      try {
+        const prevStats = JSON.parse(cachedStats);
+        const prevPrice = parseFloat(prevStats.price || '0');
+        if (prevPrice > 0) {
+          priceChange24h = ((priceUsd - prevPrice) / prevPrice) * 100;
+        }
+      } catch (e) {
+        // 忽略解析错误
+      }
+    }
+
+    // 从 pump.fun API 获取交易量（如果可用）
+    const volume24h = tokenData.volume_24h?.toString() || tokenData.usd_volume_24h?.toString() || '0';
+    
+    // 从 pump.fun API 获取持币数量（如果可用）
+    const holderCount = tokenData.holder_count || 0;
+    
+    const stats: TokenStats = {
+      address: tokenAddress,
+      chainId: 101, // Solana
+      price: priceUsd.toString(),
+      priceChange24h,
+      volume24h,
+      marketCap: marketCap.toString(),
+      holderCount,
+      liquidity: liquidity.toString(),
+    };
     
     // Store in database
     await storeTokenStats(stats, env);
     
     // Cache for real-time access
     await env.CACHE.put(
-      `token_stats:${chainId}:${tokenAddress}`,
+      `token_stats:101:${tokenAddress}`,
       JSON.stringify(stats),
       { expirationTtl: 10 } // 10 seconds for price data
     );
     
-    console.log(`Token stats updated for ${tokenAddress}`);
+    // 仅在开发环境记录详细信息
+    if (isDev) {
+      log.info(`Token stats updated: ${tokenAddress}`, {
+        price: stats.price,
+        mcap: stats.marketCap,
+        liquidity: stats.liquidity,
+      });
+    }
   } catch (error) {
-    console.error(`Error updating token stats for ${tokenAddress}:`, error);
+    log.error(`Error updating pump.fun token stats for ${tokenAddress}:`, error);
     throw error;
   }
 }
 
-async function fetchTokenStatsFromDexScreener(
-  tokenAddress: string,
-  chainId: number,
+/**
+ * 从 DexScreener 获取 Raydium 池的统计信息
+ * 仅用于已迁移到 Raydium 的 pump.fun 代币
+ */
+async function fetchRaydiumPoolStats(
+  raydiumPoolAddress: string,
   env: Env
 ): Promise<TokenStats | null> {
-  const chainName = chainId === 1 ? 'ethereum' :
-                    chainId === 8453 ? 'base' :
-                    chainId === 56 ? 'bsc' : 'solana';
-  
   try {
     const response = await fetch(
-      `https://api.dexscreener.com/latest/dex/tokens/${tokenAddress}`,
+      `https://api.dexscreener.com/latest/dex/pairs/solana/${raydiumPoolAddress}`,
       {
         headers: {
           'Accept': 'application/json',
@@ -328,8 +525,8 @@ async function fetchTokenStatsFromDexScreener(
     if (!pair) return null;
     
     return {
-      address: tokenAddress,
-      chainId,
+      address: raydiumPoolAddress,
+      chainId: 101, // Solana
       price: pair.priceUsd || '0',
       priceChange24h: pair.priceChange?.h24 || 0,
       volume24h: pair.volume?.h24?.toString() || '0',
@@ -338,7 +535,7 @@ async function fetchTokenStatsFromDexScreener(
       liquidity: pair.liquidity?.usd?.toString() || '0',
     };
   } catch (error) {
-    console.error('DexScreener fetch error:', error);
+    log.error('DexScreener fetch error after retries:', error);
     return null;
   }
 }
@@ -362,13 +559,17 @@ async function storeTokenStats(stats: TokenStats, env: Env): Promise<void> {
 // Rug Status Check
 // ============================================
 
+/**
+ * 检查 pump.fun 代币的 Rug Pull 状态
+ * 本项目仅支持 Solana 链上的 pump.fun 代币
+ */
 export async function checkRugStatus(
-  payload: { tokenAddress: string; chainId: number },
+  payload: { tokenAddress: string; chainId?: number },
   env: Env
 ): Promise<RugCheckResult> {
-  const { tokenAddress, chainId } = payload;
+  const { tokenAddress } = payload;
   
-  console.log(`Checking rug status for ${tokenAddress} on chain ${chainId}`);
+  log.info(`Checking pump.fun rug status for ${tokenAddress}`);
   
   const result: RugCheckResult = {
     tokenAddress,
@@ -383,62 +584,117 @@ export async function checkRugStatus(
   };
   
   try {
-    // Fetch current stats
-    const stats = await fetchTokenStatsFromDexScreener(tokenAddress, chainId, env);
+    // 本项目仅支持 Solana 上的 pump.fun 代币
+    // 直接使用 pump.fun 专用检测逻辑
+    return await checkPumpFunRugStatus(tokenAddress, env, result);
+  } catch (error) {
+    console.error(`Error checking pump.fun rug status for ${tokenAddress}:`, error);
+    throw error;
+  }
+}
+
+/**
+ * pump.fun 专用 Rug Pull 检测
+ * 考虑 bonding curve 机制的特殊性
+ */
+async function checkPumpFunRugStatus(
+  tokenAddress: string,
+  env: Env,
+  result: RugCheckResult
+): Promise<RugCheckResult> {
+  try {
+    // 从 pump.fun API 获取代币详情
+    const response = await fetch(`https://frontend-api.pump.fun/coins/${tokenAddress}`);
     
-    if (!stats) {
-      console.log(`Cannot fetch stats for rug check: ${tokenAddress}`);
+    if (!response.ok) {
+      log.warn(`Cannot fetch pump.fun token: ${tokenAddress}`);
       return result;
     }
     
-    // Get cached previous stats
-    const cachedKey = `token_stats_prev:${chainId}:${tokenAddress}`;
-    const prevStatsJson = await env.CACHE.get(cachedKey);
+    const tokenData = await response.json();
     
-    if (prevStatsJson) {
-      const prevStats: TokenStats = JSON.parse(prevStatsJson);
-      
-      // Check price drop
-      const prevPrice = parseFloat(prevStats.price);
-      const currentPrice = parseFloat(stats.price);
-      
-      if (prevPrice > 0 && currentPrice > 0) {
-        const dropPercent = ((prevPrice - currentPrice) / prevPrice) * 100;
-        result.rugIndicators.priceDropPercent = dropPercent;
+    // 检查 bonding curve 是否完成
+    const isComplete = tokenData.complete === true;
+    
+    if (isComplete) {
+      // 已完成 bonding curve，迁移到 Raydium 池
+      // 使用标准流动性检测（Raydium 池）
+      if (tokenData.raydium_pool) {
+        // 检查 Raydium 池的流动性
+        const raydiumStats = await fetchRaydiumPoolStats(
+          tokenData.raydium_pool,
+          env
+        );
         
-        // More than 90% drop is likely a rug
-        if (dropPercent > 90) {
+        if (raydiumStats) {
+          const liq = parseFloat(raydiumStats.liquidity);
+          // Raydium 池流动性 < 1000 USD 可能是 rug
+          if (liq < 1000 && tokenData.usd_market_cap > 10000) {
+            result.rugIndicators.liquidityRemoved = true;
+            result.isRugged = true;
+          }
+        }
+      }
+    } else {
+      // 仍在 bonding curve 阶段
+      // 检查虚拟储备是否异常
+      const virtualSolReserves = tokenData.virtual_sol_reserves || 0;
+      const virtualTokenReserves = tokenData.virtual_token_reserves || 0;
+      
+      // 获取缓存的之前状态
+      const cachedKey = `pumpfun_stats_prev:${tokenAddress}`;
+      const prevStatsJson = await env.CACHE.get(cachedKey);
+      
+      if (prevStatsJson) {
+        const prevStats = JSON.parse(prevStatsJson);
+        const prevSolReserves = prevStats.virtual_sol_reserves || 0;
+        
+        // 检查 SOL 储备是否大幅下降（>80%）
+        if (prevSolReserves > 1 && virtualSolReserves < prevSolReserves * 0.2) {
+          result.rugIndicators.liquidityRemoved = true;
           result.isRugged = true;
+          log.warn(`Pump.fun bonding curve rug detected: ${tokenAddress}`);
+        }
+        
+        // 检查价格暴跌（基于虚拟储备计算）
+        const prevPrice = prevSolReserves / (prevStats.virtual_token_reserves || 1);
+        const currentPrice = virtualSolReserves / (virtualTokenReserves || 1);
+        
+        if (prevPrice > 0 && currentPrice > 0) {
+          const dropPercent = ((prevPrice - currentPrice) / prevPrice) * 100;
+          result.rugIndicators.priceDropPercent = dropPercent;
+          
+          if (dropPercent > 90) {
+            result.isRugged = true;
+          }
         }
       }
       
-      // Check liquidity removal
-      const prevLiq = parseFloat(prevStats.liquidity);
-      const currentLiq = parseFloat(stats.liquidity);
-      
-      if (prevLiq > 1000 && currentLiq < 100) {
-        result.rugIndicators.liquidityRemoved = true;
-        result.isRugged = true;
-      }
+      // 缓存当前状态
+      await env.CACHE.put(
+        cachedKey,
+        JSON.stringify({
+          virtual_sol_reserves: virtualSolReserves,
+          virtual_token_reserves: virtualTokenReserves,
+          timestamp: Date.now(),
+        }),
+        { expirationTtl: 3600 }
+      );
     }
     
-    // Store current stats as previous for next check
-    await env.CACHE.put(cachedKey, JSON.stringify(stats), { expirationTtl: 3600 });
-    
-    // If rugged, update database
+    // 如果检测到 rug，更新数据库
     if (result.isRugged) {
       await env.DB.prepare(`
         UPDATE tokens SET status = 'rugged', rug_detected_at = ? WHERE contract_address = ?
       `).bind(Math.floor(Date.now() / 1000), tokenAddress).run();
       
-      // TODO: Trigger notifications for affected users
-      console.log(`RUG DETECTED: ${tokenAddress}`);
+      log.error(`🚨 PUMP.FUN RUG DETECTED: ${tokenAddress}`);
     }
     
     return result;
   } catch (error) {
-    console.error(`Error checking rug status for ${tokenAddress}:`, error);
-    throw error;
+    console.error(`Error checking pump.fun rug status for ${tokenAddress}:`, error);
+    return result;
   }
 }
 
@@ -446,34 +702,43 @@ export async function checkRugStatus(
 // Trending Tokens Update
 // ============================================
 
+/**
+ * 更新 pump.fun 热门代币列表
+ * 本项目仅支持 Solana 链上的 pump.fun 代币
+ */
 export async function updateTrendingTokens(env: Env): Promise<void> {
-  console.log('Updating trending tokens...');
+  log.info('Updating pump.fun trending tokens...');
   
-  const chains = [
-    { id: 1, name: 'ethereum' },
-    { id: 8453, name: 'base' },
-    { id: 56, name: 'bsc' },
-  ];
-  
-  for (const chain of chains) {
-    try {
-      const trending = await fetchTrendingFromDexScreener(chain.name);
+  try {
+    // 从 pump.fun API 获取热门代币
+    const { getPumpFunTrending } = await import('./meme-platforms');
+    const trending = await getPumpFunTrending(50);
+    
+    // 转换为统一格式
+    const formattedTrending = trending.map(token => ({
+      address: token.address,
+      symbol: token.symbol,
+      name: token.name,
+      price: token.priceUsd,
+      marketCap: token.marketCap,
+      logo: token.logo,
+      source: 'pump.fun',
+    }));
+    
+    if (formattedTrending && formattedTrending.length > 0) {
+      await env.CACHE.put(
+        `trending:101`, // Solana chainId
+        JSON.stringify({
+          tokens: formattedTrending,
+          updatedAt: Date.now(),
+        }),
+        { expirationTtl: 60 } // 1 minute
+      );
       
-      if (trending && trending.length > 0) {
-        await env.CACHE.put(
-          `trending:${chain.id}`,
-          JSON.stringify({
-            tokens: trending,
-            updatedAt: Date.now(),
-          }),
-          { expirationTtl: 60 } // 1 minute
-        );
-        
-        console.log(`Updated ${trending.length} trending tokens for ${chain.name}`);
-      }
-    } catch (error) {
-      console.error(`Error updating trending for ${chain.name}:`, error);
+      log.info(`Updated ${formattedTrending.length} pump.fun trending tokens`);
     }
+  } catch (error) {
+    log.error('Error updating pump.fun trending tokens:', error);
   }
 }
 
@@ -500,7 +765,7 @@ async function fetchTrendingFromDexScreener(chain: string): Promise<any[]> {
 // ============================================
 
 export async function updateDevScores(env: Env): Promise<void> {
-  console.log('Batch updating dev scores...');
+  log.info('Batch updating dev scores...');
   
   try {
     // Get all devs that need score update
@@ -526,9 +791,9 @@ export async function updateDevScores(env: Env): Promise<void> {
       }
     }
     
-    console.log(`Queued ${devs.results?.length || 0} devs for score update`);
+    log.info(`Queued ${devs.results?.length || 0} devs for score update`);
   } catch (error) {
-    console.error('Error in batch dev score update:', error);
+    log.error('Error in batch dev score update:', error);
     throw error;
   }
 }
@@ -538,7 +803,7 @@ export async function updateDevScores(env: Env): Promise<void> {
 // ============================================
 
 export async function cleanupExpiredData(env: Env): Promise<void> {
-  console.log('Cleaning up expired data...');
+  log.info('Cleaning up expired data...');
   
   const now = Math.floor(Date.now() / 1000);
   const thirtyDaysAgo = now - (30 * 24 * 60 * 60);
@@ -550,7 +815,7 @@ export async function cleanupExpiredData(env: Env): Promise<void> {
       DELETE FROM transactions WHERE created_at < ?
     `).bind(oneYearAgo).run();
     
-    console.log(`Deleted ${txResult.meta?.changes || 0} old transactions`);
+    log.info(`Deleted ${txResult.meta?.changes || 0} old transactions`);
     
     // Clean up expired insurance policies (30 days after expiry)
     const policyResult = await env.DB.prepare(`
@@ -558,18 +823,18 @@ export async function cleanupExpiredData(env: Env): Promise<void> {
       WHERE status = 'expired' AND expires_at < ?
     `).bind(thirtyDaysAgo).run();
     
-    console.log(`Deleted ${policyResult.meta?.changes || 0} expired policies`);
+    log.info(`Deleted ${policyResult.meta?.changes || 0} expired policies`);
     
     // Clean up old points history (keep 1 year)
     const pointsResult = await env.DB.prepare(`
       DELETE FROM points_history WHERE created_at < ?
     `).bind(oneYearAgo).run();
     
-    console.log(`Deleted ${pointsResult.meta?.changes || 0} old points records`);
+    log.info(`Deleted ${pointsResult.meta?.changes || 0} old points records`);
     
-    console.log('Cleanup completed');
+    log.info('Cleanup completed');
   } catch (error) {
-    console.error('Error during cleanup:', error);
+    log.error('Error during cleanup:', error);
     throw error;
   }
 }
