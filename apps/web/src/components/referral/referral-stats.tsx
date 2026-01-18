@@ -50,7 +50,7 @@ export function ReferralStats({ className }: ReferralStatsProps) {
 
   return (
     <div className={cn('space-y-4', className)}>
-      {/* 等级卡片 */}
+      {/* Tier Card */}
       <Card className="overflow-hidden">
         <div className={cn(
           'absolute inset-0 opacity-10',
@@ -88,7 +88,7 @@ export function ReferralStats({ className }: ReferralStatsProps) {
             </Badge>
           </div>
 
-          {/* 进度到下一等级 */}
+          {/* Progress to Next Tier */}
           {nextTierConfig && (
             <div className="space-y-2">
               <div className="flex items-center justify-between text-xs">
@@ -115,7 +115,7 @@ export function ReferralStats({ className }: ReferralStatsProps) {
         </CardContent>
       </Card>
 
-      {/* 统计网格 */}
+      {/* Stats Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <Card>
           <CardContent className="p-3 md:p-4">
@@ -178,7 +178,7 @@ export function ReferralStats({ className }: ReferralStatsProps) {
         </Card>
       </div>
 
-      {/* 领取奖励 */}
+      {/* Claim Rewards */}
       {stats.pendingRewards > 0 && (
         <Card className="border-yellow-500/30 bg-gradient-to-r from-yellow-500/5 to-orange-500/5">
           <CardContent className="p-4">
@@ -196,7 +196,7 @@ export function ReferralStats({ className }: ReferralStatsProps) {
                       : `$${stats.pendingRewards.toFixed(2)}`
                     }
                   </span>
-                  {' '}to claim
+                  {' '}pending
                   {stats.pendingRewardsPopCowDefi && (
                     <span className="text-xs text-muted-foreground ml-1">
                       (≈ ${stats.pendingRewards.toFixed(2)} USD)
@@ -234,7 +234,7 @@ export function ReferralStats({ className }: ReferralStatsProps) {
 }
 
 /**
- * 等级列表组件
+ * Tier list component
  */
 export function TierList({ className }: { className?: string }) {
   const { stats } = useReferral();

@@ -1,6 +1,6 @@
 /**
- * Solana 推荐返佣系统 Hooks
- * 对齐 multi-asset-staking 合约中的 Referral 功能
+ * Solana Referral System Hooks
+ * Aligned with Referral functionality in multi-asset-staking contract
  */
 
 import { useCallback, useMemo, useState, useEffect } from 'react';
@@ -11,20 +11,20 @@ import { PUMP_FUN_CONFIG } from '@/config/solana';
 import { POPCOWDEFI_TOKEN_MINT } from '@/lib/solana/constants';
 import { getTokenPrice } from '@/lib/helius/price';
 
-// Program ID - 对应 Solana multi-asset-staking 合约
+// Program ID - corresponds to Solana multi-asset-staking contract
 const PROGRAM_ID = new PublicKey('7qpcKQQuDYhN51PTXebV8dpWY8MxqUKeFMwwVQ1eFQ75');
 
-// 默认推荐人（管理员 Solana 地址）
+// Default referrer (admin Solana address)
 export const DEFAULT_REFERRER_SOLANA = process.env.NEXT_PUBLIC_ADMIN_SOLANA_ADDRESS 
   ? new PublicKey(process.env.NEXT_PUBLIC_ADMIN_SOLANA_ADDRESS)
-  : new PublicKey('11111111111111111111111111111111'); // 占位符
+  : new PublicKey('11111111111111111111111111111111'); // Placeholder
 
 // PDAs
 const REFERRAL_SEED = 'referral';
 const REFERRER_INFO_SEED = 'referrer_info';
 const REFERRAL_CONFIG_SEED = 'referral_config';
 
-// 推荐等级配置
+// Referral tier configuration
 export const SOLANA_REFERRAL_TIERS = [
   { tier: 0, minReferrals: 1, rate: 500, name: 'Bronze', icon: '🥉' },
   { tier: 1, minReferrals: 5, rate: 800, name: 'Silver', icon: '🥈' },
@@ -42,15 +42,15 @@ export interface SolanaReferralInfo {
 export interface SolanaReferrerInfo {
   referrer: string;
   totalReferred: number;
-  totalEarned: number; // USD 金额
-  pendingRewards: number; // USD 金额
+  totalEarned: number; // USD amount
+  pendingRewards: number; // USD amount
   refereeStakedUSD: number;
   currentTier: typeof SOLANA_REFERRAL_TIERS[0];
   currentRate: number;
-  // PopCowDefi 代币相关信息
-  totalEarnedPopCowDefi?: number; // PopCowDefi 代币数量
-  pendingRewardsPopCowDefi?: number; // PopCowDefi 代币数量
-  popCowDefiPrice?: number; // PopCowDefi 代币价格（USD）
+  // PopCowDefi token related information
+  totalEarnedPopCowDefi?: number; // PopCowDefi token amount
+  pendingRewardsPopCowDefi?: number; // PopCowDefi token amount
+  popCowDefiPrice?: number; // PopCowDefi token price (USD)
 }
 
 export interface SolanaReferralConfig {
@@ -61,7 +61,7 @@ export interface SolanaReferralConfig {
 }
 
 // ============================================
-// PDA 辅助函数
+// PDA helper functions
 // ============================================
 
 function getReferralPDA(userPubkey: PublicKey): [PublicKey, number] {
@@ -99,7 +99,7 @@ function getTierFromReferrals(totalReferred: number): typeof SOLANA_REFERRAL_TIE
 // ============================================
 
 /**
- * 检查用户是否已绑定推荐人
+ * Check if user has bound a referrer
  */
 export function useSolanaHasReferrer() {
   let connection: ReturnType<typeof useConnection>['connection'];
@@ -133,8 +133,8 @@ export function useSolanaHasReferrer() {
       const accountInfo = await connection.getAccountInfo(referralPDA);
       
       if (accountInfo && accountInfo.data.length > 8) {
-        // 解析 ReferralAccount 数据
-        // 结构: discriminator(8) + user(32) + referrer(32) + registered_at(8) + bump(1)
+        // Parse ReferralAccount data
+        // Structure: discriminator(8) + user(32) + referrer(32) + registered_at(8) + bump(1)
         const referrerBytes = accountInfo.data.slice(40, 72);
         const referrerPubkey = new PublicKey(referrerBytes);
         setReferrer(referrerPubkey.toBase58());
@@ -160,7 +160,7 @@ export function useSolanaHasReferrer() {
 }
 
 /**
- * 获取用户的推荐人信息（作为推荐人）
+ * Get user's referrer information (as a referrer)
  */
 export function useSolanaReferrerInfo() {
   let connection: ReturnType<typeof useConnection>['connection'];
@@ -191,12 +191,12 @@ export function useSolanaReferrerInfo() {
       const [referrerInfoPDA] = getReferrerInfoPDA(publicKey);
       const accountInfo = await connection.getAccountInfo(referrerInfoPDA);
       
-      // 获取 PopCowDefi 代币价格
+      // Get PopCowDefi token price
       const popCowDefiPrice = await getTokenPrice(POPCOWDEFI_TOKEN_MINT.toBase58());
       
       if (accountInfo && accountInfo.data.length > 8) {
-        // 解析 ReferrerInfo 数据
-        // 结构: discriminator(8) + referrer(32) + total_referred(4) + total_earned(8) + pending_rewards(8) + referee_staked_usd(8) + bump(1)
+        // Parse ReferrerInfo data
+        // Structure: discriminator(8) + referrer(32) + total_referred(4) + total_earned(8) + pending_rewards(8) + referee_staked_usd(8) + bump(1)
         const view = new DataView(accountInfo.data.buffer, accountInfo.data.byteOffset);
         
         const totalReferred = view.getUint32(40, true);
@@ -206,16 +206,16 @@ export function useSolanaReferrerInfo() {
         
         const currentTier = getTierFromReferrals(totalReferred);
         
-        // 转换为 USD（6位小数）
+        // Convert to USD (6 decimals)
         const totalEarnedUSD = totalEarned / 1e6;
         const pendingRewardsUSD = pendingRewards / 1e6;
         
-        // 计算等价的 PopCowDefi 代币数量
+        // Calculate equivalent PopCowDefi token amount
         let totalEarnedPopCowDefi = 0;
         let pendingRewardsPopCowDefi = 0;
         
         if (popCowDefiPrice && popCowDefiPrice > 0) {
-          // PopCowDefi 代币有 6 位小数
+          // PopCowDefi token has 6 decimals
           totalEarnedPopCowDefi = totalEarnedUSD / popCowDefiPrice;
           pendingRewardsPopCowDefi = pendingRewardsUSD / popCowDefiPrice;
         }
@@ -227,13 +227,13 @@ export function useSolanaReferrerInfo() {
           pendingRewards: pendingRewardsUSD,
           refereeStakedUSD: refereeStakedUSD / 1e6,
           currentTier,
-          currentRate: currentTier.rate / 100, // 转换为百分比
+          currentRate: currentTier.rate / 100, // Convert to percentage
           totalEarnedPopCowDefi,
           pendingRewardsPopCowDefi,
           popCowDefiPrice: popCowDefiPrice || undefined,
         });
       } else {
-        // 用户还没有初始化推荐人信息
+        // User hasn't initialized referrer info yet
         setReferrerInfo({
           referrer: publicKey.toBase58(),
           totalReferred: 0,
@@ -263,7 +263,7 @@ export function useSolanaReferrerInfo() {
 }
 
 /**
- * 注册推荐关系
+ * Register referral relationship
  */
 export function useSolanaRegisterReferral() {
   let connection: ReturnType<typeof useConnection>['connection'];
@@ -290,12 +290,12 @@ export function useSolanaRegisterReferral() {
         throw new Error('Wallet not connected');
       }
 
-      // 使用提供的推荐人或默认管理员
+      // Use provided referrer or default admin
       const referrerPubkey = referrerAddress 
         ? new PublicKey(referrerAddress)
         : DEFAULT_REFERRER_SOLANA;
 
-      // 不能自己推荐自己
+      // Cannot refer yourself
       if (referrerPubkey.equals(wallet.publicKey)) {
         throw new Error('Cannot refer yourself');
       }
@@ -306,12 +306,12 @@ export function useSolanaRegisterReferral() {
       setTxHash(null);
 
       try {
-        // 获取 PDAs
+        // Get PDAs
         const [referralPDA] = getReferralPDA(wallet.publicKey);
         const [referrerInfoPDA] = getReferrerInfoPDA(referrerPubkey);
 
-        // 构建交易（需要 Anchor IDL）
-        // 这里展示交易框架
+        // Build transaction (requires Anchor IDL)
+        // Transaction framework shown here
         console.log('Registering referral:', {
           user: wallet.publicKey.toBase58(),
           referrer: referrerPubkey.toBase58(),
@@ -319,7 +319,7 @@ export function useSolanaRegisterReferral() {
           referrerInfoPDA: referrerInfoPDA.toBase58(),
         });
 
-        // 实际实现需要使用 Anchor
+        // Actual implementation requires Anchor
         // const tx = await program.methods
         //   .registerReferral()
         //   .accounts({
@@ -334,7 +334,7 @@ export function useSolanaRegisterReferral() {
         // const signature = await wallet.sendTransaction(tx, connection);
         // await connection.confirmTransaction(signature);
 
-        // 模拟成功
+        // Simulate success
         setTxHash('simulated_tx_hash');
         setIsSuccess(true);
       } catch (err) {
@@ -347,7 +347,7 @@ export function useSolanaRegisterReferral() {
     [connection, wallet]
   );
 
-  // 绑定到默认推荐人（管理员）
+  // Bind to default referrer (admin)
   const registerToDefaultReferrer = useCallback(async () => {
     return registerReferral(DEFAULT_REFERRER_SOLANA.toBase58());
   }, [registerReferral]);
@@ -364,7 +364,7 @@ export function useSolanaRegisterReferral() {
 }
 
 /**
- * 初始化推荐人信息账户
+ * Initialize referrer info account
  */
 export function useSolanaInitializeReferrerInfo() {
   let connection: ReturnType<typeof useConnection>['connection'];
@@ -401,7 +401,7 @@ export function useSolanaInitializeReferrerInfo() {
         referrerInfoPDA: referrerInfoPDA.toBase58(),
       });
 
-      // 实际实现需要使用 Anchor
+      // Actual implementation requires Anchor
       setIsSuccess(true);
     } catch (err) {
       setError(err as Error);
@@ -420,7 +420,7 @@ export function useSolanaInitializeReferrerInfo() {
 }
 
 /**
- * 领取推荐返佣
+ * Claim referral rewards
  */
 export function useSolanaClaimReferralRewards() {
   let connection: ReturnType<typeof useConnection>['connection'];
@@ -459,7 +459,7 @@ export function useSolanaClaimReferralRewards() {
         referrerInfoPDA: referrerInfoPDA.toBase58(),
       });
 
-      // 实际实现需要使用 Anchor
+      // Actual implementation requires Anchor
       setTxHash('simulated_tx_hash');
       setIsSuccess(true);
     } catch (err) {
@@ -480,7 +480,7 @@ export function useSolanaClaimReferralRewards() {
 }
 
 /**
- * 获取推荐系统配置
+ * Get referral system configuration
  */
 export function useSolanaReferralConfig() {
   let connection: ReturnType<typeof useConnection>['connection'];
@@ -495,7 +495,7 @@ export function useSolanaReferralConfig() {
 
   const fetchConfig = useCallback(async () => {
     if (!connection) {
-      // 使用默认配置
+      // Use default configuration
       setConfig({
         referralRates: [500, 800, 1000, 1200, 1500],
         referralTiers: [1, 5, 10, 25, 50],
@@ -512,8 +512,8 @@ export function useSolanaReferralConfig() {
       const accountInfo = await connection.getAccountInfo(configPDA);
       
       if (accountInfo && accountInfo.data.length > 8) {
-        // 解析 ReferralConfig 数据
-        // 结构: discriminator(8) + referral_rates([u16;5]=10) + referral_tiers([u16;5]=10) + invitee_bonus(2) + enabled(1) + bump(1)
+        // Parse ReferralConfig data
+        // Structure: discriminator(8) + referral_rates([u16;5]=10) + referral_tiers([u16;5]=10) + invitee_bonus(2) + enabled(1) + bump(1)
         const view = new DataView(accountInfo.data.buffer, accountInfo.data.byteOffset);
         
         const referralRates = [
@@ -538,11 +538,11 @@ export function useSolanaReferralConfig() {
         setConfig({
           referralRates,
           referralTiers,
-          inviteeBonus: inviteeBonus / 100, // 转换为百分比
+          inviteeBonus: inviteeBonus / 100, // Convert to percentage
           enabled,
         });
       } else {
-        // 使用默认配置
+        // Use default configuration
         setConfig({
           referralRates: [500, 800, 1000, 1200, 1500],
           referralTiers: [1, 5, 10, 25, 50],
@@ -552,7 +552,7 @@ export function useSolanaReferralConfig() {
       }
     } catch (error) {
       console.error('Failed to fetch referral config:', error);
-      // 使用默认配置
+      // Use default configuration
       setConfig({
         referralRates: [500, 800, 1000, 1200, 1500],
         referralTiers: [1, 5, 10, 25, 50],
@@ -572,7 +572,7 @@ export function useSolanaReferralConfig() {
 }
 
 /**
- * 组合 Hook - Solana 完整推荐返佣功能
+ * Combined Hook - Solana complete referral rewards functionality
  */
 export function useSolanaReferral() {
   let wallet: ReturnType<typeof useWallet>;
@@ -590,33 +590,33 @@ export function useSolanaReferral() {
   const initAction = useSolanaInitializeReferrerInfo();
   const claimAction = useSolanaClaimReferralRewards();
 
-  // 检查是否需要绑定推荐人
+  // Check if referrer binding is needed
   const needsReferrer = useMemo(() => {
     return connected && !loadingReferrer && !hasReferrer;
   }, [connected, loadingReferrer, hasReferrer]);
 
-  // 生成推荐链接
+  // Generate referral link
   const referralLink = useMemo(() => {
     if (!publicKey) return null;
     const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://app.popcow.xyz';
     return `${baseUrl}/staking?ref=${publicKey.toBase58()}`;
   }, [publicKey]);
 
-  // 生成推荐码 (钱包地址的短格式)
+  // Generate referral code (short format of wallet address)
   const referralCode = useMemo(() => {
     if (!publicKey) return null;
     const addr = publicKey.toBase58();
     return `${addr.slice(0, 4)}...${addr.slice(-4)}`;
   }, [publicKey]);
 
-  // 从 URL 获取推荐人地址
+  // Get referrer address from URL
   const getReferrerFromUrl = useCallback(() => {
     if (typeof window === 'undefined') return null;
     const params = new URLSearchParams(window.location.search);
     const ref = params.get('ref');
     if (ref && ref.length >= 32 && ref.length <= 44) {
       try {
-        new PublicKey(ref); // 验证是否是有效的 Solana 地址
+        new PublicKey(ref); // Validate if it's a valid Solana address
         return ref;
       } catch {
         return null;
@@ -625,7 +625,7 @@ export function useSolanaReferral() {
     return null;
   }, []);
 
-  // 自动绑定推荐人（优先使用 URL 参数，否则使用默认管理员）
+  // Auto bind referrer (prefer URL parameter, otherwise use default admin)
   const autoBindReferrer = useCallback(async () => {
     const urlReferrer = getReferrerFromUrl();
     await registerAction.registerReferral(urlReferrer || undefined);
@@ -637,7 +637,7 @@ export function useSolanaReferral() {
   }, [refetchReferrer, refetchInfo]);
 
   return {
-    // 状态
+    // State
     isConnected: connected,
     publicKey: publicKey?.toBase58() || null,
     hasReferrer,
@@ -647,14 +647,14 @@ export function useSolanaReferral() {
     config,
     isLoading: loadingReferrer || loadingInfo || loadingConfig,
 
-    // 默认推荐人
+    // Default referrer
     defaultReferrer: DEFAULT_REFERRER_SOLANA.toBase58(),
 
-    // 推荐链接/码
+    // Referral link/code
     referralLink,
     referralCode,
 
-    // 操作
+    // Actions
     registerReferral: registerAction.registerReferral,
     registerToDefaultReferrer: registerAction.registerToDefaultReferrer,
     autoBindReferrer,
@@ -669,13 +669,13 @@ export function useSolanaReferral() {
     isClaiming: claimAction.isPending,
     claimSuccess: claimAction.isSuccess,
 
-    // URL 工具
+    // URL utilities
     getReferrerFromUrl,
 
-    // 刷新
+    // Refresh
     refetch: refetchAll,
   };
 }
 
-// 导出常量
+// Export constants
 export { PROGRAM_ID, getReferralPDA, getReferrerInfoPDA, getReferralConfigPDA };

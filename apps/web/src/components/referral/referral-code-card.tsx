@@ -57,7 +57,7 @@ export function ReferralCodeCard({ className }: ReferralCodeCardProps) {
         <CardContent className="py-8 text-center">
           <Gift className="h-10 w-10 mx-auto mb-3 text-muted-foreground/50" />
           <p className="text-sm text-muted-foreground">
-            Connect your wallet to get your referral code
+            连接钱包获取您的邀请链接
           </p>
         </CardContent>
       </Card>
@@ -66,7 +66,7 @@ export function ReferralCodeCard({ className }: ReferralCodeCardProps) {
 
   return (
     <Card className={cn('overflow-hidden', className)}>
-      {/* 渐变背景 */}
+      {/* Gradient background */}
       <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/10 via-transparent to-purple-500/10 pointer-events-none" />
       
       <CardHeader className="relative pb-2">
@@ -75,11 +75,72 @@ export function ReferralCodeCard({ className }: ReferralCodeCardProps) {
           Invite & Earn
         </CardTitle>
         <CardDescription>
-          Share your code and earn up to 15% commission
+          Share your referral code and earn up to 15% commission
         </CardDescription>
       </CardHeader>
 
       <CardContent className="relative space-y-4">
+        {/* Referral Link - Most Prominent Position */}
+        <div className="space-y-2">
+          <label className="text-sm font-bold text-foreground flex items-center gap-2">
+            <Link2 className="h-4 w-4 text-yellow-500" />
+            Referral Link
+          </label>
+          <div className="flex gap-2">
+            <div className="flex-1 relative">
+              <Input
+                value={referralCode.link}
+                readOnly
+                className="font-mono text-sm bg-yellow-500/10 border-yellow-500/30 pr-10 break-all font-semibold"
+                title={referralCode.link}
+              />
+              <Link2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-yellow-500" />
+            </div>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={handleCopyLink}
+              className={cn(
+                'transition-colors shrink-0 border-yellow-500/30',
+                linkCopied && 'bg-green-500/20 border-green-500/50 text-green-500'
+              )}
+              title="Copy referral link"
+            >
+              {linkCopied ? (
+                <CheckCircle className="h-4 w-4" />
+              ) : (
+                <Copy className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
+          {/* Copy Link Button - More Prominent */}
+          <Button
+            onClick={handleCopyLink}
+            className={cn(
+              'w-full transition-all font-semibold',
+              linkCopied 
+                ? 'bg-green-500 hover:bg-green-600 text-white' 
+                : 'bg-yellow-500 hover:bg-yellow-600 text-white'
+            )}
+            size="sm"
+          >
+            {linkCopied ? (
+              <>
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Link Copied!
+              </>
+            ) : (
+              <>
+                <Copy className="h-4 w-4 mr-2" />
+                Copy Referral Link
+              </>
+            )}
+          </Button>
+          <p className="text-[10px] text-muted-foreground text-center">
+            Share this link with friends. You'll earn commission when they register through the link.
+          </p>
+        </div>
+
         {/* Referral Code (Wallet Address) */}
         <div className="space-y-2">
           <label className="text-xs font-medium text-muted-foreground">Your Referral Code (Wallet Address)</label>
@@ -110,68 +171,13 @@ export function ReferralCodeCard({ className }: ReferralCodeCardProps) {
             </Button>
           </div>
           <p className="text-[10px] text-muted-foreground">
-            Your wallet address is your referral code. Share it with friends!
+            Your wallet address is your referral code. You can also share it directly with friends.
           </p>
         </div>
 
-        {/* Referral Link */}
+        {/* Share Buttons */}
         <div className="space-y-2">
-          <label className="text-xs font-medium text-muted-foreground">Referral Link</label>
-          <div className="flex gap-2">
-            <div className="flex-1 relative">
-              <Input
-                value={referralCode.link}
-                readOnly
-                className="font-mono text-xs bg-secondary/50 border-muted pr-10 truncate"
-                title={referralCode.link}
-              />
-              <Link2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            </div>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={handleCopyLink}
-              className={cn(
-                'transition-colors shrink-0',
-                linkCopied && 'bg-green-500/20 border-green-500/50 text-green-500'
-              )}
-              title="Copy referral link"
-            >
-              {linkCopied ? (
-                <CheckCircle className="h-4 w-4" />
-              ) : (
-                <Copy className="h-4 w-4" />
-              )}
-            </Button>
-          </div>
-          {/* Copy Link Button - More Prominent */}
-          <Button
-            onClick={handleCopyLink}
-            className={cn(
-              'w-full transition-all',
-              linkCopied 
-                ? 'bg-green-500 hover:bg-green-600 text-white' 
-                : 'bg-yellow-500 hover:bg-yellow-600 text-white'
-            )}
-            size="sm"
-          >
-            {linkCopied ? (
-              <>
-                <CheckCircle className="h-4 w-4 mr-2" />
-                Link Copied!
-              </>
-            ) : (
-              <>
-                <Copy className="h-4 w-4 mr-2" />
-                Copy Referral Link
-              </>
-            )}
-          </Button>
-        </div>
-
-        {/* 分享按钮 */}
-        <div className="space-y-2">
-          <label className="text-xs font-medium text-muted-foreground">Share</label>
+          <label className="text-xs font-medium text-muted-foreground">Share to</label>
           <div className="grid grid-cols-2 gap-2">
             <Button
               variant="outline"
@@ -192,7 +198,7 @@ export function ReferralCodeCard({ className }: ReferralCodeCardProps) {
           </div>
         </div>
 
-        {/* 奖励提示 */}
+        {/* Reward Tip */}
         <div className="p-3 rounded-lg bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/20">
           <div className="flex items-start gap-2">
             <Gift className="h-4 w-4 text-yellow-500 mt-0.5" />
@@ -200,7 +206,7 @@ export function ReferralCodeCard({ className }: ReferralCodeCardProps) {
               <p className="font-medium text-yellow-500">Double Rewards!</p>
               <p className="text-muted-foreground mt-0.5">
                 Your friend gets <span className="text-yellow-500 font-bold">5% bonus</span> on first stake,
-                you earn <span className="text-yellow-500 font-bold">5-15% commission</span> on their staking/insurance
+                you earn <span className="text-yellow-500 font-bold">5-15% commission</span> on their staking/insurance amount
               </p>
             </div>
           </div>

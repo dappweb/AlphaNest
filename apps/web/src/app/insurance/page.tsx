@@ -15,10 +15,10 @@ export default function InsurancePage() {
       <div>
         <h1 className="text-2xl md:text-3xl font-bold tracking-tight flex items-center gap-2">
           <Shield className="h-6 w-6 md:h-7 md:w-7 text-purple-500" />
-          CowGuard Insurance
+          CowGuard 保险
         </h1>
         <p className="text-sm md:text-base text-muted-foreground mt-1">
-          Solana (pump.fun) Meme Token Protection
+          Solana (pump.fun) Meme 代币保护
         </p>
       </div>
 

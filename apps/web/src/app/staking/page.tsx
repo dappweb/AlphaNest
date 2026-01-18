@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-// 项目仅支持 Solana/pump.fun，已移除 wagmi
+// Project only supports Solana/pump.fun, wagmi removed
 import { useWallet } from '@solana/wallet-adapter-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -27,7 +27,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useTranslation } from '@/hooks/use-translation';
-// 项目仅支持 Solana，已移除 BSC 相关 hooks
+// Project only supports Solana, BSC related hooks removed
 import {
   useSolanaStaking,
   LockPeriod as SolanaLockPeriod,
@@ -38,12 +38,12 @@ import { useStakingReferral, DEFAULT_REFERRER } from '@/hooks/use-staking-referr
 import { Gift, UserPlus } from 'lucide-react';
 
 export default function StakingPage() {
-  // 项目仅支持 Solana/pump.fun
+  // Project only supports Solana/pump.fun
   const { connected: solanaConnected, publicKey: solanaPublicKey } = useWallet();
   const { t } = useTranslation();
   const { activeChain, setActiveChain, isSolana } = useActiveChain();
   
-  // 推荐系统 - 新用户必须绑定推荐人
+  // Referral system - new users must bind a referrer
   const {
     hasReferrer,
     needsReferrer,
@@ -55,10 +55,10 @@ export default function StakingPage() {
     inviteeBonus,
   } = useStakingReferral();
   
-  // 显示推荐人绑定提示
+  // Show referrer binding prompt
   const [showReferralModal, setShowReferralModal] = useState(false);
 
-  // Solana 质押 hooks
+  // Solana staking hooks
   const solanaStaking = useSolanaStaking();
   const [solanaStakeAmount, setSolanaStakeAmount] = useState('');
   const [solanaLockPeriod, setSolanaLockPeriod] = useState<SolanaLockPeriod>(SolanaLockPeriod.Flexible);
@@ -71,11 +71,11 @@ export default function StakingPage() {
     }
     
     if (!solanaStakeAmount || Number(solanaStakeAmount) <= 0) {
-      alert('Please enter a valid stake amount');
+      alert('请输入有效的质押金额');
       return;
     }
     
-    // 检查是否需要绑定推荐人（新用户必须绑定）
+    // Check if referrer binding is needed (new users must bind)
     if (needsReferrer) {
       setShowReferralModal(true);
       return;
@@ -87,7 +87,7 @@ export default function StakingPage() {
       setTimeout(() => solanaStaking.refetch(), 2000);
     } catch (error) {
       console.error('Solana stake failed:', error);
-      alert(`Staking failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      alert(`质押失败: ${error instanceof Error ? error.message : '未知错误'}`);
     }
   };
 
@@ -98,17 +98,17 @@ export default function StakingPage() {
     }
     
     try {
-      // unstake 需要传入金额（USD），使用总质押价值
+      // unstake requires amount in USD, use total staked value
       const amountUsd = solanaStaking.totalStakedValueUsd || 0;
       if (amountUsd <= 0) {
-        alert('No staked amount to unstake');
+        alert('没有可提取的质押金额');
         return;
       }
       await solanaStaking.unstake.unstake(amountUsd);
       setTimeout(() => solanaStaking.refetch(), 2000);
     } catch (error) {
       console.error('Solana unstake failed:', error);
-      alert(`Unstaking failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      alert(`提取失败: ${error instanceof Error ? error.message : '未知错误'}`);
     }
   };
 
@@ -121,23 +121,23 @@ export default function StakingPage() {
     try {
       const pendingRewards = solanaStaking.stakeInfo?.pendingRewards || 0;
       if (pendingRewards <= 0) {
-        alert('No rewards to claim');
+        alert('没有可领取的奖励');
         return;
       }
       await solanaStaking.claimRewards.claimRewards();
       setTimeout(() => solanaStaking.refetch(), 2000);
     } catch (error) {
       console.error('Solana claim failed:', error);
-      alert(`Claim failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      alert(`领取失败: ${error instanceof Error ? error.message : '未知错误'}`);
     }
   };
 
-  // 处理推荐人绑定后继续质押
+  // Handle referrer binding and continue staking
   const handleBindAndStake = async () => {
     try {
       await autoBindReferrer();
       setShowReferralModal(false);
-      // 绑定成功后自动执行质押
+      // Automatically execute staking after successful binding
       setTimeout(async () => {
         await solanaStaking.stakeSol.stakeSol(Number(solanaStakeAmount), solanaLockPeriod);
         setSolanaStakeAmount('');
@@ -150,14 +150,14 @@ export default function StakingPage() {
 
   return (
     <div className="space-y-4 md:space-y-6">
-      {/* 页面标题 */}
+      {/* Page Title */}
       <div>
         <h1 className="text-2xl md:text-3xl font-bold tracking-tight flex items-center gap-2">
           <Coins className="h-6 w-6 md:h-7 md:w-7 text-purple-500" />
           {t.staking.title}
         </h1>
         <p className="text-sm md:text-base text-muted-foreground mt-1">
-          Solana (pump.fun) Staking
+          Solana (pump.fun) 质押
         </p>
       </div>
 
@@ -166,40 +166,40 @@ export default function StakingPage() {
         <Alert className="bg-purple-500/10 border-purple-500/30">
           <AlertCircle className="h-4 w-4 text-purple-500" />
           <AlertDescription className="text-sm">
-            Please connect your Solana wallet (Phantom/Solflare) to use staking features
+            请连接您的 Solana 钱包（Phantom/Solflare）以使用质押功能
           </AlertDescription>
         </Alert>
       )}
 
-      {/* 徽章区域 */}
+      {/* Badge Area */}
       <div className="flex items-center gap-2 flex-wrap">
         <Badge className="bg-purple-500/20 text-purple-500 border-purple-500/30 text-[10px] md:text-xs">
           <Zap className="h-3 w-3 mr-1" />
-          Solana Network
+          Solana 网络
         </Badge>
         {solanaStaking.earlyBirdBonus > 0 && (
           <Badge className="bg-gradient-to-r from-purple-500 to-pink-500 text-white border-0 text-[10px] md:text-xs">
             <Sparkles className="h-3 w-3 mr-1" />
-            +{solanaStaking.earlyBirdBonus}% Bonus
+            +{solanaStaking.earlyBirdBonus}% 奖励
           </Badge>
         )}
         <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/30 text-[10px] md:text-xs">
           <Shield className="h-3 w-3 mr-1" />
-          Pyth Oracle
+          Pyth 预言机
         </Badge>
       </div>
 
       {/* ============================================ */}
       {/* ============================================ */}
-      {/* Solana 质押内容 - 仅支持 Solana/pump.fun */}
+          {/* Solana Staking Content - Solana/pump.fun Only */}
       {/* ============================================ */}
       {(
         <>
-          {/* Solana 全局统计 */}
+          {/* Solana Global Stats */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
             <Card>
               <CardContent className="p-3 md:p-4">
-                <p className="text-[10px] md:text-xs text-muted-foreground font-medium">Your SOL Balance</p>
+                <p className="text-[10px] md:text-xs text-muted-foreground font-medium">您的 SOL 余额</p>
                 <p className="text-lg md:text-2xl font-bold mt-1">
                   {solanaStaking.solBalance?.toFixed(4) || '0'} SOL
                 </p>
@@ -211,7 +211,7 @@ export default function StakingPage() {
             <Card>
               <CardContent className="p-3 md:p-4">
                 <div className="flex items-center justify-between">
-                  <p className="text-[10px] md:text-xs text-muted-foreground font-medium">SOL Price</p>
+                  <p className="text-[10px] md:text-xs text-muted-foreground font-medium">SOL 价格</p>
                   {solanaStaking.solPriceChange24h && (
                     <Badge className={`text-[8px] ${solanaStaking.solPriceChange24h >= 0 ? 'bg-green-500/20 text-green-500' : 'bg-red-500/20 text-red-500'}`}>
                       {solanaStaking.solPriceChange24h >= 0 ? '+' : ''}{solanaStaking.solPriceChange24h.toFixed(2)}%
@@ -226,7 +226,7 @@ export default function StakingPage() {
             </Card>
             <Card>
               <CardContent className="p-3 md:p-4">
-                <p className="text-[10px] md:text-xs text-muted-foreground font-medium">Your Staked</p>
+                <p className="text-[10px] md:text-xs text-muted-foreground font-medium">您的质押</p>
                 <p className="text-lg md:text-2xl font-bold mt-1">
                   ${solanaStaking.totalStakedValueUsd?.toFixed(2) || '0'}
                 </p>
@@ -234,7 +234,7 @@ export default function StakingPage() {
             </Card>
             <Card>
               <CardContent className="p-3 md:p-4">
-                <p className="text-[10px] md:text-xs text-muted-foreground font-medium">Pending Rewards</p>
+                <p className="text-[10px] md:text-xs text-muted-foreground font-medium">待领取奖励</p>
                 <p className="text-lg md:text-2xl font-bold text-green-500 mt-1">
                   {solanaStaking.stakeInfo?.pendingRewards?.toFixed(4) || '0'}
                 </p>
@@ -242,24 +242,24 @@ export default function StakingPage() {
             </Card>
           </div>
 
-          {/* Solana 主要内容 */}
+          {/* Solana Main Content */}
           <div className="grid lg:grid-cols-3 gap-4 md:gap-6">
-            {/* Solana 质押卡片 */}
+            {/* Solana Staking Card */}
             <div className="lg:col-span-2">
               <Card>
                 <CardHeader className="pb-3 md:pb-4">
                   <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
                     <Coins className="h-5 w-5 text-purple-500" />
-                    Stake SOL
+                    质押 SOL
                   </CardTitle>
                   <CardDescription className="text-xs md:text-sm">
-                    Stake SOL on Solana (pump.fun) for rewards
+                    在 Solana (pump.fun) 上质押 SOL 获得奖励
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4 md:space-y-6">
-                  {/* 锁定期选择 */}
+                  {/* Lock Period Selection */}
                   <div className="space-y-1.5">
-                    <label className="text-xs md:text-sm font-medium">Lock Period</label>
+                    <label className="text-xs md:text-sm font-medium">锁定期</label>
                     <Select
                       value={solanaLockPeriod.toString()}
                       onValueChange={(v) => setSolanaLockPeriod(Number(v) as SolanaLockPeriod)}
@@ -277,9 +277,9 @@ export default function StakingPage() {
                     </Select>
                   </div>
 
-                  {/* 金额输入 */}
+                  {/* Amount Input */}
                   <div className="space-y-1.5">
-                    <label className="text-xs md:text-sm font-medium">Amount (SOL)</label>
+                    <label className="text-xs md:text-sm font-medium">金额 (SOL)</label>
                     <div className="flex gap-2">
                       <Input
                         type="number"
@@ -298,14 +298,14 @@ export default function StakingPage() {
                           <Loader2 className="h-4 w-4 animate-spin" />
                         ) : (
                           <>
-                            Stake
+                            质押
                             <ArrowRight className="h-4 w-4 ml-1 hidden sm:inline" />
                           </>
                         )}
                       </Button>
                     </div>
 
-                    {/* 快捷金额 */}
+                    {/* Quick Amounts */}
                     <div className="flex gap-1.5 mt-2">
                       {['0.5', '1', '2', '5'].map((val) => (
                         <Button
@@ -326,7 +326,7 @@ export default function StakingPage() {
                     <Alert className="bg-green-500/10 border-green-500/30">
                       <CheckCircle className="h-4 w-4 text-green-500" />
                       <AlertDescription className="text-sm text-green-500">
-                        Stake successful! Transaction: {solanaStaking.stakeSol.txHash?.slice(0, 8)}...
+                        质押成功！交易: {solanaStaking.stakeSol.txHash?.slice(0, 8)}...
                       </AlertDescription>
                     </Alert>
                   )}
@@ -335,29 +335,29 @@ export default function StakingPage() {
                     <Alert className="bg-red-500/10 border-red-500/30">
                       <AlertCircle className="h-4 w-4 text-red-500" />
                       <AlertDescription className="text-sm text-red-500">
-                        {solanaStaking.stakeSol.error.message || 'Staking failed. Please try again.'}
+                        {solanaStaking.stakeSol.error.message || '质押失败，请重试。'}
                       </AlertDescription>
                     </Alert>
                   )}
 
-                  {/* 未连接钱包 */}
+                  {/* Wallet Not Connected */}
                   {!solanaConnected && (
                     <div className="text-center py-6 md:py-8 border rounded-lg">
-                      <p className="text-sm text-muted-foreground">Connect Solana wallet to start staking</p>
+                      <p className="text-sm text-muted-foreground">连接 Solana 钱包开始质押</p>
                     </div>
                   )}
                 </CardContent>
               </Card>
             </div>
 
-            {/* Solana 侧边信息 */}
+            {/* Solana Sidebar Info */}
             <div className="space-y-3 md:space-y-4">
-              {/* 锁定期倍数 */}
+              {/* Lock Multipliers */}
               <Card>
                 <CardHeader className="pb-2 md:pb-3">
                   <CardTitle className="text-sm md:text-base flex items-center gap-2">
                     <Lock className="h-4 w-4 text-purple-500" />
-                    Lock Multipliers
+                    锁定倍数
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="pb-3 md:pb-4">
@@ -377,7 +377,7 @@ export default function StakingPage() {
                 </CardContent>
               </Card>
 
-              {/* Helius API 状态 */}
+              {/* Helius API Status */}
               <Card className="border-purple-500/30 bg-gradient-to-br from-purple-500/5 to-pink-500/5">
                 <CardContent className="p-3 md:p-4">
                   <div className="flex items-center justify-between mb-2">
@@ -414,7 +414,7 @@ export default function StakingPage() {
                 </CardContent>
               </Card>
 
-              {/* pump.fun 代币列表 */}
+              {/* pump.fun Token List */}
               {solanaStaking.pumpFunTokens && solanaStaking.pumpFunTokens.length > 0 && (
                 <Card>
                   <CardHeader className="pb-2 md:pb-3">
@@ -449,7 +449,7 @@ export default function StakingPage() {
                 </Card>
               )}
 
-              {/* pump.fun 信息 */}
+              {/* pump.fun Info */}
               <Card className="border-purple-500/30 bg-gradient-to-br from-purple-500/5 to-pink-500/5">
                 <CardContent className="p-3 md:p-4">
                   <div className="flex items-center gap-2 mb-2">
@@ -473,7 +473,7 @@ export default function StakingPage() {
                 </CardContent>
               </Card>
 
-              {/* 合约信息 */}
+              {/* Contract Info */}
               <Card className="bg-secondary/30">
                 <CardContent className="p-3 md:p-4">
                   <div className="flex items-center gap-2 mb-2">

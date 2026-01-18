@@ -18,8 +18,8 @@ import {
   INSURANCE_TYPE_ICONS,
 } from '@/hooks/use-solana-insurance';
 
-// 预设的保险产品 - 仅支持 pump.fun 代币
-// 根据 bonding curve 状态提供不同费率（确保盈利）
+// Predefined insurance products - pump.fun tokens only
+// Different rates based on bonding curve status (ensuring profitability)
 const INSURANCE_PRODUCTS = [
   {
     id: 1,
@@ -28,14 +28,14 @@ const INSURANCE_PRODUCTS = [
     chainIcon: '🟣',
     type: InsuranceType.RugPull,
     name: 'Rug Pull Protection (Bonding Curve)',
-    description: '保护 bonding curve 阶段的 pump.fun 代币免受 Rug Pull',
-    premiumRate: 7,  // 7% - bonding curve 阶段高风险，确保盈利
+    description: 'Protect pump.fun tokens in bonding curve stage from Rug Pull',
+    premiumRate: 7,  // 7% - high risk in bonding curve stage, ensuring profitability
     coverageRate: 100,
     minCoverage: 100,
     maxCoverage: 10000,
     duration: 30,
     color: 'purple',
-    bondingCurveStage: true,  // bonding curve 阶段标识
+    bondingCurveStage: true,  // Bonding curve stage identifier
   },
   {
     id: 2,
@@ -44,14 +44,14 @@ const INSURANCE_PRODUCTS = [
     chainIcon: '🟣',
     type: InsuranceType.RugPull,
     name: 'Rug Pull Protection (Completed)',
-    description: '保护已完成 bonding curve 的 pump.fun 代币',
-    premiumRate: 3,  // 3% - 完成状态相对稳定
+    description: 'Protect pump.fun tokens that have completed bonding curve',
+    premiumRate: 3,  // 3% - relatively stable in completed state
     coverageRate: 100,
     minCoverage: 100,
     maxCoverage: 10000,
     duration: 30,
     color: 'purple',
-    bondingCurveStage: false,  // 已完成标识
+    bondingCurveStage: false,  // Completed identifier
   },
   {
     id: 3,
@@ -60,8 +60,8 @@ const INSURANCE_PRODUCTS = [
     chainIcon: '🟣',
     type: InsuranceType.PriceDrop,
     name: 'Price Drop Protection (Bonding Curve)',
-    description: '保护 bonding curve 阶段的 pump.fun 代币免受价格暴跌',
-    premiumRate: 8,  // 8% - bonding curve 阶段高风险
+    description: 'Protect pump.fun tokens in bonding curve stage from price crash',
+    premiumRate: 8,  // 8% - high risk in bonding curve stage
     coverageRate: 100,
     minCoverage: 500,
     maxCoverage: 50000,
@@ -76,8 +76,8 @@ const INSURANCE_PRODUCTS = [
     chainIcon: '🟣',
     type: InsuranceType.Comprehensive,
     name: 'Comprehensive Coverage (Bonding Curve)',
-    description: 'bonding curve 阶段全面保护',
-    premiumRate: 10,  // 10% - 综合保险，高风险
+    description: 'Comprehensive protection for bonding curve stage',
+    premiumRate: 10,  // 10% - comprehensive insurance, high risk
     coverageRate: 100,
     minCoverage: 1000,
     maxCoverage: 100000,
@@ -92,8 +92,8 @@ const INSURANCE_PRODUCTS = [
     chainIcon: '🟣',
     type: InsuranceType.Comprehensive,
     name: 'Comprehensive Coverage (Completed)',
-    description: '已完成 bonding curve 的全面保护',
-    premiumRate: 6,  // 6% - 完成状态相对稳定
+    description: 'Comprehensive protection for completed bonding curve',
+    premiumRate: 6,  // 6% - relatively stable in completed state
     coverageRate: 100,
     minCoverage: 1000,
     maxCoverage: 100000,
@@ -117,7 +117,7 @@ function PurchaseModal({ product, onClose }: PurchaseModalProps) {
     product?.type || InsuranceType.RugPull, 
     parseFloat(coverageAmount) || 0
   );
-  const calcLoading = false; // 保费计算是同步的
+  const calcLoading = false; // Premium calculation is synchronous
 
   if (!product) return null;
 
@@ -140,7 +140,7 @@ function PurchaseModal({ product, onClose }: PurchaseModalProps) {
     
     try {
       await purchase.purchaseInsurance(product.type, coverage);
-      // 延迟关闭，让用户看到成功消息
+      // Delay closing to let user see success message
       setTimeout(() => {
         onClose();
       }, 2000);
@@ -269,7 +269,7 @@ export function InsuranceProducts() {
   const [selectedProduct, setSelectedProduct] = useState<typeof INSURANCE_PRODUCTS[0] | null>(null);
   const [activeTab, setActiveTab] = useState<'all' | 'bonding' | 'completed'>('all');
 
-  // 仅显示 pump.fun 代币产品，根据 bonding curve 状态筛选
+  // Only show pump.fun token products, filtered by bonding curve status
   const filteredProducts = INSURANCE_PRODUCTS.filter(p => {
     if (activeTab === 'all') return true;
     if (activeTab === 'bonding') return p.bondingCurveStage === true;
