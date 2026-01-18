@@ -24,7 +24,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://popcowdefi.pages.dev'),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://app.popcow.xyz'),
   title: {
     default: 'PopCowDefi - The Smartest Cow in Crypto 🐄',
     template: '%s | PopCowDefi',
@@ -65,7 +65,7 @@ export const metadata: Metadata = {
     description:
       'Follow PopCowDefi for Alpha discoveries, Rug Pull protection, and safe Meme coin trading.',
     type: 'website',
-    url: 'https://popcowdefi.pages.dev',
+    url: 'https://app.popcow.xyz',
     siteName: 'PopCowDefi',
     images: [
       {

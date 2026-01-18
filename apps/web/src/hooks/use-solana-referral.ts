@@ -488,7 +488,7 @@ export function useSolanaReferral() {
   // 生成推荐链接
   const referralLink = useMemo(() => {
     if (!publicKey) return null;
-    const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://popcowdefi.pages.dev';
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://app.popcow.xyz';
     return `${baseUrl}/staking?ref=${publicKey.toBase58()}`;
   }, [publicKey]);
 

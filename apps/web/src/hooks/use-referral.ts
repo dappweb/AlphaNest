@@ -95,7 +95,7 @@ function generateReferralCode(address: string): string {
 
 // 获取推荐链接
 function getReferralLink(code: string): string {
-  const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://popcow.xyz';
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://app.popcow.xyz';
   return `${baseUrl}?ref=${code}`;
 }
 

@@ -380,7 +380,7 @@ export function useStakingReferral() {
   // 生成推荐链接
   const referralLink = useMemo(() => {
     if (!address) return null;
-    const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://popcowdefi.pages.dev';
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://app.popcow.xyz';
     return `${baseUrl}/staking?ref=${address}`;
   }, [address]);
 
