@@ -19,7 +19,7 @@ export const translations = {
     nav: {
       dashboard: 'Dashboard',
       staking: '$PopCowDefi Staking',
-      popcowAlpha: 'PopCow Alpha',
+      popcowAlpha: 'PopCowDefi Alpha',
       trade: 'Trade',
       memeHunter: 'Meme Hunter',
       copyTrading: 'Copy Trading',
@@ -155,7 +155,7 @@ export const translations = {
         description: 'Our development milestones and future plans',
       },
       document: {
-        title: 'PopCow Whitepaper',
+        title: 'PopCowDefi Whitepaper',
         subtitle: 'Cross-chain Meme Asset Issuance and Traffic Aggregation Platform',
       },
       highlights: {
@@ -270,7 +270,7 @@ export const translations = {
     nav: {
       dashboard: '仪表盘',
       staking: '$PopCowDefi 质押挖矿',
-      popcowAlpha: 'PopCow Alpha',
+      popcowAlpha: 'PopCowDefi Alpha',
       trade: '交易',
       memeHunter: 'Meme 猎手',
       copyTrading: '跟单交易',
@@ -405,7 +405,7 @@ export const translations = {
         description: '我们的开发里程碑和未来计划',
       },
       document: {
-        title: 'PopCow 白皮书',
+        title: 'PopCowDefi 白皮书',
         subtitle: '跨链 Meme 资产发行与流量聚合平台',
       },
       highlights: {

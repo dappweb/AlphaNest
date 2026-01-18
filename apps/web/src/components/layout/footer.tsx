@@ -69,8 +69,8 @@ export function Footer({ className }: { className?: string }) {
           {/* Brand */}
           <div className="col-span-2 md:col-span-1">
             <div className="flex items-center gap-2 mb-3">
-              <Image src="/logo.png" alt="PopCow" width={28} height={28} className="rounded-lg" />
-              <span className="font-bold">PopCow</span>
+              <Image src="/logo.png" alt="PopCowDefi" width={28} height={28} className="rounded-lg" />
+              <span className="font-bold">PopCowDefi</span>
             </div>
             <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
               Cross-chain Meme asset platform with curated launches & CowGuard insurance.
@@ -108,7 +108,7 @@ export function Footer({ className }: { className?: string }) {
 
         {/* Bottom */}
         <div className="mt-8 pt-6 border-t flex flex-col md:flex-row items-center justify-between gap-3 text-xs text-muted-foreground">
-          <p>© {new Date().getFullYear()} PopCow</p>
+          <p>© {new Date().getFullYear()} PopCowDefi</p>
           <div className="flex items-center gap-2">
             <span>Built on</span>
             {chains.map((chain) => (

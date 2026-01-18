@@ -24,15 +24,15 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://app.popcow.xyz'),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://popcowdefi.pages.dev'),
   title: {
     default: 'PopCowDefi - The Smartest Cow in Crypto 🐄',
     template: '%s | PopCowDefi',
   },
   description:
-    'Follow PopCow, the smartest cow in crypto! Discover Alpha projects, avoid Rug Pulls, and trade safely with PopCow\'s intelligence and CowGuard insurance.',
+    'Follow PopCowDefi, the smartest cow in crypto! Discover Alpha projects, avoid Rug Pulls, and trade safely with PopCowDefi\'s intelligence and CowGuard insurance.',
   keywords: [
-    'PopCow',
+    'PopCowDefi',
     'Crypto Cow',
     'Alpha Hunter',
     'Meme coins',
@@ -48,8 +48,8 @@ export const metadata: Metadata = {
     'Insurance',
     'Smart Trading',
   ],
-  authors: [{ name: 'PopCow Team' }],
-  creator: 'PopCow',
+  authors: [{ name: 'PopCowDefi Team' }],
+  creator: 'PopCowDefi',
   publisher: 'PopCowDefi Platform',
   manifest: '/manifest.json',
   appleWebApp: {
@@ -63,24 +63,24 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'PopCowDefi - The Smartest Cow in Crypto 🐄',
     description:
-      'Follow PopCow for Alpha discoveries, Rug Pull protection, and safe Meme coin trading.',
+      'Follow PopCowDefi for Alpha discoveries, Rug Pull protection, and safe Meme coin trading.',
     type: 'website',
-    url: 'https://app.popcow.xyz',
+    url: 'https://popcowdefi.pages.dev',
     siteName: 'PopCowDefi',
     images: [
       {
         url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'PopCow - The Smartest Cow in Crypto',
+        alt: 'PopCowDefi - The Smartest Cow in Crypto',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'PopCow - The Smartest Cow in Crypto 🐄',
+    title: 'PopCowDefi - The Smartest Cow in Crypto 🐄',
     description:
-      'Follow PopCow for Alpha discoveries, Rug Pull protection, and safe Meme coin trading.',
+      'Follow PopCowDefi for Alpha discoveries, Rug Pull protection, and safe Meme coin trading.',
     images: ['/og-image.png'],
     creator: '@popcowxyz',
   },

@@ -239,7 +239,7 @@ export function StatsOverview() {
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Staking APY</p>
                   <p className="text-2xl font-bold">28.5%</p>
-                  <p className="text-sm text-muted-foreground mt-1">PopCow Rewards</p>
+                  <p className="text-sm text-muted-foreground mt-1">PopCowDefi Rewards</p>
                 </div>
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-500/10">
                   <Coins className="h-5 w-5 text-purple-500" />

@@ -77,14 +77,14 @@ export function Header() {
             <Menu className="h-5 w-5" />
           </Button>
 
-          {/* PopCow Logo - Show when sidebar is collapsed or on mobile */}
+          {/* PopCowDefi Logo - Show when sidebar is collapsed or on mobile */}
           <div className={cn(
             "items-center gap-2 transition-opacity duration-200",
             isCollapsed ? "hidden md:flex" : "flex md:hidden"
           )}>
             <Image
               src="/logo.png"
-              alt="PopCow Logo"
+              alt="PopCowDefi Logo"
               width={28}
               height={28}
               className="rounded-lg"

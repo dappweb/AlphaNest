@@ -1,9 +1,9 @@
-// PopCow Brand Configuration
+// PopCowDefi Brand Configuration
 export const POPCOW_CONFIG = {
   // Brand Identity
-  name: 'PopCow',
+  name: 'PopCowDefi',
   tagline: 'The Smartest Cow in Crypto',
-  description: 'Follow PopCow for Alpha discoveries, Rug Pull protection, and safe Meme coin trading.',
+  description: 'Follow PopCowDefi for Alpha discoveries, Rug Pull protection, and safe Meme coin trading.',
   
   // Social Links
   social: {
@@ -20,7 +20,7 @@ export const POPCOW_CONFIG = {
     background: '#fff7ed', // orange-50
   },
   
-  // PopCow Stats
+  // PopCowDefi Stats
   stats: {
     successRate: 87,
     rugsPrevented: 156,
@@ -30,10 +30,10 @@ export const POPCOW_CONFIG = {
   
   // Product Names
   products: {
-    platform: 'PopCow Platform',
+    platform: 'PopCowDefi Platform',
     insurance: 'CowGuard Insurance',
-    bot: 'PopCow Intelligence Bot',
-    token: 'PopCow Token',
+    bot: 'PopCowDefi Intelligence Bot',
+    token: 'PopCowDefi Token',
     protection: 'CowGuard Protection',
   },
   
@@ -47,7 +47,7 @@ export const POPCOW_CONFIG = {
     'Risk Assessment',
   ],
   
-  // Moods for PopCow Avatar
+  // Moods for PopCowDefi Avatar
   moods: {
     happy: '🐄',
     thinking: '🤔🐄',
@@ -59,20 +59,20 @@ export const POPCOW_CONFIG = {
     detective: '🔍🐄',
   },
   
-  // Messages for PopCow Tooltip
+  // Messages for PopCowDefi Tooltip
   messages: [
-    "🐄 Moo! PopCow discovered a new Alpha opportunity!",
+    "🐄 Moo! PopCowDefi discovered a new Alpha opportunity!",
     "🚀 Follow the smartest cow to find great projects!",
-    "⚠️ PopCow Alert: Watch out for potential Rug Pulls!",
-    "💎 PopCow only recommends premium projects!",
-    "🔍 PopCow is analyzing market trends...",
-    "🎯 PopCow helps you find the next golden opportunity!",
+    "⚠️ PopCowDefi Alert: Watch out for potential Rug Pulls!",
+    "💎 PopCowDefi only recommends premium projects!",
+    "🔍 PopCowDefi is analyzing market trends...",
+    "🎯 PopCowDefi helps you find the next golden opportunity!",
     "🛡️ Use CowGuard to protect your investments!",
-    "📊 PopCow's data analysis is never wrong!",
-    "🌟 PopCow's intelligence at your service!",
-    "🔥 Hot tip from PopCow: Check the new trending tokens!",
-    "💰 PopCow users get better rates and protection!",
-    "🎪 Welcome to PopCow's crypto adventure - but safer!",
+    "📊 PopCowDefi's data analysis is never wrong!",
+    "🌟 PopCowDefi's intelligence at your service!",
+    "🔥 Hot tip from PopCowDefi: Check the new trending tokens!",
+    "💰 PopCowDefi users get better rates and protection!",
+    "🎪 Welcome to PopCowDefi's crypto adventure - but safer!",
   ],
 } as const;
 

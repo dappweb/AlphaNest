@@ -7,7 +7,7 @@ export const POPCOW_TOKEN_MINT = new PublicKey('8mrMRf8QwGh5bSrgzKsMmHPTTGqDcENU
 export const POPCOWDEFI_TOKEN_MINT = new PublicKey('11111111111111111111111111111111'); // TODO: 部署后替换
 
 // 质押合约程序 ID (devnet 网络 - 2026-01-17 部署)
-export const STAKING_PROGRAM_ID = new PublicKey('9tyVCiEHi97uMbzHHt1MUwprn1d7HEwCzDwUVpxdbYuj'); // PopCow Staking Program ✅
+export const STAKING_PROGRAM_ID = new PublicKey('9tyVCiEHi97uMbzHHt1MUwprn1d7HEwCzDwUVpxdbYuj'); // PopCowDefi Staking Program ✅
 
 // 多资产质押程序 ID (待部署)
 export const MULTI_ASSET_STAKING_PROGRAM_ID = new PublicKey('7qpcKQQuDYhN51PTXebV8dpWY8MxqUKeFMwwVQ1eFQ75'); // ⏳ 待部署
@@ -69,7 +69,7 @@ export const MAINSTREAM_TOKENS = {
   POPCOW: {
     mint: POPCOW_TOKEN_MINT,
     symbol: 'POPCOW',
-    name: 'PopCow',
+    name: 'PopCowDefi',
     decimals: 6,
     icon: '🐄',
     coingeckoId: null,
@@ -126,13 +126,13 @@ export const STAKEABLE_TOKENS = [
 export const TOKEN_INFO = {
   popcow: {
     symbol: 'POPCOW',
-    name: 'PopCow',
+    name: 'PopCowDefi',
     decimals: 6,
     mint: POPCOW_TOKEN_MINT,
   },
   popCowDefi: {
     symbol: 'PopCowDefi',
-    name: 'PopCow Defi Token',
+    name: 'PopCowDefi Token',
     decimals: 9,
     mint: POPCOWDEFI_TOKEN_MINT,
     totalSupply: 100_000_000,
