@@ -12,6 +12,7 @@ import {
   ChevronLeft,
   ChevronRight,
   X,
+  Gift,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -46,6 +47,13 @@ const getNavigation = (t: any) => [
     icon: Shield,
     shortcut: 'Ctrl+I',
     badge: { text: 'MEME', variant: 'secondary' as const }
+  },
+  {
+    name: '🎁 Referral',
+    href: '/referral',
+    icon: Gift,
+    shortcut: 'Ctrl+R',
+    badge: { text: 'NEW', variant: 'default' as const, className: 'bg-green-500 text-white' }
   },
 ];
 

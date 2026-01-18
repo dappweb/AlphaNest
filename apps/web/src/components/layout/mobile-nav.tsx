@@ -6,7 +6,7 @@ import {
   LayoutDashboard,
   Coins,
   Shield,
-  Settings,
+  Gift,
   MoreHorizontal,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -16,7 +16,7 @@ const mobileNavItems = [
   { name: 'Home', href: '/', icon: LayoutDashboard },
   { name: 'Stake', href: '/staking', icon: Coins, highlight: true },
   { name: 'Insure', href: '/insurance', icon: Shield },
-  { name: 'Settings', href: '/settings', icon: Settings },
+  { name: 'Invite', href: '/referral', icon: Gift, highlight: true },
   { name: 'More', href: '#more', icon: MoreHorizontal, isMore: true },
 ];
 
