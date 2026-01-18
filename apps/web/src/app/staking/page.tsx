@@ -55,6 +55,10 @@ export default function StakingPage() {
     isBscNetwork,
     isLoading,
     refetch,
+    // Chainlink 价格
+    tokenPrice,
+    priceFeedInfo,
+    oracleEnabled,
   } = useMultiAssetStaking(tokenAddress);
 
   const { stakeBNB, isPending: isStakingBNB, isSuccess: stakeBNBSuccess } = useStakeBNB();
@@ -173,10 +177,23 @@ export default function StakingPage() {
         </Card>
         <Card>
           <CardContent className="p-3 md:p-4">
-            <p className="text-[10px] md:text-xs text-muted-foreground font-medium">Supported Assets</p>
-            <p className="text-lg md:text-2xl font-bold mt-1">
-              {globalStats?.supportedTokenCount?.toString() || '4'}
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] md:text-xs text-muted-foreground font-medium">
+                {selectedToken} Price
+              </p>
+              {priceFeedInfo?.isHealthy && (
+                <Badge variant="outline" className="text-[8px] bg-green-500/10 text-green-500 border-green-500/30">
+                  <CheckCircle className="h-2 w-2 mr-0.5" />
+                  Live
+                </Badge>
+              )}
+            </div>
+            <p className="text-lg md:text-2xl font-bold text-yellow-500 mt-1">
+              ${tokenPrice?.priceUSD?.toFixed(2) || '0'}
             </p>
+            {oracleEnabled && (
+              <p className="text-[8px] text-muted-foreground mt-0.5">via Chainlink</p>
+            )}
           </CardContent>
         </Card>
         <Card>
@@ -504,6 +521,45 @@ export default function StakingPage() {
               </div>
               <p className="text-[10px] text-muted-foreground mt-2">
                 Powered by Four.meme on BSC
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* Chainlink 价格预言机 */}
+          <Card className="border-blue-500/30 bg-gradient-to-br from-blue-500/5 to-cyan-500/5">
+            <CardContent className="p-3 md:p-4">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4 text-blue-500" />
+                  <span className="text-sm font-medium">Chainlink Oracle</span>
+                </div>
+                {priceFeedInfo?.isHealthy ? (
+                  <Badge className="bg-green-500/20 text-green-500 border-0 text-[8px]">
+                    <CheckCircle className="h-2 w-2 mr-0.5" />
+                    Healthy
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="text-[8px]">Fallback</Badge>
+                )}
+              </div>
+              <div className="space-y-1.5 text-[10px] md:text-xs">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">{selectedToken} Price</span>
+                  <span className="font-mono">${tokenPrice?.priceUSD?.toFixed(2) || '0'}</span>
+                </div>
+                {priceFeedInfo?.lastUpdate && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Last Update</span>
+                    <span className="font-mono">{priceFeedInfo.lastUpdate.toLocaleTimeString()}</span>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Oracle</span>
+                  <span className="font-mono">{oracleEnabled ? 'Chainlink' : 'Fallback'}</span>
+                </div>
+              </div>
+              <p className="text-[8px] text-muted-foreground mt-2">
+                Real-time prices from Chainlink decentralized oracles
               </p>
             </CardContent>
           </Card>

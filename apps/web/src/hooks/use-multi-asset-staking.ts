@@ -16,9 +16,9 @@ import { bsc, bscTestnet } from 'wagmi/chains';
 
 // Contract ABI - 对齐 MultiAssetStaking.sol (BSC)
 const MULTI_ASSET_STAKING_ABI = [
-  // 质押 BNB (原生代币)
+  // 质押原生代币 (ETH/BNB)
   {
-    name: 'stakeBNB',
+    name: 'stakeETH',
     type: 'function',
     stateMutability: 'payable',
     inputs: [{ name: 'lockPeriod', type: 'uint8' }],
@@ -140,6 +140,47 @@ const MULTI_ASSET_STAKING_ABI = [
     stateMutability: 'view',
     inputs: [],
     outputs: [{ name: '', type: 'uint256' }],
+  },
+  // 获取代币价格 (Chainlink 预言机)
+  {
+    name: 'getTokenPrice',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: 'tokenAddress', type: 'address' }],
+    outputs: [{ name: '', type: 'uint256' }],
+  },
+  // 检查价格喂价健康状态
+  {
+    name: 'isPriceFeedHealthy',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: 'tokenAddress', type: 'address' }],
+    outputs: [
+      { name: 'healthy', type: 'bool' },
+      { name: 'reason', type: 'string' },
+    ],
+  },
+  // 获取价格喂价详情
+  {
+    name: 'getPriceFeedInfo',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: 'tokenAddress', type: 'address' }],
+    outputs: [
+      { name: 'feedAddress', type: 'address' },
+      { name: 'price', type: 'uint256' },
+      { name: 'lastUpdate', type: 'uint256' },
+      { name: 'feedDecimals', type: 'uint8' },
+      { name: 'isHealthy', type: 'bool' },
+    ],
+  },
+  // 预言机设置
+  {
+    name: 'useChainlinkOracle',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ name: '', type: 'bool' }],
   },
 ] as const;
 
@@ -374,7 +415,83 @@ export function useEarlyBirdBonus() {
 }
 
 /**
- * 质押 BNB (原生代币)
+ * 获取代币价格 (从 Chainlink 预言机)
+ */
+export function useTokenPrice(tokenAddress: `0x${string}` = BNB_ADDRESS) {
+  const { data, isLoading, error, refetch } = useReadContract({
+    address: CONTRACT_ADDRESS,
+    abi: MULTI_ASSET_STAKING_ABI,
+    functionName: 'getTokenPrice',
+    args: [tokenAddress],
+    query: {
+      enabled: !!CONTRACT_ADDRESS,
+    },
+  });
+
+  const price = useMemo(() => {
+    if (!data) return null;
+    // 价格为 18 位小数
+    return {
+      priceRaw: data,
+      priceFormatted: formatEther(data),
+      priceUSD: Number(formatEther(data)),
+    };
+  }, [data]);
+
+  return { price, isLoading, error, refetch };
+}
+
+/**
+ * 获取价格喂价详情
+ */
+export function usePriceFeedInfo(tokenAddress: `0x${string}` = BNB_ADDRESS) {
+  const { data, isLoading, error } = useReadContract({
+    address: CONTRACT_ADDRESS,
+    abi: MULTI_ASSET_STAKING_ABI,
+    functionName: 'getPriceFeedInfo',
+    args: [tokenAddress],
+    query: {
+      enabled: !!CONTRACT_ADDRESS,
+    },
+  });
+
+  const feedInfo = useMemo(() => {
+    if (!data) return null;
+    const [feedAddress, price, lastUpdate, feedDecimals, isHealthy] = data;
+    return {
+      feedAddress,
+      price: formatEther(price),
+      priceUSD: Number(formatEther(price)),
+      lastUpdate: new Date(Number(lastUpdate) * 1000),
+      feedDecimals,
+      isHealthy,
+    };
+  }, [data]);
+
+  return { feedInfo, isLoading, error };
+}
+
+/**
+ * 检查是否使用 Chainlink 预言机
+ */
+export function useOracleStatus() {
+  const { data, isLoading } = useReadContract({
+    address: CONTRACT_ADDRESS,
+    abi: MULTI_ASSET_STAKING_ABI,
+    functionName: 'useChainlinkOracle',
+    query: {
+      enabled: !!CONTRACT_ADDRESS,
+    },
+  });
+
+  return {
+    useChainlink: data || false,
+    isLoading,
+  };
+}
+
+/**
+ * 质押 BNB/原生代币
  */
 export function useStakeBNB() {
   const { writeContract, data: hash, isPending, error } = useWriteContract();
@@ -393,10 +510,11 @@ export function useStakeBNB() {
 
       const amountWei = parseEther(amount);
 
+      // 合约使用 stakeETH (原生代币质押)
       writeContract({
         address: CONTRACT_ADDRESS,
         abi: MULTI_ASSET_STAKING_ABI,
-        functionName: 'stakeBNB',
+        functionName: 'stakeETH',
         args: [lockPeriod],
         value: amountWei,
       });
@@ -555,6 +673,11 @@ export function useMultiAssetStaking(tokenAddress: `0x${string}` = BNB_ADDRESS) 
   const { stats: globalStats, isLoading: loadingGlobal, refetch: refetchGlobal } = useGlobalStats();
   const { tokens: supportedTokens, isLoading: loadingTokens } = useSupportedTokens();
   const { bonus: earlyBirdBonus, isLoading: loadingBonus } = useEarlyBirdBonus();
+  
+  // 价格相关 hooks (Chainlink)
+  const { price: tokenPrice, isLoading: loadingPrice, refetch: refetchPrice } = useTokenPrice(tokenAddress);
+  const { feedInfo: priceFeedInfo, isLoading: loadingFeedInfo } = usePriceFeedInfo(tokenAddress);
+  const { useChainlink: oracleEnabled } = useOracleStatus();
 
   const stakeBNBAction = useStakeBNB();
   const stakeTokenAction = useStakeToken();
@@ -566,7 +689,8 @@ export function useMultiAssetStaking(tokenAddress: `0x${string}` = BNB_ADDRESS) 
     refetchStake();
     refetchConfig();
     refetchGlobal();
-  }, [refetchStake, refetchConfig, refetchGlobal]);
+    refetchPrice();
+  }, [refetchStake, refetchConfig, refetchGlobal, refetchPrice]);
 
   // 检查是否在 BSC 网络
   const isBscNetwork = chainId === bsc.id || chainId === bscTestnet.id;
@@ -582,12 +706,17 @@ export function useMultiAssetStaking(tokenAddress: `0x${string}` = BNB_ADDRESS) 
     globalStats,
     supportedTokens,
     earlyBirdBonus,
+    
+    // 价格信息 (Chainlink)
+    tokenPrice,
+    priceFeedInfo,
+    oracleEnabled,
 
     // Token addresses
     fourMemeAddress: FOUR_MEME_ADDRESS,
     
     // Loading states
-    isLoading: loadingStake || loadingConfig || loadingGlobal || loadingTokens || loadingBonus,
+    isLoading: loadingStake || loadingConfig || loadingGlobal || loadingTokens || loadingBonus || loadingPrice || loadingFeedInfo,
 
     // Actions
     stakeBNB: stakeBNBAction,
