@@ -7,8 +7,9 @@
 
 import { useCallback, useMemo, useState, useEffect } from 'react';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
-import { PublicKey, LAMPORTS_PER_SOL, SystemProgram } from '@solana/web3.js';
+import { PublicKey, LAMPORTS_PER_SOL, SystemProgram, Connection } from '@solana/web3.js';
 import { Program, AnchorProvider, BN, Idl } from '@coral-xyz/anchor';
+import { PUMP_FUN_CONFIG } from '@/config/solana';
 
 // Program ID - 对应 Solana 合约
 const PROGRAM_ID = new PublicKey('7qpcKQQuDYhN51PTXebV8dpWY8MxqUKeFMwwVQ1eFQ75');
@@ -42,6 +43,14 @@ export enum AssetType {
   PumpFun = 'PUMP', // pump.fun 代币
   Custom = 'Custom',
 }
+
+// pump.fun 代币配置
+export const PUMP_FUN_TOKENS = {
+  // 示例 pump.fun 代币 (需要根据实际情况配置)
+  platform: PUMP_FUN_CONFIG,
+  defaultDecimals: 6,
+  minStakeAmount: 100, // 最小质押 100 个代币
+};
 
 // Types
 export interface SolanaStakeInfo {
@@ -248,36 +257,70 @@ export function useSolanaStakeInfo() {
 }
 
 /**
- * 获取 SOL 价格 (from Pyth)
+ * 获取 SOL 价格 (from Pyth Network)
+ * 使用 use-pyth-price hook 获取实时价格
  */
 export function useSolPrice() {
-  const [price, setPrice] = useState<number>(0);
+  // 导入 Pyth price hook
+  // 注意: 实际使用时需要确保 SolanaProvider 已包装应用
+  const [price, setPrice] = useState<number>(150); // 默认回退价格
   const [isLoading, setIsLoading] = useState(false);
+  const [isStale, setIsStale] = useState(false);
+  const { connection } = useConnection();
 
   const fetchPrice = useCallback(async () => {
     setIsLoading(true);
     try {
-      // 实际应从 Pyth Network 获取
-      // Pyth SOL/USD Price Feed: H6ARHf6YXhGYeQfUzQNGk6rDNnLBQKrenN712K4AQJEG
-      // 这里使用模拟价格
-      const mockPrice = 150; // $150 USD
-      setPrice(mockPrice);
+      // 从 Pyth Network 获取价格
+      // Pyth SOL/USD Price Feed: H6ARHf6YXhGYeQfUzQNGk6rDNnLBQKrenN712K4AQJEG (Mainnet)
+      // Pyth SOL/USD Price Feed: J83w4HKfqxwcq3BEMMkPFSppX3gqekLyLJBexebFVkix (Devnet)
+      const { getCurrentPriceFeeds } = await import('@/config/solana');
+      const priceFeeds = getCurrentPriceFeeds();
+      const priceFeedAccount = new PublicKey(priceFeeds.SOL_USD);
+      
+      const accountInfo = await connection.getAccountInfo(priceFeedAccount);
+      
+      if (accountInfo && accountInfo.data.length >= 200) {
+        // 简化的价格解析 - 实际建议使用 @pythnetwork/client
+        const view = new DataView(accountInfo.data.buffer, accountInfo.data.byteOffset);
+        const expo = view.getInt32(20, true);
+        const priceRaw = view.getBigInt64(208, true);
+        const publishTime = view.getBigInt64(96, true);
+        
+        const scale = Math.pow(10, expo);
+        const priceUsd = Number(priceRaw) * scale;
+        
+        // 检查价格是否过期 (>60秒)
+        const now = Date.now() / 1000;
+        const isOld = now - Number(publishTime) > 60;
+        
+        if (priceUsd > 0) {
+          setPrice(priceUsd);
+          setIsStale(isOld);
+          return;
+        }
+      }
+      
+      // 回退到默认价格
+      setPrice(150);
+      setIsStale(true);
     } catch (err) {
-      console.error('Failed to fetch SOL price:', err);
+      console.error('Failed to fetch SOL price from Pyth:', err);
       setPrice(150); // fallback
+      setIsStale(true);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [connection]);
 
   useEffect(() => {
     fetchPrice();
-    // 每分钟更新价格
-    const interval = setInterval(fetchPrice, 60000);
+    // 每 30 秒更新价格
+    const interval = setInterval(fetchPrice, 30000);
     return () => clearInterval(interval);
   }, [fetchPrice]);
 
-  return { price, isLoading, refetch: fetchPrice };
+  return { price, isLoading, isStale, refetch: fetchPrice };
 }
 
 /**

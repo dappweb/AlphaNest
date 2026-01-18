@@ -62,3 +62,68 @@ export const SOLANA_TOKEN_DECIMALS: Record<string, number> = {
   [SOLANA_TOKENS.POPCOW]: 9,
   [SOLANA_TOKENS.POPCOW_DEFI]: 6,
 };
+
+// ============================================
+// Pyth Network 价格预言机配置
+// ============================================
+
+// Pyth Program ID
+export const PYTH_PROGRAM_ID = new PublicKey(
+  SOLANA_NETWORK === WalletAdapterNetwork.Mainnet
+    ? 'FsJ3A3u2vn5cTVofAjvy6y5kwABJAqYWpe4975bi2epH' // Mainnet
+    : 'gSbePebfvPy7tRqimPoVecS2UsBvYv46ynrzWocc92s'  // Devnet
+);
+
+// Pyth Price Feed IDs (Mainnet)
+// https://pyth.network/developers/price-feed-ids
+export const PYTH_PRICE_FEEDS = {
+  // Mainnet Price Feed IDs
+  mainnet: {
+    SOL_USD: 'H6ARHf6YXhGYeQfUzQNGk6rDNnLBQKrenN712K4AQJEG',
+    USDC_USD: 'Gnt27xtC473ZT2Mw5u8wZ68Z3gULkSTb5DuxJy7eJotD',
+    USDT_USD: '3vxLXJqLqF3JG5TCbYycbKWRBbCJQLxQmBGCkyqEEefL',
+    BONK_USD: '8ihFLu5FimgTQ1Unh4dVyEHUGodJ5gJQCrQf4KUVB9bN',
+    WIF_USD: '6ABgrEZk8urs6kJ1JNdC1sspH5zKXRqxy8sg3ZG2cQps',
+  },
+  // Devnet Price Feed IDs
+  devnet: {
+    SOL_USD: 'J83w4HKfqxwcq3BEMMkPFSppX3gqekLyLJBexebFVkix',
+    USDC_USD: '5SSkXsEKQepHHAewytPVwdej4epN1nxgLVM84L4KXgy7',
+    USDT_USD: '38xoQ4oeJCBrcVvca2cGk7iV1dAfrmTR1kmhSCJQ8Jto',
+    BONK_USD: '72jCwWJPnx3SLmswNm5HkLPJ3cYiRqFYLbJtMvUJ2Fep',
+    WIF_USD: '6B23K3tkb51vLZA14jcEQVCA1pfHptzEHFA93V5dYwbT',
+  },
+};
+
+// 获取当前网络的 Price Feed
+export const getCurrentPriceFeeds = () => {
+  return SOLANA_NETWORK === WalletAdapterNetwork.Mainnet
+    ? PYTH_PRICE_FEEDS.mainnet
+    : PYTH_PRICE_FEEDS.devnet;
+};
+
+// Pyth Price Account 地址
+export const PYTH_PRICE_ACCOUNTS = {
+  SOL_USD: new PublicKey(getCurrentPriceFeeds().SOL_USD),
+  USDC_USD: new PublicKey(getCurrentPriceFeeds().USDC_USD),
+  USDT_USD: new PublicKey(getCurrentPriceFeeds().USDT_USD),
+};
+
+// ============================================
+// pump.fun 配置
+// ============================================
+
+export const PUMP_FUN_CONFIG = {
+  name: 'pump.fun',
+  url: 'https://pump.fun',
+  apiUrl: 'https://frontend-api.pump.fun',
+  programId: new PublicKey('6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P'),
+  // pump.fun 代币通常有 6 位小数
+  defaultDecimals: 6,
+  // 支持的功能
+  features: {
+    staking: true,
+    insurance: true,
+    trading: true,
+  },
+};
